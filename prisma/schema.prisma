@@ -1,0 +1,180 @@
+// CRM CEF 2026 — Prisma schema (SQLite)
+// Enums are not used: SQLite via Prisma does not support native enums.
+// String fields hold constrained values, validated at the app boundary with Zod.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         String     @default("ADMIN") // ADMIN
+  image        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  auditLogs    AuditLog[]
+}
+
+model Plan {
+  id           String    @id @default(cuid())
+  name         String
+  monthlyPrice Float
+  description  String?
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  members      Member[]
+  payments     Payment[]
+}
+
+model Member {
+  id           String @id @default(cuid())
+  registration Int    @unique // matrícula (atribuída pela aplicação)
+
+  // Seção 01 — Informações Pessoais
+  fullName  String
+  sex       String // M | F
+  email     String
+  phone     String
+  birthDate DateTime
+  cpf       String   @unique
+  photoUrl  String?
+
+  // Seção 02 — Endereço
+  cep          String
+  street       String
+  number       String
+  complement   String?
+  neighborhood String
+  city         String
+  state        String // UF
+
+  // Seção 03 — Saúde e Emergência
+  bloodType        String // A+, A-, B+, B-, AB+, AB-, O+, O-, NAO_SEI
+  emergencyName    String
+  emergencyPhone   String
+  healthConditions String  @default("[]") // JSON string array
+  healthDetails    String?
+
+  // Seção 04 — Experiência em Atividades de Montanha
+  mountainExperience String // NUNCA | MENOS_1 | MAIS_1 | MAIS_5 | MAIS_10 | PARADO
+  otherGroup         Boolean @default(false)
+  otherGroupName     String?
+
+  // Seção 05 — Interesses (escala 1-5)
+  interestHiking     Int     @default(0)
+  interestClimbing   Int     @default(0)
+  interestCourse     Int     @default(0)
+  interestBike       Int     @default(0)
+  interestEcological Int     @default(0)
+  suggestions        String?
+
+  status    String    @default("ACTIVE") // ACTIVE | INACTIVE
+  planId    String?
+  plan      Plan?     @relation(fields: [planId], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // soft delete
+
+  payments           Payment[]
+  eventRegistrations EventRegistration[]
+  birthdayLogs       BirthdayMessageLog[]
+
+  @@index([status])
+  @@index([deletedAt])
+}
+
+model Payment {
+  id             String    @id @default(cuid())
+  memberId       String
+  member         Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  planId         String?
+  plan           Plan?     @relation(fields: [planId], references: [id])
+  amount         Float
+  referenceMonth Int // 1-12
+  referenceYear  Int
+  status         String    @default("PENDENTE") // PAGO | PENDENTE | ATRASADO
+  dueDate        DateTime
+  paidAt         DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([memberId, referenceMonth, referenceYear])
+  @@index([status])
+  @@index([referenceYear, referenceMonth])
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  dateTime    DateTime
+  location    String
+  difficulty  String // FACIL | MODERADO | DIFICIL | TECNICO
+  slots       Int      @default(0)
+  status      String   @default("PLANEJADO") // PLANEJADO | CONFIRMADO | REALIZADO | CANCELADO
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  registrations EventRegistration[]
+  photos        EventPhoto[]
+
+  @@index([status])
+  @@index([dateTime])
+}
+
+model EventRegistration {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, memberId])
+}
+
+model EventPhoto {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  url       String
+  createdAt DateTime @default(now())
+}
+
+model BirthdayMessageConfig {
+  id        String   @id @default(cuid())
+  template  String   @default("Feliz aniversario, {nome}! O Clube Excursionista de Friburgo deseja um dia incrivel!")
+  enabled   Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+}
+
+model BirthdayMessageLog {
+  id        String   @id @default(cuid())
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  channel   String // WHATSAPP | EMAIL
+  sentAt    DateTime @default(now())
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String // CREATE | UPDATE | DELETE
+  entity    String // Member | Plan | Payment | Event | ...
+  entityId  String
+  metadata  String? // JSON string
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+}

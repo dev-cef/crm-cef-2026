@@ -1,26 +1,227 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-display);
+  --font-heading: var(--font-display);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Paleta oficial CEF: #2b4954 #4f7c93 #92b8c4 #c7dee2 #dfe6de #000 */
+:root {
+  --background: #ffffff;
+  --foreground: #1b2e35;
+  --card: #ffffff;
+  --card-foreground: #1b2e35;
+  --popover: #ffffff;
+  --popover-foreground: #1b2e35;
+  --primary: #2b4954;
+  --primary-foreground: #ffffff;
+  --secondary: #dfe6de;
+  --secondary-foreground: #2b4954;
+  --muted: #eef4f4;
+  --muted-foreground: #5d7a85;
+  --accent: #c7dee2;
+  --accent-foreground: #2b4954;
+  --destructive: #cc2b2b;
+  --border: #d5e2e4;
+  --input: #d5e2e4;
+  --ring: #4f7c93;
+  --chart-1: #2b4954;
+  --chart-2: #4f7c93;
+  --chart-3: #92b8c4;
+  --chart-4: #c7dee2;
+  --chart-5: #3fb5a3;
+  --radius: 0.625rem;
+  --sidebar: #f3f8f8;
+  --sidebar-foreground: #2b4954;
+  --sidebar-primary: #2b4954;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #dfe6de;
+  --sidebar-accent-foreground: #2b4954;
+  --sidebar-border: #d5e2e4;
+  --sidebar-ring: #4f7c93;
+}
+
+.dark {
+  --background: #16242a;
+  --foreground: #eef4f4;
+  --card: #1f3640;
+  --card-foreground: #eef4f4;
+  --popover: #1f3640;
+  --popover-foreground: #eef4f4;
+  --primary: #4f7c93;
+  --primary-foreground: #ffffff;
+  --secondary: #2b4954;
+  --secondary-foreground: #eef4f4;
+  --muted: #243b43;
+  --muted-foreground: #9fbcc4;
+  --accent: #2b4954;
+  --accent-foreground: #eef4f4;
+  --destructive: #e05b5b;
+  --border: #ffffff1a;
+  --input: #ffffff26;
+  --ring: #4f7c93;
+  --chart-1: #92b8c4;
+  --chart-2: #4f7c93;
+  --chart-3: #2b4954;
+  --chart-4: #c7dee2;
+  --chart-5: #3fb5a3;
+  --sidebar: #1b2e35;
+  --sidebar-foreground: #eef4f4;
+  --sidebar-primary: #4f7c93;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #2b4954;
+  --sidebar-accent-foreground: #eef4f4;
+  --sidebar-border: #ffffff1a;
+  --sidebar-ring: #4f7c93;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-background text-foreground;
+    /* Atmosfera de marca: malha sutil teal/azul sobre o branco */
+    background-image:
+      radial-gradient(
+        60rem 60rem at 100% -10%,
+        color-mix(in oklab, var(--primary) 9%, transparent),
+        transparent 60%
+      ),
+      radial-gradient(
+        50rem 50rem at -10% 110%,
+        color-mix(in oklab, var(--chart-2) 10%, transparent),
+        transparent 55%
+      );
+    background-attachment: fixed;
+  }
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display), Georgia, serif;
+    letter-spacing: -0.015em;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Aurora de marca (telas de autenticação) */
+.cef-aurora {
+  background-image:
+    radial-gradient(
+      60rem 40rem at 50% -10%,
+      color-mix(in oklab, var(--primary) 22%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      50rem 40rem at 100% 110%,
+      color-mix(in oklab, var(--chart-2) 20%, transparent),
+      transparent 55%
+    );
+}
+
+.cef-hero-overlay {
+  background-image: linear-gradient(
+    to top right,
+    #16242a 0%,
+    color-mix(in oklab, var(--primary) 72%, transparent) 45%,
+    transparent 80%
+  );
+}
+
+.cef-grid {
+  background-image:
+    linear-gradient(var(--foreground) 1px, transparent 1px),
+    linear-gradient(90deg, var(--foreground) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.03;
+}
+
+/* Entrada orquestrada: revela em cascata via --i */
+@keyframes cef-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cef-rise {
+    opacity: 0;
+    animation: cef-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation-delay: calc(var(--i, 0) * 70ms);
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    inset: 0;
+    margin: 24px auto;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+::view-transition-old(root), ::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
 }
