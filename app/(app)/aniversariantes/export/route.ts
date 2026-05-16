@@ -48,7 +48,6 @@ export async function GET(request: Request) {
       sex: true,
       phone: true,
       instagram: true,
-      whatsapp: true,
       birthDate: true,
     },
   });
@@ -104,7 +103,6 @@ export async function GET(request: Request) {
     "Idade",
     "Sexo",
     "Instagram",
-    "WhatsApp",
     "Telefone",
   ];
   const rows = list.map((m) => {
@@ -116,7 +114,6 @@ export async function GET(request: Request) {
       calculateAge(d),
       m.sex === "F" ? "Feminino" : "Masculino",
       m.instagram ?? "",
-      m.whatsapp ?? "",
       m.phone,
     ]
       .map(csvCell)

@@ -76,11 +76,11 @@ function Brand() {
     <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-4">
       <CefLogo className="size-10" />
       <div className="leading-tight">
-        <p className="font-display text-base font-semibold tracking-tight">
+        <p className="font-display text-[15px] tracking-[0.05em]">
           CRM CEF
         </p>
-        <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
-          Friburguense · 2026
+        <p className="text-[6px] uppercase tracking-[0.2em] text-muted-foreground">
+          PAINEL DE CONTROLE
         </p>
       </div>
     </div>

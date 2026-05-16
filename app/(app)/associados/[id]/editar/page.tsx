@@ -48,7 +48,6 @@ export default async function EditarAssociadoPage({
           email: member.email,
           phone: member.phone,
           instagram: member.instagram,
-          whatsapp: member.whatsapp,
           birthDate: toBrDate(member.birthDate),
           cpf: formatCpf(member.cpf),
           photoUrl: member.photoUrl,

@@ -46,6 +46,7 @@ import { MonthBars } from "@/components/modules/aniversariantes/month-bars";
 import { IconFeminino, IconMasculino } from "@/components/icons/sex-icons";
 import { ConfigForm } from "@/components/modules/aniversariantes/config-form";
 import { DeleteMemberDialog } from "@/components/modules/associados/delete-member-dialog";
+import { CardBeam } from "@/components/ui/card-beam";
 
 export const dynamic = "force-dynamic";
 
@@ -98,7 +99,6 @@ export default async function AniversariantesPage({
         sex: true,
         phone: true,
         instagram: true,
-        whatsapp: true,
         photoUrl: true,
         birthDate: true,
       },
@@ -219,9 +219,10 @@ export default async function AniversariantesPage({
         {stats.map((s, i) => (
           <Card
             key={s.label}
-            className="cef-rise border-border/70"
+            className="group relative cef-rise border-border/70"
             style={{ "--i": i + 1 } as React.CSSProperties}
           >
+            <CardBeam />
             <CardContent className="pt-1">
               <span className="inline-flex" style={{ color: s.color }}>
                 <s.icon className="size-5" />
@@ -245,9 +246,10 @@ export default async function AniversariantesPage({
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card
-          className="cef-rise border-border/70"
+          className="group relative cef-rise border-border/70"
           style={{ "--i": 6 } as React.CSSProperties}
         >
+          <CardBeam />
           <CardContent className="pt-1">
             <p className="mb-5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Por mês
@@ -257,9 +259,10 @@ export default async function AniversariantesPage({
         </Card>
 
         <Card
-          className="cef-rise border-border/70"
+          className="group relative cef-rise border-border/70"
           style={{ "--i": 7 } as React.CSSProperties}
         >
+          <CardBeam />
           <CardContent className="pt-1">
             <p className="mb-5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Por sexo
@@ -269,9 +272,10 @@ export default async function AniversariantesPage({
         </Card>
 
         <Card
-          className="cef-rise border-border/70"
+          className="group relative cef-rise border-border/70"
           style={{ "--i": 8 } as React.CSSProperties}
         >
+          <CardBeam />
           <CardContent className="pt-1">
             <p className="mb-5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Faixa etária
@@ -282,7 +286,7 @@ export default async function AniversariantesPage({
       </div>
 
       <Card
-        className="cef-rise mt-4 border-border/70"
+        className="group relative cef-rise mt-4 border-border/70"
         style={{ "--i": 9 } as React.CSSProperties}
       >
         <CardContent className="pt-4">
@@ -339,7 +343,7 @@ export default async function AniversariantesPage({
       </Card>
 
       <Card
-        className="cef-rise mt-4 border-border/70"
+        className="group relative cef-rise mt-4 border-border/70"
         style={{ "--i": 10 } as React.CSSProperties}
       >
         <CardHeader>
@@ -436,15 +440,15 @@ export default async function AniversariantesPage({
                       )}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
-                      {m.whatsapp ? (
+                      {m.phone ? (
                         <a
-                          href={waUrl(m.whatsapp)}
+                          href={waUrl(m.phone)}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center gap-1 text-sm hover:underline"
                         >
                           <MessageCircle className="size-3.5" />
-                          {m.whatsapp}
+                          {m.phone}
                         </a>
                       ) : (
                         <span className="text-muted-foreground">—</span>
@@ -489,7 +493,7 @@ export default async function AniversariantesPage({
       </Card>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <Card>
+        <Card className="group relative">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <MessageSquareText className="size-4" /> Mensagem de parabéns
@@ -508,7 +512,7 @@ export default async function AniversariantesPage({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="group relative">
           <CardHeader>
             <CardTitle className="text-base">
               Log de mensagens enviadas

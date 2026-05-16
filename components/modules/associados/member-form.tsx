@@ -75,7 +75,6 @@ export type MemberFormProps = {
     email: string;
     phone: string;
     instagram: string | null;
-    whatsapp: string | null;
     birthDate: string; // DD/MM/AAAA
     cpf: string; // formatado
     photoUrl: string | null;
@@ -119,7 +118,6 @@ export function MemberForm({ mode, plans, member }: MemberFormProps) {
       email: member?.email ?? "",
       phone: member?.phone ?? "",
       instagram: member?.instagram ?? "",
-      whatsapp: member?.whatsapp ?? "",
       birthDate: member?.birthDate ?? "",
       cpf: member?.cpf ?? "",
       photoUrl: member?.photoUrl ?? "",
@@ -388,19 +386,6 @@ export function MemberForm({ mode, plans, member }: MemberFormProps) {
                     placeholder="@usuario"
                   />
                   <Err msg={errors.instagram?.message} />
-                </div>
-
-                <div>
-                  <Label htmlFor="whatsapp">WhatsApp</Label>
-                  <Input
-                    id="whatsapp"
-                    {...register("whatsapp")}
-                    onChange={(e) =>
-                      setValue("whatsapp", maskPhoneInput(e.target.value))
-                    }
-                    placeholder="(99) 99999-9999"
-                  />
-                  <Err msg={errors.whatsapp?.message} />
                 </div>
 
                 <div>

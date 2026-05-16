@@ -30,7 +30,6 @@ function normalize(values: MemberFormValues) {
       email: d.email.toLowerCase(),
       phone: d.phone,
       instagram: d.instagram || null,
-      whatsapp: d.whatsapp || null,
       birthDate: parseBrDate(d.birthDate)!,
       cpf: stripCpf(d.cpf),
       photoUrl: d.photoUrl || null,
