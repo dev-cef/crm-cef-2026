@@ -257,7 +257,7 @@ export default async function AniversariantesPage({
         </Card>
 
         <Card
-          className="cef-rise border border-[#dfae3c]/50"
+          className="cef-rise border-border/70"
           style={{ "--i": 7 } as React.CSSProperties}
         >
           <CardContent className="pt-1">
