@@ -227,10 +227,9 @@ export default async function DashboardPage() {
       </div>
 
       <Card
-        className="group cef-rise relative mt-6 overflow-hidden border-border/70"
+        className="cef-rise mt-6 border-border/70"
         style={{ "--i": 5 } as React.CSSProperties}
       >
-        <CardBeam />
         <CardHeader>
           <CardTitle>Próximos eventos</CardTitle>
           <CardDescription>
