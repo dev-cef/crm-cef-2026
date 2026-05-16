@@ -32,7 +32,7 @@ export function AgeBars({
 
   return (
     <div className="space-y-3.5">
-      {bands.map((b) => {
+      {bands.map((b, i) => {
         const color = COLORS[b.decade] ?? DEFAULT_COLOR;
         const pct = Math.round((b.count / total) * 100);
         const barW = max ? (b.count / max) * 100 : 0;
@@ -43,11 +43,14 @@ export function AgeBars({
             </span>
             <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-muted-foreground/15">
               <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${Math.max(barW, 2)}%`,
-                  background: color,
-                }}
+                className="bar-grow h-full rounded-full"
+                style={
+                  {
+                    "--bar-w": `${Math.max(barW, 2)}%`,
+                    "--i": i,
+                    background: color,
+                  } as React.CSSProperties
+                }
               />
             </div>
             <span className="w-12 shrink-0 text-right leading-tight">

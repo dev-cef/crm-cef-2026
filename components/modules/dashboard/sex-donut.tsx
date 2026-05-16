@@ -24,6 +24,8 @@ export function SexDonut({
   const gap = female && male ? 0.018 * c : 0;
   const fLen = total ? (female / total) * c : 0;
   const mLen = total ? (male / total) * c : 0;
+  // ângulo onde o arco masculino começa (após o feminino)
+  const femaleDeg = total ? (female / total) * 360 : 0;
 
   return (
     <div className="flex items-center gap-6">
@@ -53,6 +55,12 @@ export function SexDonut({
                   r={r}
                   stroke={FEMALE}
                   strokeDasharray={`${Math.max(fLen - gap, 0.01)} ${c}`}
+                  className="donut-arc"
+                  style={
+                    {
+                      "--len": Math.max(fLen - gap, 0.01),
+                    } as React.CSSProperties
+                  }
                 />
                 <circle
                   cx={size / 2}
@@ -60,7 +68,14 @@ export function SexDonut({
                   r={r}
                   stroke={MALE}
                   strokeDasharray={`${Math.max(mLen - gap, 0.01)} ${c}`}
-                  strokeDashoffset={-fLen}
+                  transform={`rotate(${femaleDeg} ${size / 2} ${size / 2})`}
+                  className="donut-arc"
+                  style={
+                    {
+                      "--len": Math.max(mLen - gap, 0.01),
+                      "--d": 340,
+                    } as React.CSSProperties
+                  }
                 />
               </>
             )}

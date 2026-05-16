@@ -203,6 +203,47 @@
   }
 }
 
+/* Donut "Associados por sexo": traça os arcos ao entrar */
+@keyframes donut-draw {
+  from {
+    stroke-dashoffset: var(--len, 0);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Barras "Faixa etária": crescem da esquerda em cascata */
+@keyframes grow-bar {
+  from {
+    width: 0;
+  }
+  to {
+    width: var(--bar-w, 0%);
+  }
+}
+
+/* Estado final estático (reduced-motion / sem JS / SSR) */
+.donut-arc {
+  stroke-dashoffset: 0;
+}
+.bar-grow {
+  width: var(--bar-w, 0%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .donut-arc {
+    stroke-dashoffset: var(--len, 0);
+    animation: donut-draw 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation-delay: calc(var(--d, 0) * 1ms);
+  }
+  .bar-grow {
+    width: 0;
+    animation: grow-bar 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation-delay: calc(var(--i, 0) * 90ms + 120ms);
+  }
+}
+
 @media print {
   body * {
     visibility: hidden;
