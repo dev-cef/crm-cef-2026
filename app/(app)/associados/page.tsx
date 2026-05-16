@@ -135,7 +135,7 @@ export default async function AssociadosPage({
             <TableRow>
               <TableHead className="w-12">Foto</TableHead>
               <TableHead>Nome</TableHead>
-              <TableHead className="hidden md:table-cell">CPF</TableHead>
+              <TableHead className="hidden md:table-cell">Telefone</TableHead>
               <TableHead className="hidden sm:table-cell">Plano</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
@@ -173,8 +173,8 @@ export default async function AssociadosPage({
                     Matrícula #{m.registration}
                   </p>
                 </TableCell>
-                <TableCell className="hidden font-mono text-sm md:table-cell">
-                  {formatCpf(m.cpf)}
+                <TableCell className="hidden text-sm md:table-cell">
+                  {m.phone}
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
                   {m.plan ? (
