@@ -43,6 +43,7 @@ import { CountUp } from "@/components/unlumen-ui/count-up";
 import { SexDonut } from "@/components/modules/dashboard/sex-donut";
 import { AgeBars } from "@/components/modules/dashboard/age-bars";
 import { MonthBars } from "@/components/modules/aniversariantes/month-bars";
+import { IconFeminino, IconMasculino } from "@/components/icons/sex-icons";
 import { ConfigForm } from "@/components/modules/aniversariantes/config-form";
 import { DeleteMemberDialog } from "@/components/modules/associados/delete-member-dialog";
 
@@ -173,8 +174,7 @@ export default async function AniversariantesPage({
     value: number;
     sub?: string;
     color: string;
-    icon?: React.ComponentType<{ className?: string }>;
-    glyph?: string;
+    icon: React.ComponentType<{ className?: string }>;
   }[] = [
     { label: "Total", value: totalPeriod, color: AMBER, icon: Users },
     {
@@ -182,14 +182,14 @@ export default async function AniversariantesPage({
       value: female,
       sub: `${femalePct}%`,
       color: FEMALE,
-      glyph: "♀",
+      icon: IconFeminino,
     },
     {
       label: "Masculino",
       value: male,
       sub: `${malePct}%`,
       color: MALE,
-      glyph: "♂",
+      icon: IconMasculino,
     },
     { label: "Idade média", value: avgAge, color: AMBER, icon: Target },
     {
@@ -223,17 +223,8 @@ export default async function AniversariantesPage({
             style={{ "--i": i + 1 } as React.CSSProperties}
           >
             <CardContent className="pt-1">
-              <span
-                className="inline-flex text-lg"
-                style={{ color: s.color }}
-              >
-                {s.glyph ? (
-                  <span className="font-semibold leading-none">
-                    {s.glyph}
-                  </span>
-                ) : s.icon ? (
-                  <s.icon className="size-5" />
-                ) : null}
+              <span className="inline-flex" style={{ color: s.color }}>
+                <s.icon className="size-5" />
               </span>
               <p
                 className="mt-3 font-display text-4xl font-bold tracking-tight"
