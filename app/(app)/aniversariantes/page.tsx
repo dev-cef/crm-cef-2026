@@ -1,9 +1,11 @@
 import Link from "next/link";
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   AtSign,
   BarChart3,
   Cake,
-  ChevronUp,
   FileSpreadsheet,
   FileText,
   Filter,
@@ -73,6 +75,8 @@ export default async function AniversariantesPage({
     month?: string;
     sex?: string;
     q?: string;
+    sort?: string;
+    dir?: string;
   }>;
 }) {
   const sp = await searchParams;
@@ -89,6 +93,8 @@ export default async function AniversariantesPage({
   );
   const sex = sp.sex === "M" || sp.sex === "F" ? sp.sex : "ALL";
   const q = (sp.q ?? "").trim();
+  const sort = (["nome", "dia", "mes", "sexo", "idade"].includes(sp.sort ?? "") ? sp.sort : "mes") as "nome" | "dia" | "mes" | "sexo" | "idade";
+  const dir = sp.dir === "desc" ? "desc" : "asc";
 
   const [members, cfg, logs] = await Promise.all([
     prisma.member.findMany({
@@ -111,26 +117,25 @@ export default async function AniversariantesPage({
     }),
   ]);
 
-  const sortByDate = <T extends { birthDate: Date }>(arr: T[]) =>
-    [...arr].sort((a, b) => {
-      const da = new Date(a.birthDate);
-      const db = new Date(b.birthDate);
-      return (
-        da.getUTCMonth() - db.getUTCMonth() ||
-        da.getUTCDate() - db.getUTCDate()
-      );
-    });
-
   const inPeriod = members.filter((m) =>
     isBirthdayInPeriod(new Date(m.birthDate), period, month, today),
   );
-  const list = sortByDate(
-    inPeriod
-      .filter((m) => (sex === "ALL" ? true : m.sex === sex))
-      .filter((m) =>
-        q ? m.fullName.toLowerCase().includes(q.toLowerCase()) : true,
-      ),
-  );
+  const list = inPeriod
+    .filter((m) => (sex === "ALL" ? true : m.sex === sex))
+    .filter((m) =>
+      q ? m.fullName.toLowerCase().includes(q.toLowerCase()) : true,
+    )
+    .sort((a, b) => {
+      const da = new Date(a.birthDate);
+      const db = new Date(b.birthDate);
+      let cmp = 0;
+      if (sort === "nome") cmp = a.fullName.localeCompare(b.fullName, "pt-BR");
+      else if (sort === "dia") cmp = da.getUTCDate() - db.getUTCDate();
+      else if (sort === "sexo") cmp = a.sex.localeCompare(b.sex);
+      else if (sort === "idade") cmp = calculateAge(da) - calculateAge(db);
+      else cmp = da.getUTCMonth() - db.getUTCMonth() || da.getUTCDate() - db.getUTCDate();
+      return dir === "desc" ? -cmp : cmp;
+    });
 
   const totalPeriod = inPeriod.length;
   const female = list.filter((m) => m.sex === "F").length;
@@ -168,6 +173,16 @@ export default async function AniversariantesPage({
     sex,
     ...(q ? { q } : {}),
   }).toString();
+
+  const sortHref = (col: "nome" | "dia" | "mes" | "sexo" | "idade") => {
+    const newDir = sort === col && dir === "asc" ? "desc" : "asc";
+    return `/aniversariantes?${new URLSearchParams({ period, month: String(month), sex, ...(q ? { q } : {}), sort: col, dir: newDir })}`;
+  };
+
+  const SortIcon = ({ col }: { col: "nome" | "dia" | "mes" | "sexo" | "idade" }) => {
+    if (sort !== col) return <ArrowUpDown className="size-3 opacity-40" />;
+    return dir === "asc" ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />;
+  };
 
   const stats: {
     label: string;
@@ -371,21 +386,33 @@ export default async function AniversariantesPage({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead className="w-14">Dia</TableHead>
                 <TableHead>
-                  <span className="inline-flex items-center gap-1">
-                    Mês <ChevronUp className="size-3" />
-                  </span>
+                  <Link href={sortHref("nome")} className="inline-flex items-center gap-1 hover:text-foreground">
+                    Nome <SortIcon col="nome" />
+                  </Link>
                 </TableHead>
-                <TableHead className="w-16">Idade</TableHead>
-                <TableHead>Sexo</TableHead>
-                <TableHead className="hidden md:table-cell">
-                  Instagram
+                <TableHead className="w-14">
+                  <Link href={sortHref("dia")} className="inline-flex items-center gap-1 hover:text-foreground">
+                    Dia <SortIcon col="dia" />
+                  </Link>
                 </TableHead>
-                <TableHead className="hidden md:table-cell">
-                  WhatsApp
+                <TableHead>
+                  <Link href={sortHref("mes")} className="inline-flex items-center gap-1 hover:text-foreground">
+                    Mês <SortIcon col="mes" />
+                  </Link>
                 </TableHead>
+                <TableHead className="w-16">
+                  <Link href={sortHref("idade")} className="inline-flex items-center gap-1 hover:text-foreground">
+                    Idade <SortIcon col="idade" />
+                  </Link>
+                </TableHead>
+                <TableHead>
+                  <Link href={sortHref("sexo")} className="inline-flex items-center gap-1 hover:text-foreground">
+                    Sexo <SortIcon col="sexo" />
+                  </Link>
+                </TableHead>
+                <TableHead className="hidden md:table-cell">Instagram</TableHead>
+                <TableHead className="hidden md:table-cell">WhatsApp</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
