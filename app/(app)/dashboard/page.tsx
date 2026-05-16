@@ -25,6 +25,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { CountUp } from "@/components/unlumen-ui/count-up";
 import { ConfettiHover } from "@/components/modules/dashboard/confetti-hover";
+import { SexDonut } from "@/components/modules/dashboard/sex-donut";
 import { CardBeam } from "@/components/ui/card-beam";
 
 export const dynamic = "force-dynamic";
@@ -34,10 +35,15 @@ async function getData() {
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
 
-  const [activeCount, members, monthPayments, upcomingEvents] =
+  const [activeCount, sexGroups, members, monthPayments, upcomingEvents] =
     await Promise.all([
       prisma.member.count({
         where: { status: "ACTIVE", deletedAt: null },
+      }),
+      prisma.member.groupBy({
+        by: ["sex"],
+        where: { status: "ACTIVE", deletedAt: null },
+        _count: { _all: true },
       }),
       prisma.member.findMany({
         where: { deletedAt: null },
@@ -54,6 +60,11 @@ async function getData() {
         include: { _count: { select: { registrations: true } } },
       }),
     ]);
+
+  const femaleCount =
+    sexGroups.find((g) => g.sex === "F")?._count._all ?? 0;
+  const maleCount =
+    sexGroups.find((g) => g.sex === "M")?._count._all ?? 0;
 
   const today = now.getDate();
   const birthdays = members
@@ -86,6 +97,8 @@ async function getData() {
 
   return {
     activeCount,
+    femaleCount,
+    maleCount,
     birthdayCount: birthdays.length,
     birthdayMessage,
     birthdayToday: todays.length > 0,
@@ -226,61 +239,78 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <Card
-        className="cef-rise mt-6 border-border/70"
-        style={{ "--i": 5 } as React.CSSProperties}
-      >
-        <CardHeader>
-          <CardTitle>Próximos eventos</CardTitle>
-          <CardDescription>
-            Atividades planejadas e confirmadas
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {data.upcomingEvents.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-              Nenhum evento futuro cadastrado.
-            </p>
-          ) : (
-            <ul className="divide-y">
-              {data.upcomingEvents.map((e) => (
-                <li
-                  key={e.id}
-                  className="flex items-center justify-between gap-4 py-3"
-                >
-                  <div className="min-w-0">
-                    <Link
-                      href={`/eventos/${e.id}`}
-                      className="truncate font-medium hover:underline"
-                    >
-                      {e.name}
-                    </Link>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDateTime(e.dateTime)} · {e.location}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <Badge variant="secondary">
-                      {labelFrom(EVENT_DIFFICULTY, e.difficulty)}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {e._count.registrations}/{e.slots} vagas
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="mt-4">
-            <Link
-              href="/eventos"
-              className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-            >
-              Ver todos os eventos <ArrowRight className="size-4" />
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+        <Card
+          className="cef-rise border-border/70 lg:col-span-1"
+          style={{ "--i": 5 } as React.CSSProperties}
+        >
+          <CardHeader>
+            <CardTitle>Associados por sexo</CardTitle>
+            <CardDescription>
+              Distribuição dos associados ativos
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SexDonut female={data.femaleCount} male={data.maleCount} />
+          </CardContent>
+        </Card>
+
+        <Card
+          className="cef-rise border-border/70 lg:col-span-2"
+          style={{ "--i": 6 } as React.CSSProperties}
+        >
+          <CardHeader>
+            <CardTitle>Próximos eventos</CardTitle>
+            <CardDescription>
+              Atividades planejadas e confirmadas
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {data.upcomingEvents.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                Nenhum evento futuro cadastrado.
+              </p>
+            ) : (
+              <ul className="divide-y">
+                {data.upcomingEvents.map((e) => (
+                  <li
+                    key={e.id}
+                    className="flex items-center justify-between gap-4 py-3"
+                  >
+                    <div className="min-w-0">
+                      <Link
+                        href={`/eventos/${e.id}`}
+                        className="truncate font-medium hover:underline"
+                      >
+                        {e.name}
+                      </Link>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDateTime(e.dateTime)} · {e.location}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Badge variant="secondary">
+                        {labelFrom(EVENT_DIFFICULTY, e.difficulty)}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {e._count.registrations}/{e.slots} vagas
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="mt-4">
+              <Link
+                href="/eventos"
+                className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+              >
+                Ver todos os eventos <ArrowRight className="size-4" />
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
