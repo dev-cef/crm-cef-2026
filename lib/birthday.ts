@@ -1,4 +1,4 @@
-export type BirthdayPeriod = "dia" | "semana" | "mes";
+export type BirthdayPeriod = "dia" | "semana" | "mes" | "ano";
 
 // Compara mês/dia ignorando o ano
 function md(d: Date): number {
@@ -12,6 +12,8 @@ export function isBirthdayInPeriod(
   today: Date = new Date(),
 ): boolean {
   const bM = birthDate.getUTCMonth() + 1;
+
+  if (period === "ano") return true;
 
   if (period === "mes") {
     return bM === month;

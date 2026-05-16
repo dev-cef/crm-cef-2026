@@ -78,7 +78,7 @@ export default async function AniversariantesPage({
   const sp = await searchParams;
   const today = new Date();
   const period = (
-    ["dia", "semana", "mes"].includes(sp.period ?? "") ? sp.period : "mes"
+    ["dia", "semana", "mes", "ano"].includes(sp.period ?? "") ? sp.period : "mes"
   ) as BirthdayPeriod;
   const month = Math.min(
     12,
@@ -246,15 +246,29 @@ export default async function AniversariantesPage({
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card
-          className="group relative cef-rise border-border/70"
+          className="group relative cef-rise border-border/70 overflow-hidden"
           style={{ "--i": 6 } as React.CSSProperties}
         >
           <CardBeam />
-          <CardContent className="pt-1">
+          <Link
+            href={`/aniversariantes?${new URLSearchParams({ period: "ano", sex, ...(q ? { q } : {}) })}`}
+            className="absolute inset-0 z-0"
+            aria-label="Ver ano inteiro"
+          />
+          <CardContent className="relative z-10 pt-1">
             <p className="mb-5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Por mês
+              {period === "ano" && (
+                <span className="ml-2 font-normal normal-case text-primary">· ano inteiro</span>
+              )}
             </p>
-            <MonthBars counts={monthCounts} />
+            <MonthBars
+              counts={monthCounts}
+              activeMonth={period === "mes" ? month : undefined}
+              buildHref={(m) =>
+                `/aniversariantes?${new URLSearchParams({ period: "mes", month: String(m), sex, ...(q ? { q } : {}) })}`
+              }
+            />
           </CardContent>
         </Card>
 
