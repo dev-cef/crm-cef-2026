@@ -1,4 +1,3 @@
-import { cn } from "@/lib/utils";
 import { CountUp } from "@/components/unlumen-ui/count-up";
 
 const MONTHS = [
@@ -16,19 +15,22 @@ const MONTHS = [
   "Dez",
 ];
 
-export function MonthBars({
-  counts,
-  activeMonth,
-}: {
-  counts: number[];
-  activeMonth?: number;
-}) {
+// ciclo de 6 cores (igual ao anexo)
+const PALETTE = [
+  "#56b3d9",
+  "#5fc9b3",
+  "#dfae3c",
+  "#e8804f",
+  "#e983b9",
+  "#a78bda",
+];
+
+export function MonthBars({ counts }: { counts: number[] }) {
   const max = counts.reduce((m, n) => Math.max(m, n), 0);
 
   return (
     <div className="flex items-end gap-1.5 sm:gap-2">
       {counts.map((n, i) => {
-        const active = activeMonth === i + 1;
         const h = max ? (n / max) * 100 : 0;
         return (
           <div
@@ -45,21 +47,12 @@ export function MonthBars({
                   {
                     "--bar-h": `${n > 0 ? Math.max(h, 4) : 0}%`,
                     "--i": i,
-                    background: active
-                      ? "var(--primary)"
-                      : "color-mix(in oklab, var(--primary) 30%, transparent)",
+                    background: PALETTE[i % PALETTE.length],
                   } as React.CSSProperties
                 }
               />
             </div>
-            <span
-              className={cn(
-                "text-[10px] uppercase tracking-wide",
-                active
-                  ? "font-semibold text-primary"
-                  : "text-muted-foreground",
-              )}
-            >
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
               {MONTHS[i]}
             </span>
           </div>

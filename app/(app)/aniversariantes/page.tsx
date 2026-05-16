@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
-  Activity,
   AtSign,
+  BarChart3,
   Cake,
   ChevronUp,
   FileSpreadsheet,
@@ -10,8 +10,8 @@ import {
   MessageCircle,
   MessageSquareText,
   Pencil,
+  Target,
   Trash2,
-  User,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -50,6 +50,7 @@ export const dynamic = "force-dynamic";
 
 const FEMALE = "#e983b9";
 const MALE = "#56b3d9";
+const AMBER = "#dfae3c";
 const selectCls =
   "h-9 rounded-md border bg-background px-3 text-sm outline-none";
 
@@ -167,43 +168,36 @@ export default async function AniversariantesPage({
     ...(q ? { q } : {}),
   }).toString();
 
-  const stats = [
-    {
-      label: "Total no período",
-      value: totalPeriod,
-      sub: period === "mes" ? monthName(month) : undefined,
-      icon: Users,
-      tint: "text-primary",
-    },
+  const stats: {
+    label: string;
+    value: number;
+    sub?: string;
+    color: string;
+    icon?: React.ComponentType<{ className?: string }>;
+    glyph?: string;
+  }[] = [
+    { label: "Total", value: totalPeriod, color: AMBER, icon: Users },
     {
       label: "Feminino",
       value: female,
       sub: `${femalePct}%`,
-      icon: User,
-      tint: "",
       color: FEMALE,
+      glyph: "♀",
     },
     {
       label: "Masculino",
       value: male,
       sub: `${malePct}%`,
-      icon: User,
-      tint: "",
       color: MALE,
+      glyph: "♂",
     },
-    {
-      label: "Idade média",
-      value: avgAge,
-      sub: "anos",
-      icon: Activity,
-      tint: "text-primary",
-    },
+    { label: "Idade média", value: avgAge, color: AMBER, icon: Target },
     {
       label: "Filtrados",
       value: list.length,
       sub: `de ${totalPeriod}`,
-      icon: Filter,
-      tint: "text-primary",
+      color: AMBER,
+      icon: BarChart3,
     },
   ];
 
@@ -228,51 +222,82 @@ export default async function AniversariantesPage({
             className="cef-rise border-border/70"
             style={{ "--i": i + 1 } as React.CSSProperties}
           >
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardDescription>{s.label}</CardDescription>
+            <CardContent className="pt-1">
               <span
-                className={cn(
-                  "flex size-9 items-center justify-center rounded-xl bg-primary/10",
-                  s.tint,
-                )}
-                style={s.color ? { color: s.color } : undefined}
+                className="inline-flex text-lg"
+                style={{ color: s.color }}
               >
-                <s.icon className="size-4" />
+                {s.glyph ? (
+                  <span className="font-semibold leading-none">
+                    {s.glyph}
+                  </span>
+                ) : s.icon ? (
+                  <s.icon className="size-5" />
+                ) : null}
               </span>
-            </CardHeader>
-            <CardContent>
               <p
-                className="font-display text-3xl font-semibold tracking-tight"
-                style={s.color ? { color: s.color } : undefined}
+                className="mt-3 font-display text-4xl font-bold tracking-tight"
+                style={{ color: s.color }}
               >
                 <CountUp to={s.value} duration={1.2} digitEffect="none" />
               </p>
+              <p className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {s.label}
+              </p>
               {s.sub && (
-                <p className="mt-1 text-xs text-muted-foreground">{s.sub}</p>
+                <p className="text-xs text-muted-foreground">{s.sub}</p>
               )}
             </CardContent>
           </Card>
         ))}
       </div>
 
+      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+        <Card
+          className="cef-rise border-border/70"
+          style={{ "--i": 6 } as React.CSSProperties}
+        >
+          <CardContent className="pt-1">
+            <p className="mb-5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Por mês
+            </p>
+            <MonthBars counts={monthCounts} />
+          </CardContent>
+        </Card>
+
+        <Card
+          className="cef-rise border border-[#dfae3c]/50"
+          style={{ "--i": 7 } as React.CSSProperties}
+        >
+          <CardContent className="pt-1">
+            <p className="mb-5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Por sexo
+            </p>
+            <SexDonut female={female} male={male} />
+          </CardContent>
+        </Card>
+
+        <Card
+          className="cef-rise border-border/70"
+          style={{ "--i": 8 } as React.CSSProperties}
+        >
+          <CardContent className="pt-1">
+            <p className="mb-5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Faixa etária
+            </p>
+            <AgeBars bands={ageBands} />
+          </CardContent>
+        </Card>
+      </div>
+
       <Card
         className="cef-rise mt-4 border-border/70"
-        style={{ "--i": 6 } as React.CSSProperties}
+        style={{ "--i": 9 } as React.CSSProperties}
       >
-        <CardHeader>
-          <CardTitle className="text-base">Aniversários por mês</CardTitle>
-          <CardDescription>
-            Distribuição anual de todos os associados
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <MonthBars
-            counts={monthCounts}
-            activeMonth={period === "mes" ? month : undefined}
-          />
+        <CardContent className="pt-4">
           <form
             method="get"
-            className="mt-6 flex flex-wrap items-center gap-2 border-t pt-4"
+            className="flex flex-wrap items-center gap-2"
           >
             <select name="period" defaultValue={period} className={selectCls}>
               <option value="dia">Hoje</option>
@@ -322,39 +347,9 @@ export default async function AniversariantesPage({
         </CardContent>
       </Card>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card
-          className="cef-rise border-border/70"
-          style={{ "--i": 7 } as React.CSSProperties}
-        >
-          <CardHeader>
-            <CardTitle className="text-base">Por sexo</CardTitle>
-            <CardDescription>Aniversariantes filtrados</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SexDonut female={female} male={male} />
-          </CardContent>
-        </Card>
-
-        <Card
-          className="cef-rise border-border/70"
-          style={{ "--i": 8 } as React.CSSProperties}
-        >
-          <CardHeader>
-            <CardTitle className="text-base">Faixa etária</CardTitle>
-            <CardDescription>
-              Aniversariantes filtrados por década
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AgeBars bands={ageBands} />
-          </CardContent>
-        </Card>
-      </div>
-
       <Card
         className="cef-rise mt-4 border-border/70"
-        style={{ "--i": 9 } as React.CSSProperties}
+        style={{ "--i": 10 } as React.CSSProperties}
       >
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
