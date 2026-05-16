@@ -9,7 +9,7 @@ import {
   Users,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { formatDateTime, monthName } from "@/lib/format";
+import { calculateAge, formatDateTime, monthName } from "@/lib/format";
 import { labelFrom } from "@/lib/constants";
 import { EVENT_DIFFICULTY } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { CountUp } from "@/components/unlumen-ui/count-up";
 import { ConfettiHover } from "@/components/modules/dashboard/confetti-hover";
 import { SexDonut } from "@/components/modules/dashboard/sex-donut";
+import { AgeBars } from "@/components/modules/dashboard/age-bars";
 import { CardBeam } from "@/components/ui/card-beam";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +48,12 @@ async function getData() {
       }),
       prisma.member.findMany({
         where: { deletedAt: null },
-        select: { id: true, fullName: true, birthDate: true },
+        select: {
+          id: true,
+          fullName: true,
+          birthDate: true,
+          status: true,
+        },
       }),
       prisma.payment.findMany({
         where: { referenceMonth: month, referenceYear: year },
@@ -65,6 +71,18 @@ async function getData() {
     sexGroups.find((g) => g.sex === "F")?._count._all ?? 0;
   const maleCount =
     sexGroups.find((g) => g.sex === "M")?._count._all ?? 0;
+
+  const decadeCounts = new Map<number, number>();
+  for (const m of members) {
+    if (m.status !== "ACTIVE") continue;
+    const age = calculateAge(m.birthDate);
+    if (age < 0) continue;
+    const decade = Math.floor(age / 10) * 10;
+    decadeCounts.set(decade, (decadeCounts.get(decade) ?? 0) + 1);
+  }
+  const ageBands = [...decadeCounts.entries()]
+    .map(([decade, count]) => ({ decade, count }))
+    .sort((a, b) => a.decade - b.decade);
 
   const today = now.getDate();
   const birthdays = members
@@ -99,6 +117,7 @@ async function getData() {
     activeCount,
     femaleCount,
     maleCount,
+    ageBands,
     birthdayCount: birthdays.length,
     birthdayMessage,
     birthdayToday: todays.length > 0,
@@ -260,57 +279,72 @@ export default async function DashboardPage() {
           style={{ "--i": 6 } as React.CSSProperties}
         >
           <CardHeader>
-            <CardTitle>Próximos eventos</CardTitle>
+            <CardTitle>Faixa etária</CardTitle>
             <CardDescription>
-              Atividades planejadas e confirmadas
+              Associados ativos por década de idade
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {data.upcomingEvents.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                Nenhum evento futuro cadastrado.
-              </p>
-            ) : (
-              <ul className="divide-y">
-                {data.upcomingEvents.map((e) => (
-                  <li
-                    key={e.id}
-                    className="flex items-center justify-between gap-4 py-3"
-                  >
-                    <div className="min-w-0">
-                      <Link
-                        href={`/eventos/${e.id}`}
-                        className="truncate font-medium hover:underline"
-                      >
-                        {e.name}
-                      </Link>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDateTime(e.dateTime)} · {e.location}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <Badge variant="secondary">
-                        {labelFrom(EVENT_DIFFICULTY, e.difficulty)}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {e._count.registrations}/{e.slots} vagas
-                      </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <div className="mt-4">
-              <Link
-                href="/eventos"
-                className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-              >
-                Ver todos os eventos <ArrowRight className="size-4" />
-              </Link>
-            </div>
+            <AgeBars bands={data.ageBands} />
           </CardContent>
         </Card>
       </div>
+
+      <Card
+        className="cef-rise mt-4 border-border/70"
+        style={{ "--i": 7 } as React.CSSProperties}
+      >
+        <CardHeader>
+          <CardTitle>Próximos eventos</CardTitle>
+          <CardDescription>
+            Atividades planejadas e confirmadas
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {data.upcomingEvents.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              Nenhum evento futuro cadastrado.
+            </p>
+          ) : (
+            <ul className="divide-y">
+              {data.upcomingEvents.map((e) => (
+                <li
+                  key={e.id}
+                  className="flex items-center justify-between gap-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <Link
+                      href={`/eventos/${e.id}`}
+                      className="truncate font-medium hover:underline"
+                    >
+                      {e.name}
+                    </Link>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDateTime(e.dateTime)} · {e.location}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Badge variant="secondary">
+                      {labelFrom(EVENT_DIFFICULTY, e.difficulty)}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {e._count.registrations}/{e.slots} vagas
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="mt-4">
+            <Link
+              href="/eventos"
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+            >
+              Ver todos os eventos <ArrowRight className="size-4" />
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
