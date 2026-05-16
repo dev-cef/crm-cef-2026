@@ -44,6 +44,8 @@ model Member {
   sex       String // M | F
   email     String
   phone     String
+  instagram String?
+  whatsapp  String?
   birthDate DateTime
   cpf       String   @unique
   photoUrl  String?

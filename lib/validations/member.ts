@@ -33,6 +33,8 @@ export const memberSchema = z
         return d !== null && d.getTime() <= Date.now();
       }, "Data não pode ser no futuro"),
     cpf: z.string().refine((v) => isValidCpf(v), "CPF inválido"),
+    instagram: z.string().trim().optional().or(z.literal("")),
+    whatsapp: z.string().trim().optional().or(z.literal("")),
     photoUrl: z.string().optional().or(z.literal("")),
 
     // Seção 02 — Endereço

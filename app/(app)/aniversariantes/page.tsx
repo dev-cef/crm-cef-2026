@@ -1,10 +1,24 @@
-import { Cake, MessageSquareText } from "lucide-react";
-import { prisma } from "@/lib/prisma";
-import { calculateAge, ageRange, monthName } from "@/lib/format";
+import Link from "next/link";
 import {
-  isBirthdayInPeriod,
-  type BirthdayPeriod,
-} from "@/lib/birthday";
+  Activity,
+  AtSign,
+  Cake,
+  ChevronUp,
+  FileSpreadsheet,
+  FileText,
+  Filter,
+  MessageCircle,
+  MessageSquareText,
+  Pencil,
+  Trash2,
+  User,
+  UserPlus,
+  Users,
+} from "lucide-react";
+import { prisma } from "@/lib/prisma";
+import { calculateAge, monthName } from "@/lib/format";
+import { isBirthdayInPeriod, type BirthdayPeriod } from "@/lib/birthday";
+import { cn } from "@/lib/utils";
 import { getBirthdayConfig } from "@/app/(app)/aniversariantes/actions";
 import { PageHeader } from "@/components/layout/page-header";
 import {
@@ -15,7 +29,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Table,
@@ -25,36 +39,53 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { SendButtons } from "@/components/modules/aniversariantes/send-buttons";
+import { CountUp } from "@/components/unlumen-ui/count-up";
+import { SexDonut } from "@/components/modules/dashboard/sex-donut";
+import { AgeBars } from "@/components/modules/dashboard/age-bars";
+import { MonthBars } from "@/components/modules/aniversariantes/month-bars";
 import { ConfigForm } from "@/components/modules/aniversariantes/config-form";
+import { DeleteMemberDialog } from "@/components/modules/associados/delete-member-dialog";
 
 export const dynamic = "force-dynamic";
 
+const FEMALE = "#e983b9";
+const MALE = "#56b3d9";
 const selectCls =
   "h-9 rounded-md border bg-background px-3 text-sm outline-none";
 
-function ddmm(d: Date): string {
-  return `${String(d.getUTCDate()).padStart(2, "0")}/${String(
-    d.getUTCMonth() + 1,
-  ).padStart(2, "0")}`;
+function igUrl(handle: string): string {
+  return `https://instagram.com/${handle.replace(/^@/, "").trim()}`;
+}
+function waUrl(num: string): string {
+  const digits = num.replace(/\D/g, "");
+  const intl = digits.startsWith("55") ? digits : `55${digits}`;
+  return `https://wa.me/${intl}`;
 }
 
 export default async function AniversariantesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; month?: string }>;
+  searchParams: Promise<{
+    period?: string;
+    month?: string;
+    sex?: string;
+    q?: string;
+  }>;
 }) {
   const sp = await searchParams;
   const today = new Date();
   const period = (
-    ["dia", "semana", "mes"].includes(sp.period ?? "")
-      ? sp.period
-      : "mes"
+    ["dia", "semana", "mes"].includes(sp.period ?? "") ? sp.period : "mes"
   ) as BirthdayPeriod;
   const month = Math.min(
     12,
-    Math.max(1, Number(sp.month ?? today.getMonth() + 1) || today.getMonth() + 1),
+    Math.max(
+      1,
+      Number(sp.month ?? today.getMonth() + 1) || today.getMonth() + 1,
+    ),
   );
+  const sex = sp.sex === "M" || sp.sex === "F" ? sp.sex : "ALL";
+  const q = (sp.q ?? "").trim();
 
   const [members, cfg, logs] = await Promise.all([
     prisma.member.findMany({
@@ -62,7 +93,10 @@ export default async function AniversariantesPage({
       select: {
         id: true,
         fullName: true,
+        sex: true,
         phone: true,
+        instagram: true,
+        whatsapp: true,
         photoUrl: true,
         birthDate: true,
       },
@@ -75,11 +109,8 @@ export default async function AniversariantesPage({
     }),
   ]);
 
-  const list = members
-    .filter((m) =>
-      isBirthdayInPeriod(new Date(m.birthDate), period, month, today),
-    )
-    .sort((a, b) => {
+  const sortByDate = <T extends { birthDate: Date }>(arr: T[]) =>
+    [...arr].sort((a, b) => {
       const da = new Date(a.birthDate);
       const db = new Date(b.birthDate);
       return (
@@ -88,36 +119,247 @@ export default async function AniversariantesPage({
       );
     });
 
+  const inPeriod = members.filter((m) =>
+    isBirthdayInPeriod(new Date(m.birthDate), period, month, today),
+  );
+  const list = sortByDate(
+    inPeriod
+      .filter((m) => (sex === "ALL" ? true : m.sex === sex))
+      .filter((m) =>
+        q ? m.fullName.toLowerCase().includes(q.toLowerCase()) : true,
+      ),
+  );
+
+  const totalPeriod = inPeriod.length;
+  const female = list.filter((m) => m.sex === "F").length;
+  const male = list.filter((m) => m.sex === "M").length;
+  const femalePct = list.length ? Math.round((female / list.length) * 100) : 0;
+  const malePct = list.length ? 100 - femalePct : 0;
+  const avgAge = list.length
+    ? Math.round(
+        list.reduce((s, m) => s + calculateAge(new Date(m.birthDate)), 0) /
+          list.length,
+      )
+    : 0;
+
+  // distribuição anual (todos os associados, independe dos filtros)
+  const monthCounts = Array.from({ length: 12 }, () => 0);
+  for (const m of members) {
+    monthCounts[new Date(m.birthDate).getUTCMonth()]++;
+  }
+
+  // faixa etária da lista filtrada
+  const decadeMap = new Map<number, number>();
+  for (const m of list) {
+    const age = calculateAge(new Date(m.birthDate));
+    if (age < 0) continue;
+    const dec = Math.floor(age / 10) * 10;
+    decadeMap.set(dec, (decadeMap.get(dec) ?? 0) + 1);
+  }
+  const ageBands = [...decadeMap.entries()]
+    .map(([decade, count]) => ({ decade, count }))
+    .sort((a, b) => a.decade - b.decade);
+
+  const query = new URLSearchParams({
+    period,
+    month: String(month),
+    sex,
+    ...(q ? { q } : {}),
+  }).toString();
+
+  const stats = [
+    {
+      label: "Total no período",
+      value: totalPeriod,
+      sub: period === "mes" ? monthName(month) : undefined,
+      icon: Users,
+      tint: "text-primary",
+    },
+    {
+      label: "Feminino",
+      value: female,
+      sub: `${femalePct}%`,
+      icon: User,
+      tint: "",
+      color: FEMALE,
+    },
+    {
+      label: "Masculino",
+      value: male,
+      sub: `${malePct}%`,
+      icon: User,
+      tint: "",
+      color: MALE,
+    },
+    {
+      label: "Idade média",
+      value: avgAge,
+      sub: "anos",
+      icon: Activity,
+      tint: "text-primary",
+    },
+    {
+      label: "Filtrados",
+      value: list.length,
+      sub: `de ${totalPeriod}`,
+      icon: Filter,
+      tint: "text-primary",
+    },
+  ];
+
   return (
     <div>
       <PageHeader
         title="Aniversariantes"
-        description="Aniversariantes por dia, semana ou mês"
-      />
+        description="Análise e gestão dos aniversariantes do clube"
+      >
+        <Link
+          href="/associados/novo"
+          className={cn(buttonVariants({ size: "sm" }))}
+        >
+          <UserPlus className="size-4" /> Novo associado
+        </Link>
+      </PageHeader>
 
-      <form method="get" className="mb-4 flex flex-wrap items-center gap-2">
-        <select name="period" defaultValue={period} className={selectCls}>
-          <option value="dia">Hoje</option>
-          <option value="semana">Próximos 7 dias</option>
-          <option value="mes">Por mês</option>
-        </select>
-        <select name="month" defaultValue={String(month)} className={selectCls}>
-          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-            <option key={m} value={m}>
-              {monthName(m)}
-            </option>
-          ))}
-        </select>
-        <Button type="submit" variant="secondary" size="sm">
-          Filtrar
-        </Button>
-      </form>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        {stats.map((s, i) => (
+          <Card
+            key={s.label}
+            className="cef-rise border-border/70"
+            style={{ "--i": i + 1 } as React.CSSProperties}
+          >
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardDescription>{s.label}</CardDescription>
+              <span
+                className={cn(
+                  "flex size-9 items-center justify-center rounded-xl bg-primary/10",
+                  s.tint,
+                )}
+                style={s.color ? { color: s.color } : undefined}
+              >
+                <s.icon className="size-4" />
+              </span>
+            </CardHeader>
+            <CardContent>
+              <p
+                className="font-display text-3xl font-semibold tracking-tight"
+                style={s.color ? { color: s.color } : undefined}
+              >
+                <CountUp to={s.value} duration={1.2} digitEffect="none" />
+              </p>
+              {s.sub && (
+                <p className="mt-1 text-xs text-muted-foreground">{s.sub}</p>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-      <Card>
+      <Card
+        className="cef-rise mt-4 border-border/70"
+        style={{ "--i": 6 } as React.CSSProperties}
+      >
+        <CardHeader>
+          <CardTitle className="text-base">Aniversários por mês</CardTitle>
+          <CardDescription>
+            Distribuição anual de todos os associados
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <MonthBars
+            counts={monthCounts}
+            activeMonth={period === "mes" ? month : undefined}
+          />
+          <form
+            method="get"
+            className="mt-6 flex flex-wrap items-center gap-2 border-t pt-4"
+          >
+            <select name="period" defaultValue={period} className={selectCls}>
+              <option value="dia">Hoje</option>
+              <option value="semana">Próximos 7 dias</option>
+              <option value="mes">Por mês</option>
+            </select>
+            <select
+              name="month"
+              defaultValue={String(month)}
+              className={selectCls}
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={m}>
+                  {monthName(m)}
+                </option>
+              ))}
+            </select>
+            <select name="sex" defaultValue={sex} className={selectCls}>
+              <option value="ALL">Todos os sexos</option>
+              <option value="M">Masculino</option>
+              <option value="F">Feminino</option>
+            </select>
+            <input
+              type="search"
+              name="q"
+              defaultValue={q}
+              placeholder="Buscar nome…"
+              className={cn(selectCls, "min-w-44 flex-1")}
+            />
+            <Button type="submit" variant="secondary" size="sm">
+              <Filter className="size-4" /> Filtrar
+            </Button>
+            <Link
+              href={`/aniversariantes/export?${query}&format=csv`}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              <FileSpreadsheet className="size-4" /> Exportar Excel
+            </Link>
+            <Link
+              href={`/aniversariantes/export?${query}&format=txt`}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              <FileText className="size-4" />{" "}
+              {period === "mes" ? monthName(month) : "Lista"} (.txt)
+            </Link>
+          </form>
+        </CardContent>
+      </Card>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <Card
+          className="cef-rise border-border/70"
+          style={{ "--i": 7 } as React.CSSProperties}
+        >
+          <CardHeader>
+            <CardTitle className="text-base">Por sexo</CardTitle>
+            <CardDescription>Aniversariantes filtrados</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SexDonut female={female} male={male} />
+          </CardContent>
+        </Card>
+
+        <Card
+          className="cef-rise border-border/70"
+          style={{ "--i": 8 } as React.CSSProperties}
+        >
+          <CardHeader>
+            <CardTitle className="text-base">Faixa etária</CardTitle>
+            <CardDescription>
+              Aniversariantes filtrados por década
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AgeBars bands={ageBands} />
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card
+        className="cef-rise mt-4 border-border/70"
+        style={{ "--i": 9 } as React.CSSProperties}
+      >
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Cake className="size-4" />
-            {list.length} aniversariante(s)
+            {list.length} resultado(s)
             {period === "mes" ? ` em ${monthName(month)}` : ""}
           </CardTitle>
         </CardHeader>
@@ -125,51 +367,132 @@ export default async function AniversariantesPage({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12">Foto</TableHead>
                 <TableHead>Nome</TableHead>
-                <TableHead className="hidden sm:table-cell">
-                  Faixa etária
+                <TableHead className="w-14">Dia</TableHead>
+                <TableHead>
+                  <span className="inline-flex items-center gap-1">
+                    Mês <ChevronUp className="size-3" />
+                  </span>
                 </TableHead>
-                <TableHead>Aniversário</TableHead>
-                <TableHead className="hidden md:table-cell">Telefone</TableHead>
-                <TableHead className="text-right">Enviar</TableHead>
+                <TableHead className="w-16">Idade</TableHead>
+                <TableHead>Sexo</TableHead>
+                <TableHead className="hidden md:table-cell">
+                  Instagram
+                </TableHead>
+                <TableHead className="hidden md:table-cell">
+                  WhatsApp
+                </TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {list.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={8}
                     className="py-10 text-center text-sm text-muted-foreground"
                   >
-                    Nenhum aniversariante no período.
+                    Nenhum aniversariante para os filtros atuais.
                   </TableCell>
                 </TableRow>
               )}
               {list.map((m) => {
-                const age = calculateAge(new Date(m.birthDate));
+                const d = new Date(m.birthDate);
+                const age = calculateAge(d);
                 return (
                   <TableRow key={m.id}>
                     <TableCell>
-                      <Avatar className="size-9">
-                        {m.photoUrl && (
-                          <AvatarImage src={m.photoUrl} alt={m.fullName} />
-                        )}
-                        <AvatarFallback className="text-xs">
-                          {m.fullName.slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      <Link
+                        href={`/associados/${m.id}`}
+                        className="flex items-center gap-3 font-medium hover:underline"
+                      >
+                        <Avatar className="size-8">
+                          {m.photoUrl && (
+                            <AvatarImage src={m.photoUrl} alt={m.fullName} />
+                          )}
+                          <AvatarFallback className="text-xs">
+                            {m.fullName.slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="truncate">{m.fullName}</span>
+                      </Link>
                     </TableCell>
-                    <TableCell className="font-medium">{m.fullName}</TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <Badge variant="secondary">{ageRange(age)}</Badge>
+                    <TableCell className="tabular-nums">
+                      {String(d.getUTCDate()).padStart(2, "0")}
                     </TableCell>
-                    <TableCell>{ddmm(new Date(m.birthDate))}</TableCell>
+                    <TableCell>{monthName(d.getUTCMonth() + 1)}</TableCell>
+                    <TableCell className="tabular-nums">{age}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="secondary"
+                        style={{
+                          color: m.sex === "F" ? FEMALE : MALE,
+                        }}
+                      >
+                        {m.sex === "F" ? "Feminino" : "Masculino"}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="hidden md:table-cell">
-                      {m.phone}
+                      {m.instagram ? (
+                        <a
+                          href={igUrl(m.instagram)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-sm hover:underline"
+                        >
+                          <AtSign className="size-3.5" />
+                          {m.instagram.startsWith("@")
+                            ? m.instagram
+                            : `@${m.instagram}`}
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {m.whatsapp ? (
+                        <a
+                          href={waUrl(m.whatsapp)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-sm hover:underline"
+                        >
+                          <MessageCircle className="size-3.5" />
+                          {m.whatsapp}
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
-                      <SendButtons memberId={m.id} />
+                      <div className="flex items-center justify-end gap-1">
+                        <Link
+                          href={`/associados/${m.id}/editar`}
+                          className={cn(
+                            buttonVariants({
+                              variant: "ghost",
+                              size: "icon-sm",
+                            }),
+                          )}
+                          aria-label="Editar"
+                        >
+                          <Pencil className="size-4" />
+                        </Link>
+                        <DeleteMemberDialog
+                          id={m.id}
+                          name={m.fullName}
+                          trigger={
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label="Excluir"
+                              className="text-destructive"
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          }
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

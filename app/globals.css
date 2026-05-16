@@ -223,12 +223,25 @@
   }
 }
 
+/* Barras "Por mês": crescem de baixo p/ cima em cascata */
+@keyframes grow-bar-v {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--bar-h, 0%);
+  }
+}
+
 /* Estado final estático (reduced-motion / sem JS / SSR) */
 .donut-arc {
   stroke-dashoffset: 0;
 }
 .bar-grow {
   width: var(--bar-w, 0%);
+}
+.bar-grow-v {
+  height: var(--bar-h, 0%);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -241,6 +254,11 @@
     width: 0;
     animation: grow-bar 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
     animation-delay: calc(var(--i, 0) * 90ms + 120ms);
+  }
+  .bar-grow-v {
+    height: 0;
+    animation: grow-bar-v 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation-delay: calc(var(--i, 0) * 55ms + 120ms);
   }
 }
 
