@@ -74,6 +74,7 @@ export default async function EditarAssociadoPage({
           suggestions: member.suggestions,
           planId: member.planId,
           status: member.status,
+          createdAt: toBrDate(member.createdAt),
         }}
       />
     </div>

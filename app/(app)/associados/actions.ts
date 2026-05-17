@@ -56,6 +56,7 @@ function normalize(values: MemberFormValues) {
       suggestions: d.suggestions || null,
       planId: d.planId || null,
       status: d.status,
+      ...(d.createdAt ? { createdAt: parseBrDate(d.createdAt)! } : {}),
     },
   } as const;
 }

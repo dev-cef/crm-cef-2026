@@ -77,6 +77,17 @@ export const memberSchema = z
     // Vínculo
     planId: z.string().optional().or(z.literal("")),
     status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
+
+    // Administração (só edição)
+    createdAt: z
+      .string()
+      .trim()
+      .optional()
+      .or(z.literal(""))
+      .refine(
+        (v) => !v || parseBrDate(v) !== null,
+        "Data inválida (DD/MM/AAAA)",
+      ),
   })
   .refine(
     (d) => !d.otherGroup || (d.otherGroupName ?? "").trim().length > 0,

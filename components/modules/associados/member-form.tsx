@@ -101,6 +101,7 @@ export type MemberFormProps = {
     suggestions: string | null;
     planId: string | null;
     status: string;
+    createdAt?: string;
   };
 };
 
@@ -147,6 +148,7 @@ export function MemberForm({ mode, plans, member }: MemberFormProps) {
       suggestions: member?.suggestions ?? "",
       planId: member?.planId ?? "",
       status: (member?.status as "ACTIVE" | "INACTIVE") ?? "ACTIVE",
+      createdAt: member?.createdAt ?? "",
     },
   });
 
@@ -680,6 +682,29 @@ export function MemberForm({ mode, plans, member }: MemberFormProps) {
                   </select>
                 </div>
               </div>
+
+              {mode === "edit" && (
+                <div className="rounded-lg border border-dashed border-amber-400/50 bg-amber-500/5 p-4">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                    Administração
+                  </p>
+                  <div>
+                    <Label htmlFor="createdAt">Data de cadastro</Label>
+                    <Input
+                      id="createdAt"
+                      placeholder="DD/MM/AAAA"
+                      maxLength={10}
+                      {...register("createdAt")}
+                      onChange={(e) =>
+                        setValue("createdAt", maskDateInput(e.target.value), {
+                          shouldValidate: true,
+                        })
+                      }
+                    />
+                    <Err msg={errors.createdAt?.message as string | undefined} />
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>

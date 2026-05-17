@@ -163,7 +163,10 @@ export default async function AssociadoPerfilPage({
               label="Nascimento"
               value={`${toBrDate(member.birthDate)}`}
             />
-            <Info label="Cadastro" value={formatDate(member.createdAt)} />
+            <Info
+              label="Associado desde"
+              value={`${toBrDate(member.createdAt)} (${calculateAge(member.createdAt)} anos)`}
+            />
           </CardContent>
         </Card>
 
