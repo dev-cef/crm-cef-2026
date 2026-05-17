@@ -41,7 +41,7 @@ function normalize(values: MemberFormValues) {
       city: d.city,
       state: d.state,
       bloodType: d.bloodType,
-      emergencyName: d.emergencyName,
+      emergencyName: formatPersonName(d.emergencyName),
       emergencyPhone: d.emergencyPhone,
       healthConditions: JSON.stringify(d.healthConditions),
       healthDetails: d.healthDetails || null,
