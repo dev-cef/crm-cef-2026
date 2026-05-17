@@ -15,6 +15,7 @@ import {
 import { PageHeader } from "@/components/layout/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { MembershipCard } from "@/components/modules/carteirinha/membership-card";
+import { CardSettingsForm } from "@/components/modules/carteirinha/card-settings-form";
 
 export const dynamic = "force-dynamic";
 
@@ -56,11 +57,19 @@ export default async function CarteirinhaMemberPage({
         maskedCpf={maskCpf(member.cpf)}
         membershipNo={membershipNumber(member.registration)}
         planName={member.plan?.name ?? "Sem plano"}
-        validity={formatDate(membershipValidity())}
+        validity={formatDate(member.cardValidUntil ?? membershipValidity())}
         photoUrl={member.photoUrl}
         qrDataUrl={qrDataUrl}
         validationUrl={url}
       />
+
+      <div className="mt-4 flex justify-center">
+        <CardSettingsForm
+          memberId={member.id}
+          registration={member.registration}
+          cardValidUntil={member.cardValidUntil?.toISOString() ?? null}
+        />
+      </div>
     </div>
   );
 }

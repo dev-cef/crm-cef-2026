@@ -36,8 +36,9 @@ model Plan {
 }
 
 model Member {
-  id           String @id @default(cuid())
-  registration Int    @unique // matrícula (atribuída pela aplicação)
+  id             String    @id @default(cuid())
+  registration   Int       @unique // matrícula (atribuída pela aplicação)
+  cardValidUntil DateTime?          // null = usa 31/12 do ano corrente
 
   // Seção 01 — Informações Pessoais
   fullName  String
