@@ -237,15 +237,9 @@ export function MemberForm({ mode, plans, member }: MemberFormProps) {
 
   return (
     <form
-      onSubmit={form.handleSubmit(onSubmit)}
+      onSubmit={(e) => e.preventDefault()}
       onKeyDown={(e) => {
-        const t = e.target as HTMLElement;
-        // Enter não submete o formulário (exceto em textarea/botões)
-        if (
-          e.key === "Enter" &&
-          t.tagName !== "TEXTAREA" &&
-          t.tagName !== "BUTTON"
-        ) {
+        if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
           e.preventDefault();
         }
       }}
@@ -706,7 +700,7 @@ export function MemberForm({ mode, plans, member }: MemberFormProps) {
             Próximo <ArrowRight className="size-4" />
           </Button>
         ) : (
-          <Button type="submit" disabled={pending}>
+          <Button type="button" onClick={form.handleSubmit(onSubmit)} disabled={pending}>
             {pending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (

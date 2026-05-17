@@ -21,6 +21,7 @@ export async function savePlan(
   const data = {
     name: d.name,
     monthlyPrice: d.monthlyPrice,
+    billingPeriod: d.billingPeriod,
     description: d.description || null,
     active: d.active,
   };
@@ -125,6 +126,65 @@ export async function launchMonthly(
   revalidatePath("/financeiro/pagamentos");
   revalidatePath("/financeiro");
   return { ok: true, created };
+}
+
+export async function markAsPaid(
+  id: string,
+  paidAt?: Date,
+  notes?: string,
+): Promise<{ ok: true; receiptNumber: string } | { ok: false; error: string }> {
+  const session = await auth();
+  try {
+    const resolvedDate = paidAt ?? new Date();
+    const year = resolvedDate.getFullYear();
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const count = await tx.payment.count({
+        where: { receiptNumber: { startsWith: `${year}-` } },
+      });
+      const receiptNumber = `${year}-${String(count + 1).padStart(4, "0")}`;
+      return tx.payment.update({
+        where: { id },
+        data: {
+          status: "PAGO",
+          paidAt: resolvedDate,
+          notes: notes?.trim() || null,
+          receiptNumber,
+        },
+      });
+    });
+
+    await recordAudit({
+      userId: session?.user?.id,
+      action: "UPDATE",
+      entity: "Payment",
+      entityId: id,
+      metadata: { status: "PAGO", receiptNumber: updated.receiptNumber },
+    });
+    revalidatePath("/financeiro/pagamentos");
+    revalidatePath("/financeiro");
+    return { ok: true, receiptNumber: updated.receiptNumber! };
+  } catch {
+    return { ok: false, error: "Erro ao registrar pagamento." };
+  }
+}
+
+export async function cancelPayment(id: string): Promise<Result> {
+  const session = await auth();
+  try {
+    await prisma.payment.delete({ where: { id } });
+    await recordAudit({
+      userId: session?.user?.id,
+      action: "DELETE",
+      entity: "Payment",
+      entityId: id,
+    });
+    revalidatePath("/financeiro/pagamentos");
+    revalidatePath("/financeiro");
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Erro ao cancelar o pagamento." };
+  }
 }
 
 export async function setPaymentStatus(

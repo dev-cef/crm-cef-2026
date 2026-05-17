@@ -24,15 +24,16 @@ model User {
 }
 
 model Plan {
-  id           String    @id @default(cuid())
-  name         String
-  monthlyPrice Float
-  description  String?
-  active       Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  members      Member[]
-  payments     Payment[]
+  id            String    @id @default(cuid())
+  name          String
+  monthlyPrice  Float
+  billingPeriod String    @default("MENSAL") // MENSAL | ANUAL
+  description   String?
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  members       Member[]
+  payments      Payment[]
 }
 
 model Member {
@@ -83,6 +84,12 @@ model Member {
   status    String    @default("ACTIVE") // ACTIVE | INACTIVE
   planId    String?
   plan      Plan?     @relation(fields: [planId], references: [id])
+
+  // Plano Família: dependente aponta para o titular
+  titularId  String?  @unique
+  titular    Member?  @relation("TitularDependente", fields: [titularId], references: [id])
+  dependente Member?  @relation("TitularDependente")
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime? // soft delete
@@ -107,6 +114,9 @@ model Payment {
   status         String    @default("PENDENTE") // PAGO | PENDENTE | ATRASADO
   dueDate        DateTime
   paidAt         DateTime?
+  notes          String?   // Observação da baixa
+  receiptPath    String?   // Caminho do comprovante (arquivo local)
+  receiptNumber  String?   // Número do recibo gerado (YYYY-NNNN)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 

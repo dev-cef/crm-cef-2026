@@ -33,6 +33,7 @@ export function PlanDialog({
     id: string;
     name: string;
     monthlyPrice: number;
+    billingPeriod: string;
     description: string | null;
     active: boolean;
   };
@@ -53,6 +54,7 @@ export function PlanDialog({
     defaultValues: {
       name: plan?.name ?? "",
       monthlyPrice: plan?.monthlyPrice ?? 0,
+      billingPeriod: (plan?.billingPeriod as "MENSAL" | "ANUAL") ?? "MENSAL",
       description: plan?.description ?? "",
       active: plan?.active ?? true,
     },
@@ -94,20 +96,33 @@ export function PlanDialog({
                 </p>
               )}
             </div>
-            <div>
-              <Label htmlFor="monthlyPrice">Valor mensal (R$) *</Label>
-              <Input
-                id="monthlyPrice"
-                type="number"
-                step="0.01"
-                min="0"
-                {...register("monthlyPrice")}
-              />
-              {errors.monthlyPrice && (
-                <p className="mt-1 text-xs text-destructive">
-                  {errors.monthlyPrice.message}
-                </p>
-              )}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="monthlyPrice">Valor (R$) *</Label>
+                <Input
+                  id="monthlyPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  {...register("monthlyPrice")}
+                />
+                {errors.monthlyPrice && (
+                  <p className="mt-1 text-xs text-destructive">
+                    {errors.monthlyPrice.message}
+                  </p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="billingPeriod">Período *</Label>
+                <select
+                  id="billingPeriod"
+                  {...register("billingPeriod")}
+                  className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="MENSAL">Mensal</option>
+                  <option value="ANUAL">Anual</option>
+                </select>
+              </div>
             </div>
             <div>
               <Label htmlFor="description">Descrição / benefícios</Label>

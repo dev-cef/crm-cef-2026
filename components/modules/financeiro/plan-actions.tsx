@@ -25,6 +25,7 @@ export function PlanActions({
     id: string;
     name: string;
     monthlyPrice: number;
+    billingPeriod: string;
     description: string | null;
     active: boolean;
   };

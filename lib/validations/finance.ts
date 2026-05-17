@@ -5,6 +5,7 @@ export const planSchema = z.object({
   monthlyPrice: z.coerce
     .number({ message: "Valor inválido" })
     .min(0, "Valor inválido"),
+  billingPeriod: z.enum(["MENSAL", "ANUAL"]).default("MENSAL"),
   description: z.string().trim().optional().or(z.literal("")),
   active: z.boolean().default(true),
 });

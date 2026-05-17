@@ -45,6 +45,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DeleteMemberDialog } from "@/components/modules/associados/delete-member-dialog";
+import { FamilyPlanCard } from "@/components/modules/associados/family-plan-card";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +76,8 @@ export default async function AssociadoPerfilPage({
     include: {
       plan: true,
       payments: { orderBy: [{ referenceYear: "desc" }, { referenceMonth: "desc" }] },
+      titular: { select: { id: true, fullName: true, registration: true, photoUrl: true, phone: true, plan: { select: { name: true } } } },
+      dependente: { select: { id: true, fullName: true, registration: true, photoUrl: true, phone: true, plan: { select: { name: true } } } },
     },
   });
 
@@ -282,6 +285,16 @@ export default async function AssociadoPerfilPage({
             )}
           </CardContent>
         </Card>
+
+        {/* Plano Família */}
+        {member.plan?.name.includes("Família") && (
+          <FamilyPlanCard
+            memberId={member.id}
+            planName={member.plan.name}
+            role={member.titularId ? "dependente" : "titular"}
+            linked={member.titularId ? member.titular : member.dependente}
+          />
+        )}
 
         <Card className="md:col-span-3">
           <CardHeader>

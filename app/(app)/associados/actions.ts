@@ -134,6 +134,87 @@ export async function updateMember(
   }
 }
 
+export async function assignDependent(
+  titularId: string,
+  dependenteId: string,
+): Promise<ActionResult> {
+  if (titularId === dependenteId)
+    return { ok: false, error: "O titular e o dependente precisam ser pessoas diferentes." };
+
+  const session = await auth();
+
+  try {
+    const [titular, dependente] = await Promise.all([
+      prisma.member.findFirst({
+        where: { id: titularId, deletedAt: null },
+        include: { plan: true, dependente: true },
+      }),
+      prisma.member.findFirst({
+        where: { id: dependenteId, deletedAt: null },
+        include: { plan: true, dependente: true, titular: true },
+      }),
+    ]);
+
+    if (!titular) return { ok: false, error: "Titular não encontrado." };
+    if (!dependente) return { ok: false, error: "Dependente não encontrado." };
+    if (!titular.plan?.name.includes("Família"))
+      return { ok: false, error: "Apenas titulares com plano Família podem ter dependentes." };
+    if (titular.dependente)
+      return { ok: false, error: "Este titular já possui um dependente cadastrado." };
+    if (dependente.titularId)
+      return { ok: false, error: "Este associado já é dependente de outro titular." };
+    if (dependente.dependente)
+      return { ok: false, error: "Este associado já possui um dependente (seria circular)." };
+
+    await prisma.member.update({
+      where: { id: dependenteId },
+      data: { titularId, planId: titular.planId },
+    });
+
+    await recordAudit({
+      userId: session?.user?.id,
+      action: "UPDATE",
+      entity: "Member",
+      entityId: dependenteId,
+      metadata: { action: "assignDependent", titularId },
+    });
+
+    revalidatePath(`/associados/${titularId}`);
+    revalidatePath(`/associados/${dependenteId}`);
+    return { ok: true, id: dependenteId };
+  } catch (e) {
+    return { ok: false, error: dbError(e) };
+  }
+}
+
+export async function removeDependent(
+  titularId: string,
+  dependenteId: string,
+): Promise<ActionResult> {
+  const session = await auth();
+
+  try {
+    await prisma.member.update({
+      where: { id: dependenteId, titularId },
+      data: { titularId: null },
+    });
+
+    await recordAudit({
+      userId: session?.user?.id,
+      action: "UPDATE",
+      entity: "Member",
+      entityId: dependenteId,
+      metadata: { action: "removeDependent", titularId },
+    });
+
+    revalidatePath(`/associados/${titularId}`);
+    revalidatePath(`/associados/${dependenteId}`);
+    return { ok: true, id: dependenteId };
+  } catch {
+    return { ok: false, error: "Erro ao remover dependente." };
+  }
+}
+
 export async function softDeleteMember(id: string): Promise<ActionResult> {
   const session = await auth();
   try {

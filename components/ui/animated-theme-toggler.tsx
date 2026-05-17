@@ -180,7 +180,9 @@ export const AnimatedThemeToggler = ({
       const newTheme = !isDark
       setIsDark(newTheme)
       document.documentElement.classList.toggle("dark")
-      localStorage.setItem("theme", newTheme ? "dark" : "light")
+      const themeValue = newTheme ? "dark" : "light"
+      localStorage.setItem("theme", themeValue)
+      document.cookie = `theme=${themeValue}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`
     }
 
     if (typeof document.startViewTransition !== "function") {

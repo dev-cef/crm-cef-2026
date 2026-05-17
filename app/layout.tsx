@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { Fraunces, Hanken_Grotesk, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -27,24 +28,20 @@ export const metadata: Metadata = {
     "Sistema de gestão de associados, financeiro e eventos do Clube Excursionista de Friburgo.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const theme = (await cookies()).get("theme")?.value;
+  const isDark = theme === "dark";
+
   return (
     <html
       lang="pt-BR"
-      className={`${fontBody.variable} ${fontDisplay.variable} ${fontMono.variable} h-full antialiased`}
+      className={`${fontBody.variable} ${fontDisplay.variable} ${fontMono.variable} h-full antialiased${isDark ? " dark" : ""}`}
       suppressHydrationWarning
     >
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}`,
-          }}
-        />
-      </head>
       <body className="min-h-full flex flex-col">
         {children}
         <Toaster richColors position="top-right" />

@@ -1,8 +1,19 @@
 import Link from "next/link";
-import { Eye, Pencil, Search, Trash2, UserPlus, Download } from "lucide-react";
+import {
+  Eye,
+  Pencil,
+  Search,
+  Trash2,
+  UserPlus,
+  Download,
+  Crown,
+  UserCheck,
+  Users,
+  CornerDownRight,
+  X,
+} from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
-import { formatCpf } from "@/lib/cpf";
 import { stripCpf } from "@/lib/cpf";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -21,12 +32,14 @@ import { DeleteMemberDialog } from "@/components/modules/associados/delete-membe
 
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 20;
+type Role = "titular" | "dependente" | "individual";
 
 type SearchParams = Promise<{
   q?: string;
   status?: string;
   page?: string;
+  role?: string;
 }>;
 
 export default async function AssociadosPage({
@@ -38,40 +51,133 @@ export default async function AssociadosPage({
   const q = (sp.q ?? "").trim();
   const status = sp.status ?? "ALL";
   const page = Math.max(1, Number(sp.page ?? "1") || 1);
+  const role = (["titular", "dependente", "individual"].includes(sp.role ?? "")
+    ? sp.role
+    : "ALL") as Role | "ALL";
 
-  const where: Record<string, unknown> = { deletedAt: null };
-  if (status === "ACTIVE" || status === "INACTIVE") where.status = status;
+  // ── Where clause ──────────────────────────────────────────────────
+  type AndClause = Record<string, unknown>;
+  const and: AndClause[] = [{ deletedAt: null }];
+
+  if (status === "ACTIVE" || status === "INACTIVE") and.push({ status });
+
   if (q) {
     const digits = stripCpf(q);
-    where.OR = [
-      { fullName: { contains: q } },
-      { email: { contains: q } },
-      ...(digits ? [{ cpf: { contains: digits } }] : []),
-    ];
+    and.push({
+      OR: [
+        { fullName: { contains: q } },
+        { email: { contains: q } },
+        ...(digits ? [{ cpf: { contains: digits } }] : []),
+      ],
+    });
   }
 
-  const [total, members] = await Promise.all([
+  if (role === "titular") {
+    and.push({ titularId: null });
+    and.push({ plan: { name: { contains: "Família" } } });
+  } else if (role === "dependente") {
+    and.push({ titularId: { not: null } });
+  } else if (role === "individual") {
+    and.push({ titularId: null });
+    and.push({
+      OR: [
+        { planId: null },
+        { plan: { name: { not: { contains: "Família" } } } },
+      ],
+    });
+  }
+
+  const where = { AND: and };
+
+  const [total, raw] = await Promise.all([
     prisma.member.count({ where }),
     prisma.member.findMany({
       where,
-      include: { plan: true },
+      include: {
+        plan: true,
+        titular: { select: { id: true, fullName: true, registration: true } },
+        dependente: {
+          select: {
+            id: true,
+            fullName: true,
+            registration: true,
+            photoUrl: true,
+            status: true,
+          },
+        },
+      },
       orderBy: { fullName: "asc" },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
     }),
   ]);
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const qs = new URLSearchParams();
-  if (q) qs.set("q", q);
-  if (status !== "ALL") qs.set("status", status);
-  const exportHref = `/associados/export${qs.toString() ? `?${qs}` : ""}`;
-
-  function pageHref(p: number) {
-    const u = new URLSearchParams(qs);
-    u.set("page", String(p));
-    return `/associados?${u.toString()}`;
+  // ── Grouping ───────────────────────────────────────────────────────
+  const dependentes = raw.filter((m) => !!m.titularId);
+  const nonDependentes = raw.filter((m) => !m.titularId);
+  type MemberRow = (typeof raw)[number];
+  const grouped: MemberRow[] = [];
+  for (const t of nonDependentes) {
+    grouped.push(t);
+    const dep = dependentes.find((d) => d.titularId === t.id);
+    if (dep) grouped.push(dep);
   }
+  for (const d of dependentes) {
+    if (!grouped.includes(d)) grouped.push(d);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // ── URL helpers ───────────────────────────────────────────────────
+  function buildHref(overrides: Record<string, string | undefined>) {
+    const p = new URLSearchParams();
+    if (q) p.set("q", q);
+    if (status !== "ALL") p.set("status", status);
+    if (role !== "ALL") p.set("role", role);
+    Object.entries(overrides).forEach(([k, v]) => {
+      if (v === undefined || v === "ALL" || v === "") p.delete(k);
+      else p.set(k, v);
+    });
+    const str = p.toString();
+    return `/associados${str ? `?${str}` : ""}`;
+  }
+
+  function roleHref(r: Role) {
+    // clicking the active role → clears it
+    return buildHref({ role: role === r ? "ALL" : r, page: "1" });
+  }
+
+  const exportHref = buildHref({ page: undefined }).replace(
+    "/associados",
+    "/associados/export",
+  );
+
+  const ROLE_FILTERS = [
+    {
+      key: "titular" as Role,
+      label: "Titular do plano Família",
+      icon: Crown,
+      active: "bg-amber-100 border-amber-400 text-amber-800 dark:bg-amber-900/40 dark:border-amber-600 dark:text-amber-300",
+      inactive: "border-muted-foreground/20 text-muted-foreground hover:bg-muted/60",
+      iconColor: "text-amber-500",
+    },
+    {
+      key: "dependente" as Role,
+      label: "Dependente (cônjuge)",
+      icon: UserCheck,
+      active: "bg-blue-100 border-blue-400 text-blue-800 dark:bg-blue-900/40 dark:border-blue-600 dark:text-blue-300",
+      inactive: "border-muted-foreground/20 text-muted-foreground hover:bg-muted/60",
+      iconColor: "text-blue-500",
+    },
+    {
+      key: "individual" as Role,
+      label: "Sócio individual",
+      icon: Users,
+      active: "bg-muted border-foreground/30 text-foreground",
+      inactive: "border-muted-foreground/20 text-muted-foreground hover:bg-muted/60",
+      iconColor: "text-muted-foreground",
+    },
+  ] as const;
 
   return (
     <div>
@@ -86,18 +192,15 @@ export default async function AssociadosPage({
         >
           <Download className="size-4" /> Exportar CSV
         </Link>
-        <Link
-          href="/associados/novo"
-          className={cn(buttonVariants({ size: "sm" }))}
-        >
+        <Link href="/associados/novo" className={cn(buttonVariants({ size: "sm" }))}>
           <UserPlus className="size-4" /> Novo associado
         </Link>
       </PageHeader>
 
-      <form
-        method="get"
-        className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center"
-      >
+      {/* ── Filtros de busca ── */}
+      <form method="get" className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+        {/* preserve role param via hidden input */}
+        {role !== "ALL" && <input type="hidden" name="role" value={role} />}
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -119,22 +222,52 @@ export default async function AssociadosPage({
         <Button type="submit" variant="secondary" size="sm">
           Filtrar
         </Button>
-        {(q || status !== "ALL") && (
+        {(q || status !== "ALL" || role !== "ALL") && (
           <Link
             href="/associados"
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
           >
-            Limpar
+            <X className="size-3.5" /> Limpar
           </Link>
         )}
       </form>
 
-      <div className="rounded-lg border">
+      {/* ── Filtros de tipo de sócio (legenda clicável) ── */}
+      <div className="mb-4 flex flex-wrap gap-2">
+        {ROLE_FILTERS.map(({ key, label, icon: Icon, active, inactive, iconColor }) => {
+          const isActive = role === key;
+          return (
+            <Link
+              key={key}
+              href={roleHref(key)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all",
+                isActive ? active : inactive,
+              )}
+            >
+              <Icon className={cn("size-3.5", isActive ? "" : iconColor)} />
+              {label}
+              {isActive && (
+                <X className="size-3 opacity-60" />
+              )}
+            </Link>
+          );
+        })}
+
+        {role !== "ALL" && (
+          <span className="inline-flex items-center text-xs text-muted-foreground">
+            · {total} resultado{total !== 1 ? "s" : ""}
+          </span>
+        )}
+      </div>
+
+      {/* ── Tabela ── */}
+      <div className="rounded-xl border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-12">Foto</TableHead>
-              <TableHead>Nome</TableHead>
+              <TableHead className="w-10 pl-4" />
+              <TableHead>Associado</TableHead>
               <TableHead className="hidden md:table-cell">Telefone</TableHead>
               <TableHead className="hidden sm:table-cell">Plano</TableHead>
               <TableHead>Status</TableHead>
@@ -142,104 +275,207 @@ export default async function AssociadosPage({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {members.length === 0 && (
+            {grouped.length === 0 && (
               <TableRow>
                 <TableCell
                   colSpan={6}
-                  className="py-10 text-center text-sm text-muted-foreground"
+                  className="py-12 text-center text-sm text-muted-foreground"
                 >
-                  Nenhum associado encontrado.
+                  {role !== "ALL"
+                    ? `Nenhum associado do tipo "${ROLE_FILTERS.find((r) => r.key === role)?.label}" encontrado.`
+                    : "Nenhum associado encontrado."}
                 </TableCell>
               </TableRow>
             )}
-            {members.map((m) => (
-              <TableRow key={m.id}>
-                <TableCell>
-                  <Avatar className="size-9">
-                    {m.photoUrl && <AvatarImage src={m.photoUrl} alt={m.fullName} />}
-                    <AvatarFallback className="text-xs">
-                      {m.fullName.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                </TableCell>
-                <TableCell>
-                  <Link
-                    href={`/associados/${m.id}`}
-                    className="font-medium hover:underline"
-                  >
-                    {m.fullName}
-                  </Link>
-                  <p className="text-xs text-muted-foreground">
-                    Matrícula #{m.registration}
-                  </p>
-                </TableCell>
-                <TableCell className="hidden text-sm md:table-cell">
-                  {m.phone}
-                </TableCell>
-                <TableCell className="hidden sm:table-cell">
-                  {m.plan ? (
-                    <Badge variant="secondary">{m.plan.name}</Badge>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">—</span>
+            {grouped.map((m, i) => {
+              const isDependent = !!m.titularId;
+              const isFamilyPlan = m.plan?.name.includes("Família");
+              const isTitular = isFamilyPlan && !isDependent;
+              const hasDependente = !!m.dependente;
+
+              const prev = i > 0 ? grouped[i - 1] : null;
+              const isAdjacentDependent = isDependent && prev?.id === m.titularId;
+
+              return (
+                <TableRow
+                  key={m.id}
+                  className={cn(
+                    "group/row transition-colors",
+                    (isTitular && hasDependente) || isAdjacentDependent
+                      ? "bg-amber-500/[0.03] hover:bg-amber-500/[0.07]"
+                      : undefined,
+                    isTitular && hasDependente && i > 0 && !isAdjacentDependent
+                      ? "border-t-2 border-t-amber-500/20"
+                      : undefined,
                   )}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant={m.status === "ACTIVE" ? "default" : "secondary"}
-                  >
-                    {m.status === "ACTIVE" ? "Ativo" : "Inativo"}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex justify-end gap-1">
-                    <Link
-                      href={`/associados/${m.id}`}
-                      className={cn(
-                        buttonVariants({ variant: "ghost", size: "icon-sm" }),
+                >
+                  {/* Avatar */}
+                  <TableCell className="pl-4 pr-0">
+                    <div className={cn("flex items-center", isAdjacentDependent && "pl-5")}>
+                      {isAdjacentDependent && (
+                        <CornerDownRight className="mr-1.5 size-3.5 shrink-0 text-amber-400" />
                       )}
-                      aria-label="Ver"
-                    >
-                      <Eye className="size-4" />
-                    </Link>
-                    <Link
-                      href={`/associados/${m.id}/editar`}
-                      className={cn(
-                        buttonVariants({ variant: "ghost", size: "icon-sm" }),
-                      )}
-                      aria-label="Editar"
-                    >
-                      <Pencil className="size-4" />
-                    </Link>
-                    <DeleteMemberDialog
-                      id={m.id}
-                      name={m.fullName}
-                      trigger={
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label="Excluir"
-                          className="text-destructive"
+                      <div className="relative">
+                        <Avatar className={cn("size-9 shrink-0", isAdjacentDependent && "size-8")}>
+                          {m.photoUrl && (
+                            <AvatarImage src={m.photoUrl} alt={m.fullName} />
+                          )}
+                          <AvatarFallback
+                            className={cn(
+                              "text-xs font-medium",
+                              isTitular && "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
+                              isDependent && "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
+                            )}
+                          >
+                            {m.fullName.slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        {isTitular && (
+                          <span className="absolute -right-0.5 -top-0.5 flex size-3.5 items-center justify-center rounded-full bg-amber-500 ring-2 ring-background">
+                            <Crown className="size-2 text-white" />
+                          </span>
+                        )}
+                        {isDependent && (
+                          <span className="absolute -right-0.5 -top-0.5 flex size-3.5 items-center justify-center rounded-full bg-blue-500 ring-2 ring-background">
+                            <UserCheck className="size-2 text-white" />
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
+
+                  {/* Nome */}
+                  <TableCell>
+                    <div className={cn(isAdjacentDependent && "pl-6")}>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Link
+                          href={`/associados/${m.id}`}
+                          className="font-medium hover:underline"
                         >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      }
-                    />
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                          {m.fullName}
+                        </Link>
+                        {isTitular && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+                            <Crown className="size-2.5" /> Titular
+                          </span>
+                        )}
+                        {isDependent && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">
+                            <UserCheck className="size-2.5" /> Dependente
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        <span>Mat. #{m.registration}</span>
+                        {isTitular && hasDependente && m.dependente && (
+                          <span className="flex items-center gap-0.5">
+                            <Users className="size-3" />
+                            <Link
+                              href={`/associados/${m.dependente.id}`}
+                              className="text-amber-600 hover:underline dark:text-amber-400"
+                            >
+                              {m.dependente.fullName}
+                            </Link>
+                          </span>
+                        )}
+                        {isTitular && !hasDependente && isFamilyPlan && (
+                          <span className="text-muted-foreground/60">sem dependente</span>
+                        )}
+                        {isDependent && m.titular && (
+                          <span className="flex items-center gap-0.5">
+                            <Crown className="size-3 text-amber-500" />
+                            <span>de </span>
+                            <Link
+                              href={`/associados/${m.titular.id}`}
+                              className="text-amber-600 hover:underline dark:text-amber-400"
+                            >
+                              {m.titular.fullName}
+                            </Link>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
+
+                  {/* Telefone */}
+                  <TableCell className="hidden text-sm md:table-cell">
+                    {m.phone}
+                  </TableCell>
+
+                  {/* Plano */}
+                  <TableCell className="hidden sm:table-cell">
+                    {m.plan ? (
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          isTitular && "border-amber-300/60 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+                          isDependent && "border-blue-300/60 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+                        )}
+                      >
+                        {m.plan.name}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+
+                  {/* Status */}
+                  <TableCell>
+                    <Badge variant={m.status === "ACTIVE" ? "default" : "secondary"}>
+                      {m.status === "ACTIVE" ? "Ativo" : "Inativo"}
+                    </Badge>
+                  </TableCell>
+
+                  {/* Ações */}
+                  <TableCell>
+                    <div className="flex justify-end gap-1">
+                      <Link
+                        href={`/associados/${m.id}`}
+                        className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
+                        aria-label="Ver perfil"
+                      >
+                        <Eye className="size-4" />
+                      </Link>
+                      <Link
+                        href={`/associados/${m.id}/editar`}
+                        className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
+                        aria-label="Editar"
+                      >
+                        <Pencil className="size-4" />
+                      </Link>
+                      <DeleteMemberDialog
+                        id={m.id}
+                        name={m.fullName}
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Desativar"
+                            className="text-destructive"
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        }
+                      />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
 
+      {/* ── Paginação ── */}
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Página {page} de {totalPages}
+            Página {page} de {totalPages} · {total} associados
           </p>
           <div className="flex gap-2">
             <Link
-              href={pageHref(Math.max(1, page - 1))}
+              href={buildHref({ page: String(Math.max(1, page - 1)) })}
               aria-disabled={page <= 1}
               className={cn(
                 buttonVariants({ variant: "outline", size: "sm" }),
@@ -249,7 +485,7 @@ export default async function AssociadosPage({
               Anterior
             </Link>
             <Link
-              href={pageHref(Math.min(totalPages, page + 1))}
+              href={buildHref({ page: String(Math.min(totalPages, page + 1)) })}
               aria-disabled={page >= totalPages}
               className={cn(
                 buttonVariants({ variant: "outline", size: "sm" }),
