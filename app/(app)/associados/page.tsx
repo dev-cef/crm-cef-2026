@@ -112,6 +112,7 @@ export default async function AssociadosPage({
   if (since !== "ALL") {
     const range = sinceToDateRange(since);
     and.push({ createdAt: range });
+    and.push({ titular: { is: null } });
   }
 
   if (role === "titular") {
@@ -339,11 +340,16 @@ export default async function AssociadosPage({
             <TableRow>
               <TableHead className="w-10 pl-4" />
               <TableHead>Associado</TableHead>
-              <TableHead className="hidden md:table-cell">
-                {since !== "ALL" ? "Sócio desde" : "Telefone"}
-              </TableHead>
+              {since !== "ALL" ? (
+                <>
+                  <TableHead className="hidden md:table-cell">Mat.</TableHead>
+                  <TableHead className="hidden md:table-cell">Tempo de sócio</TableHead>
+                  <TableHead className="hidden md:table-cell">Sócio desde</TableHead>
+                </>
+              ) : (
+                <TableHead className="hidden md:table-cell">Telefone</TableHead>
+              )}
               <TableHead className="hidden sm:table-cell">Plano</TableHead>
-              <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -351,7 +357,7 @@ export default async function AssociadosPage({
             {grouped.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={since !== "ALL" ? 7 : 5}
                   className="py-12 text-center text-sm text-muted-foreground"
                 >
                   {role !== "ALL"
@@ -439,59 +445,64 @@ export default async function AssociadosPage({
                         )}
                       </div>
 
-                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                        {since !== "ALL" && (
-                          <>
-                            <span>Mat. #{m.registration}</span>
-                            <span className="text-muted-foreground/60">·</span>
-                            <span>{membershipLabel(m.createdAt)}</span>
-                          </>
-                        )}
-                        {isTitular && hasDependente && m.dependente && (
-                          <span className="flex items-center gap-0.5">
-                            <Users className="size-3" />
-                            <Link
-                              href={`/associados/${m.dependente.id}`}
-                              className="text-amber-600 hover:underline dark:text-amber-400"
-                            >
-                              {m.dependente.fullName}
-                            </Link>
-                          </span>
-                        )}
-                        {isTitular && !hasDependente && isFamilyPlan && (
-                          <span className="text-muted-foreground/60">sem dependente</span>
-                        )}
-                        {isDependent && m.titular && (
-                          <span className="flex items-center gap-0.5">
-                            <Crown className="size-3 text-amber-500" />
-                            <span>de </span>
-                            <Link
-                              href={`/associados/${m.titular.id}`}
-                              className="text-amber-600 hover:underline dark:text-amber-400"
-                            >
-                              {m.titular.fullName}
-                            </Link>
-                          </span>
-                        )}
-                      </div>
+                      {since === "ALL" && (
+                        <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          {isTitular && hasDependente && m.dependente && (
+                            <span className="flex items-center gap-0.5">
+                              <Users className="size-3" />
+                              <Link
+                                href={`/associados/${m.dependente.id}`}
+                                className="text-amber-600 hover:underline dark:text-amber-400"
+                              >
+                                {m.dependente.fullName}
+                              </Link>
+                            </span>
+                          )}
+                          {isTitular && !hasDependente && isFamilyPlan && (
+                            <span className="text-muted-foreground/60">sem dependente</span>
+                          )}
+                          {isDependent && m.titular && (
+                            <span className="flex items-center gap-0.5">
+                              <Crown className="size-3 text-amber-500" />
+                              <span>de </span>
+                              <Link
+                                href={`/associados/${m.titular.id}`}
+                                className="text-amber-600 hover:underline dark:text-amber-400"
+                              >
+                                {m.titular.fullName}
+                              </Link>
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </TableCell>
 
-                  {/* Telefone / Sócio desde */}
-                  <TableCell className="hidden text-sm md:table-cell">
-                    {since !== "ALL" ? (
-                      <span
-                        title={membershipLabel(m.createdAt)}
-                        className="cursor-default underline decoration-dashed decoration-muted-foreground/40 underline-offset-2"
-                      >
-                        {toBrDate(m.createdAt)}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">
-                        {m.phone || "—"}
-                      </span>
-                    )}
-                  </TableCell>
+                  {/* Telefone  OU  Mat. + Tempo + Sócio desde */}
+                  {since !== "ALL" ? (
+                    <>
+                      <TableCell className="hidden text-sm md:table-cell">
+                        <span className="tabular-nums text-muted-foreground">
+                          #{m.registration}
+                        </span>
+                      </TableCell>
+                      <TableCell className="hidden text-sm md:table-cell">
+                        {membershipLabel(m.createdAt)}
+                      </TableCell>
+                      <TableCell className="hidden text-sm md:table-cell">
+                        <span
+                          title={membershipLabel(m.createdAt)}
+                          className="cursor-default underline decoration-dashed decoration-muted-foreground/40 underline-offset-2"
+                        >
+                          {toBrDate(m.createdAt)}
+                        </span>
+                      </TableCell>
+                    </>
+                  ) : (
+                    <TableCell className="hidden text-sm md:table-cell text-muted-foreground">
+                      {m.phone || "—"}
+                    </TableCell>
+                  )}
 
                   {/* Plano */}
                   <TableCell className="hidden sm:table-cell">
@@ -508,13 +519,6 @@ export default async function AssociadosPage({
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
-                  </TableCell>
-
-                  {/* Status */}
-                  <TableCell>
-                    <Badge variant={m.status === "ACTIVE" ? "default" : "secondary"}>
-                      {m.status === "ACTIVE" ? "Ativo" : "Inativo"}
-                    </Badge>
                   </TableCell>
 
                   {/* Ações */}
