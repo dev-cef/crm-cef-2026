@@ -8,7 +8,6 @@ import {
   Cake,
   FileSpreadsheet,
   FileText,
-  Filter,
   MessageCircle,
   MessageSquareText,
   Pencil,
@@ -47,6 +46,7 @@ import { AgeBars } from "@/components/modules/dashboard/age-bars";
 import { MonthBars } from "@/components/modules/aniversariantes/month-bars";
 import { IconFeminino, IconMasculino } from "@/components/icons/sex-icons";
 import { ConfigForm } from "@/components/modules/aniversariantes/config-form";
+import { BirthdayFilters } from "@/components/modules/aniversariantes/birthday-filters";
 import { DeleteMemberDialog } from "@/components/modules/associados/delete-member-dialog";
 import { CardBeam } from "@/components/ui/card-beam";
 
@@ -55,9 +55,6 @@ export const dynamic = "force-dynamic";
 const FEMALE = "#e983b9";
 const MALE = "#56b3d9";
 const AMBER = "#dfae3c";
-const selectCls =
-  "h-9 rounded-md border bg-background px-3 text-sm outline-none";
-
 function igUrl(handle: string): string {
   return `https://instagram.com/${handle.replace(/^@/, "").trim()}`;
 }
@@ -319,41 +316,15 @@ export default async function AniversariantesPage({
         style={{ "--i": 9 } as React.CSSProperties}
       >
         <CardContent className="pt-4">
-          <form
-            method="get"
-            className="flex flex-wrap items-center gap-2"
-          >
-            <select name="period" defaultValue={period} className={selectCls}>
-              <option value="dia">Hoje</option>
-              <option value="semana">Próximos 7 dias</option>
-              <option value="mes">Por mês</option>
-            </select>
-            <select
-              name="month"
-              defaultValue={String(month)}
-              className={selectCls}
-            >
-              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                <option key={m} value={m}>
-                  {monthName(m)}
-                </option>
-              ))}
-            </select>
-            <select name="sex" defaultValue={sex} className={selectCls}>
-              <option value="ALL">Todos os sexos</option>
-              <option value="M">Masculino</option>
-              <option value="F">Feminino</option>
-            </select>
-            <input
-              type="search"
-              name="q"
-              defaultValue={q}
-              placeholder="Buscar nome…"
-              className={cn(selectCls, "min-w-44 flex-1")}
+          <div className="flex flex-wrap items-center gap-2">
+            <BirthdayFilters
+              period={period}
+              month={month}
+              sex={sex}
+              q={q}
+              sort={sort}
+              dir={dir}
             />
-            <Button type="submit" variant="secondary" size="sm">
-              <Filter className="size-4" /> Filtrar
-            </Button>
             <Link
               href={`/aniversariantes/export?${query}&format=csv`}
               className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
@@ -367,7 +338,7 @@ export default async function AniversariantesPage({
               <FileText className="size-4" />{" "}
               {period === "mes" ? monthName(month) : "Lista"} (.txt)
             </Link>
-          </form>
+          </div>
         </CardContent>
       </Card>
 
