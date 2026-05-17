@@ -11,10 +11,12 @@ import {
   Users,
   CornerDownRight,
   X,
+  CalendarClock,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
 import { stripCpf } from "@/lib/cpf";
+import { calculateAge, toBrDate } from "@/lib/format";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,13 +35,45 @@ import { DeleteMemberDialog } from "@/components/modules/associados/delete-membe
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 20;
+
+function membershipLabel(createdAt: Date): string {
+  const now = new Date();
+  const years = calculateAge(createdAt);
+  if (years >= 1) return `${years} ${years === 1 ? "ano" : "anos"} de sócio`;
+  const months =
+    (now.getFullYear() - createdAt.getFullYear()) * 12 +
+    (now.getMonth() - createdAt.getMonth());
+  if (months <= 0) return "Menos de 1 mês de sócio";
+  return `${months} ${months === 1 ? "mês" : "meses"} de sócio`;
+}
 type Role = "titular" | "dependente" | "individual";
+type Since = "lt1" | "1to5" | "5to10" | "10to20" | "gt30";
+
+const SINCE_OPTIONS: { key: Since; label: string; description: string }[] = [
+  { key: "lt1",   label: "< 1 ano",    description: "Menos de 1 ano" },
+  { key: "1to5",  label: "1–5 anos",   description: "Entre 1 e 5 anos" },
+  { key: "5to10", label: "5–10 anos",  description: "Entre 5 e 10 anos" },
+  { key: "10to20",label: "10–20 anos", description: "Entre 10 e 20 anos" },
+  { key: "gt30",  label: "+ 30 anos",  description: "Mais de 30 anos" },
+];
+
+function sinceToDateRange(since: Since): { gte?: Date; lte?: Date } {
+  const now = new Date();
+  const yearsAgo = (y: number) =>
+    new Date(now.getFullYear() - y, now.getMonth(), now.getDate());
+  if (since === "lt1")    return { gte: yearsAgo(1) };
+  if (since === "1to5")   return { gte: yearsAgo(5),  lte: yearsAgo(1) };
+  if (since === "5to10")  return { gte: yearsAgo(10), lte: yearsAgo(5) };
+  if (since === "10to20") return { gte: yearsAgo(20), lte: yearsAgo(10) };
+  return { lte: yearsAgo(30) };
+}
 
 type SearchParams = Promise<{
   q?: string;
   status?: string;
   page?: string;
   role?: string;
+  since?: string;
 }>;
 
 export default async function AssociadosPage({
@@ -49,11 +83,14 @@ export default async function AssociadosPage({
 }) {
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();
-  const status = sp.status ?? "ALL";
+  const status = sp.status ?? "ACTIVE";
   const page = Math.max(1, Number(sp.page ?? "1") || 1);
   const role = (["titular", "dependente", "individual"].includes(sp.role ?? "")
     ? sp.role
     : "ALL") as Role | "ALL";
+  const since = (["lt1", "1to5", "5to10", "10to20", "gt30"].includes(sp.since ?? "")
+    ? sp.since
+    : "ALL") as Since | "ALL";
 
   // ── Where clause ──────────────────────────────────────────────────
   type AndClause = Record<string, unknown>;
@@ -70,6 +107,11 @@ export default async function AssociadosPage({
         ...(digits ? [{ cpf: { contains: digits } }] : []),
       ],
     });
+  }
+
+  if (since !== "ALL") {
+    const range = sinceToDateRange(since);
+    and.push({ createdAt: range });
   }
 
   if (role === "titular") {
@@ -132,10 +174,11 @@ export default async function AssociadosPage({
   function buildHref(overrides: Record<string, string | undefined>) {
     const p = new URLSearchParams();
     if (q) p.set("q", q);
-    if (status !== "ALL") p.set("status", status);
+    p.set("status", status);
     if (role !== "ALL") p.set("role", role);
+    if (since !== "ALL") p.set("since", since);
     Object.entries(overrides).forEach(([k, v]) => {
-      if (v === undefined || v === "ALL" || v === "") p.delete(k);
+      if (v === undefined || v === "") p.delete(k);
       else p.set(k, v);
     });
     const str = p.toString();
@@ -143,8 +186,11 @@ export default async function AssociadosPage({
   }
 
   function roleHref(r: Role) {
-    // clicking the active role → clears it
     return buildHref({ role: role === r ? "ALL" : r, page: "1" });
+  }
+
+  function sinceHref(s: Since) {
+    return buildHref({ since: since === s ? "ALL" : s, page: "1" });
   }
 
   const exportHref = buildHref({ page: undefined }).replace(
@@ -199,8 +245,8 @@ export default async function AssociadosPage({
 
       {/* ── Filtros de busca ── */}
       <form method="get" className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-        {/* preserve role param via hidden input */}
         {role !== "ALL" && <input type="hidden" name="role" value={role} />}
+        {since !== "ALL" && <input type="hidden" name="since" value={since} />}
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -222,7 +268,7 @@ export default async function AssociadosPage({
         <Button type="submit" variant="secondary" size="sm">
           Filtrar
         </Button>
-        {(q || status !== "ALL" || role !== "ALL") && (
+        {(q || status !== "ACTIVE" || role !== "ALL" || since !== "ALL") && (
           <Link
             href="/associados"
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
@@ -232,8 +278,8 @@ export default async function AssociadosPage({
         )}
       </form>
 
-      {/* ── Filtros de tipo de sócio (legenda clicável) ── */}
-      <div className="mb-4 flex flex-wrap gap-2">
+      {/* ── Filtros de tipo de sócio + tempo de sócio ── */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         {ROLE_FILTERS.map(({ key, label, icon: Icon, active, inactive, iconColor }) => {
           const isActive = role === key;
           return (
@@ -247,14 +293,39 @@ export default async function AssociadosPage({
             >
               <Icon className={cn("size-3.5", isActive ? "" : iconColor)} />
               {label}
-              {isActive && (
-                <X className="size-3 opacity-60" />
-              )}
+              {isActive && <X className="size-3 opacity-60" />}
             </Link>
           );
         })}
 
-        {role !== "ALL" && (
+        {/* separator */}
+        <span className="h-4 w-px bg-border" aria-hidden />
+
+        {/* Sócio desde chips */}
+        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+          <CalendarClock className="size-3.5" /> Sócio há:
+        </span>
+        {SINCE_OPTIONS.map(({ key, label, description }) => {
+          const isActive = since === key;
+          return (
+            <Link
+              key={key}
+              href={sinceHref(key)}
+              title={description}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-all",
+                isActive
+                  ? "border-emerald-400 bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:border-emerald-600 dark:text-emerald-300"
+                  : "border-muted-foreground/20 text-muted-foreground hover:bg-muted/60",
+              )}
+            >
+              {label}
+              {isActive && <X className="size-3 opacity-60" />}
+            </Link>
+          );
+        })}
+
+        {(role !== "ALL" || since !== "ALL") && (
           <span className="inline-flex items-center text-xs text-muted-foreground">
             · {total} resultado{total !== 1 ? "s" : ""}
           </span>
@@ -268,7 +339,9 @@ export default async function AssociadosPage({
             <TableRow>
               <TableHead className="w-10 pl-4" />
               <TableHead>Associado</TableHead>
-              <TableHead className="hidden md:table-cell">Telefone</TableHead>
+              <TableHead className="hidden md:table-cell">
+                {since !== "ALL" ? "Sócio desde" : "Telefone"}
+              </TableHead>
               <TableHead className="hidden sm:table-cell">Plano</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
@@ -367,7 +440,13 @@ export default async function AssociadosPage({
                       </div>
 
                       <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                        <span>Mat. #{m.registration}</span>
+                        {since !== "ALL" && (
+                          <>
+                            <span>Mat. #{m.registration}</span>
+                            <span className="text-muted-foreground/60">·</span>
+                            <span>{membershipLabel(m.createdAt)}</span>
+                          </>
+                        )}
                         {isTitular && hasDependente && m.dependente && (
                           <span className="flex items-center gap-0.5">
                             <Users className="size-3" />
@@ -398,9 +477,20 @@ export default async function AssociadosPage({
                     </div>
                   </TableCell>
 
-                  {/* Telefone */}
+                  {/* Telefone / Sócio desde */}
                   <TableCell className="hidden text-sm md:table-cell">
-                    {m.phone}
+                    {since !== "ALL" ? (
+                      <span
+                        title={membershipLabel(m.createdAt)}
+                        className="cursor-default underline decoration-dashed decoration-muted-foreground/40 underline-offset-2"
+                      >
+                        {toBrDate(m.createdAt)}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">
+                        {m.phone || "—"}
+                      </span>
+                    )}
                   </TableCell>
 
                   {/* Plano */}
