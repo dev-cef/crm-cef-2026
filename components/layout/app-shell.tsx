@@ -130,6 +130,42 @@ function Brand() {
   );
 }
 
+function SidebarFooter({
+  name,
+  email,
+  initials,
+}: {
+  name?: string | null;
+  email?: string | null;
+  initials: string;
+}) {
+  return (
+    <div className="border-t border-sidebar-border p-3">
+      <div className="flex items-center gap-3 px-2 py-2">
+        <Avatar className="size-8">
+          <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 leading-tight">
+          <p className="truncate text-sm font-medium">{name ?? email}</p>
+          {name && email ? (
+            <p className="truncate text-xs text-muted-foreground">{email}</p>
+          ) : null}
+        </div>
+      </div>
+      <form action={logoutAction}>
+        <Button
+          type="submit"
+          variant="ghost"
+          className="mt-1 w-full justify-start gap-3 text-destructive hover:bg-destructive/10 hover:text-destructive"
+        >
+          <LogOut className="size-4" />
+          Sair
+        </Button>
+      </form>
+    </div>
+  );
+}
+
 export function AppShell({
   user,
   children,
@@ -160,6 +196,11 @@ export function AppShell({
         <div className="flex-1 overflow-y-auto">
           <NavLinks role={role} />
         </div>
+        <SidebarFooter
+          name={user.name}
+          email={user.email}
+          initials={initials}
+        />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -179,8 +220,17 @@ export function AppShell({
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-0">
               <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
-              <Brand />
-              <NavLinks role={role} onNavigate={() => setOpen(false)} />
+              <div className="flex h-full flex-col">
+                <Brand />
+                <div className="flex-1 overflow-y-auto">
+                  <NavLinks role={role} onNavigate={() => setOpen(false)} />
+                </div>
+                <SidebarFooter
+                  name={user.name}
+                  email={user.email}
+                  initials={initials}
+                />
+              </div>
             </SheetContent>
           </Sheet>
 
