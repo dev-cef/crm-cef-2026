@@ -258,11 +258,15 @@ model AuditLog {
   id        String   @id @default(cuid())
   userId    String?
   user      User?    @relation(fields: [userId], references: [id])
-  action    String // CREATE | UPDATE | DELETE
-  entity    String // Member | Plan | Payment | Event | ...
+  action    String // CREATE | UPDATE | DELETE | LOGIN_SUCCESS | LOGIN_FAILED | LOCKOUT | LOGIN_OFFHOURS | EXPORT
+  entity    String // Member | Plan | Payment | Event | Auth | ...
   entityId  String
   metadata  String? // JSON string
+  ip        String? // endereço IP da requisição (LGPD)
+  userAgent String? // user-agent da requisição (LGPD)
   createdAt DateTime @default(now())
 
   @@index([entity, entityId])
+  @@index([userId])
+  @@index([createdAt])
 }

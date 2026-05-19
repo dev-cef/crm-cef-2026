@@ -11,6 +11,7 @@ import {
   Lock,
   LogOut,
   Menu,
+  ScrollText,
   ShieldAlert,
   ShieldCheck,
   UserCircle,
@@ -228,6 +229,17 @@ export function AppShell({
                       )}
                       Segurança · 2FA{" "}
                       {user.totpEnabled ? "ativo" : "inativo"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      render={
+                        <Link
+                          href="/configuracoes/auditoria"
+                          className="w-full"
+                        />
+                      }
+                    >
+                      <ScrollText className="size-4" />
+                      Auditoria
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                   </>

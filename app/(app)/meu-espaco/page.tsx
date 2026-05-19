@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { CreditCard, CalendarClock, CircleAlert, CircleCheck } from "lucide-react";
+import {
+  CreditCard,
+  CalendarClock,
+  CircleAlert,
+  CircleCheck,
+  ShieldCheck,
+  Download,
+} from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/authz";
 import { formatCpf } from "@/lib/cpf";
@@ -199,6 +206,29 @@ export default async function MeuEspacoPage() {
               </TableBody>
             </Table>
           )}
+        </CardContent>
+      </Card>
+
+      {/* LGPD — direito de acesso aos próprios dados */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <ShieldCheck className="size-5" />
+            Privacidade (LGPD)
+          </CardTitle>
+          <CardDescription>
+            Você pode baixar um registro de todas as ações associadas à sua
+            conta e ao seu cadastro.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <a
+            href="/meu-espaco/export-logs"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            <Download className="size-4" />
+            Exportar meus registros (CSV)
+          </a>
         </CardContent>
       </Card>
     </div>

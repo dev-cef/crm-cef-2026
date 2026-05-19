@@ -5,6 +5,7 @@ import { authConfig } from "@/lib/auth.config";
 import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validations/auth";
 import { normalizeRecoveryCode, verifyTotp } from "@/lib/totp";
+import { isOffHours, recordSecurityEvent } from "@/lib/audit";
 
 const MAX_FAILED_ATTEMPTS = 5;
 const BASE_LOCKOUT_MINUTES = 15;
@@ -70,12 +71,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 ),
               },
             });
+            await recordSecurityEvent({
+              userId: user.id,
+              action: "LOCKOUT",
+              email: user.email,
+              metadata: { lockoutCount: user.lockoutCount + 1 },
+            });
           } else {
             await prisma.user.update({
               where: { id: user.id },
               data: { failedLoginAttempts: attempts },
             });
           }
+          await recordSecurityEvent({
+            userId: user.id,
+            action: "LOGIN_FAILED",
+            email: user.email,
+            metadata: { attempts },
+          });
           return null;
         }
 
@@ -119,6 +132,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               lockedUntil: null,
               lockoutCount: 0,
             },
+          });
+        }
+
+        const offHours = isOffHours();
+        await recordSecurityEvent({
+          userId: user.id,
+          action: "LOGIN_SUCCESS",
+          email: user.email,
+          metadata: { role: user.role, offHours },
+        });
+        if (offHours) {
+          await recordSecurityEvent({
+            userId: user.id,
+            action: "LOGIN_OFFHOURS",
+            email: user.email,
           });
         }
 
