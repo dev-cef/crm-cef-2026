@@ -40,6 +40,13 @@ export async function authenticate(
           error: "Código de verificação inválido.",
         };
       }
+      if (error.code === "account_pending") {
+        return {
+          stage: "password",
+          error:
+            "Sua conta está aguardando aprovação do administrador do clube.",
+        };
+      }
       return { stage: "password", error: "E-mail ou senha inválidos." };
     }
     if (error instanceof AuthError) {

@@ -38,6 +38,7 @@ import {
 } from "@/lib/format";
 import { calculateAge } from "@/lib/format";
 import { createMember, updateMember } from "@/app/(app)/associados/actions";
+import { registrarAssociado } from "@/app/criar-conta/actions";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,7 +67,7 @@ function Err({ msg }: { msg?: string }) {
 }
 
 export type MemberFormProps = {
-  mode: "create" | "edit";
+  mode: "create" | "edit" | "signup";
   plans: { id: string; name: string }[];
   member?: {
     id: string;
@@ -109,6 +110,8 @@ export function MemberForm({ mode, plans, member }: MemberFormProps) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [pending, startTransition] = useTransition();
+  const [signupPw, setSignupPw] = useState("");
+  const [signupPw2, setSignupPw2] = useState("");
 
   const form = useForm<MemberFormValues>({
     resolver: zodResolver(memberSchema),
@@ -209,6 +212,28 @@ export function MemberForm({ mode, plans, member }: MemberFormProps) {
   function onSubmit(values: MemberFormValues) {
     // Só salva na última etapa, via clique explícito no botão.
     if (step !== STEPS.length - 1) return;
+    if (mode === "signup") {
+      if (signupPw.length < 12) {
+        toast.error("A senha deve ter ao menos 12 caracteres.");
+        setStep(0);
+        return;
+      }
+      if (signupPw !== signupPw2) {
+        toast.error("As senhas não conferem.");
+        setStep(0);
+        return;
+      }
+      startTransition(async () => {
+        const res = await registrarAssociado(values, signupPw);
+        if (res.ok) {
+          toast.success("Cadastro enviado! Aguarde a aprovação.");
+          router.push("/login?cadastro=ok");
+        } else {
+          toast.error(res.error);
+        }
+      });
+      return;
+    }
     startTransition(async () => {
       const res =
         mode === "create"
@@ -419,6 +444,46 @@ export function MemberForm({ mode, plans, member }: MemberFormProps) {
                   <Err msg={errors.birthDate?.message} />
                 </div>
               </div>
+
+              {mode === "signup" && (
+                <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
+                  <p className="mb-3 text-sm font-medium">
+                    Dados de acesso
+                  </p>
+                  <p className="mb-3 text-xs text-muted-foreground">
+                    Seu login será o e-mail informado acima. A conta passa por
+                    aprovação do clube antes de liberar o acesso.
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <Label htmlFor="signupPw">Senha *</Label>
+                      <Input
+                        id="signupPw"
+                        type="password"
+                        value={signupPw}
+                        onChange={(e) => setSignupPw(e.target.value)}
+                        autoComplete="new-password"
+                        placeholder="Mín. 12 caracteres"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="signupPw2">Confirmar senha *</Label>
+                      <Input
+                        id="signupPw2"
+                        type="password"
+                        value={signupPw2}
+                        onChange={(e) => setSignupPw2(e.target.value)}
+                        autoComplete="new-password"
+                        placeholder="Repita a senha"
+                      />
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Use 12+ caracteres com maiúscula, minúscula, número e
+                    símbolo.
+                  </p>
+                </div>
+              )}
             </>
           )}
 
@@ -731,7 +796,11 @@ export function MemberForm({ mode, plans, member }: MemberFormProps) {
             ) : (
               <Save className="size-4" />
             )}
-            {mode === "create" ? "Cadastrar associado" : "Salvar alterações"}
+            {mode === "signup"
+              ? "Enviar cadastro"
+              : mode === "create"
+                ? "Cadastrar associado"
+                : "Salvar alterações"}
           </Button>
         )}
       </div>

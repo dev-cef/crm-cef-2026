@@ -114,6 +114,66 @@ export async function disableTotp(code: string): Promise<ActionMsg> {
   return { ok: true };
 }
 
+export async function aprovarConta(userId: string): Promise<ActionMsg> {
+  const admin = await requireAdmin();
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { member: { select: { id: true } } },
+  });
+  if (!user || user.approved) {
+    return { ok: false, error: "Conta inválida ou já aprovada." };
+  }
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: userId },
+      data: { approved: true },
+    });
+    if (user.member) {
+      await tx.member.update({
+        where: { id: user.member.id },
+        data: { status: "ACTIVE", inactiveReason: null, inactiveAt: null },
+      });
+    }
+  });
+  await recordAudit({
+    userId: admin.id,
+    action: "UPDATE",
+    entity: "User",
+    entityId: userId,
+    metadata: { event: "account_approved" },
+  });
+  revalidatePath("/configuracoes/aprovacoes");
+  return { ok: true };
+}
+
+export async function recusarConta(userId: string): Promise<ActionMsg> {
+  const admin = await requireAdmin();
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { member: { select: { id: true } } },
+  });
+  if (!user || user.approved) {
+    return { ok: false, error: "Conta inválida ou já aprovada." };
+  }
+  // Recusa um auto-cadastro nunca aprovado: remove member (cascata em
+  // pagamentos) e depois a conta.
+  await prisma.$transaction(async (tx) => {
+    if (user.member) {
+      await tx.member.delete({ where: { id: user.member.id } });
+    }
+    await tx.user.delete({ where: { id: userId } });
+  });
+  await recordAudit({
+    userId: admin.id,
+    action: "DELETE",
+    entity: "User",
+    entityId: userId,
+    metadata: { event: "account_rejected" },
+  });
+  revalidatePath("/configuracoes/aprovacoes");
+  return { ok: true };
+}
+
 export async function regenerateRecoveryCodes(
   code: string,
 ): Promise<ActionMsg> {

@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
   ScrollText,
+  UserCheck,
   ShieldAlert,
   ShieldCheck,
   UserCircle,
@@ -290,6 +291,17 @@ export function AppShell({
                     >
                       <ScrollText className="size-4" />
                       Auditoria
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      render={
+                        <Link
+                          href="/configuracoes/aprovacoes"
+                          className="w-full"
+                        />
+                      }
+                    >
+                      <UserCheck className="size-4" />
+                      Aprovações
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                   </>

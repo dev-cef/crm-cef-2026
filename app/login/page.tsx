@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { LoginForm } from "@/components/auth/login-form";
 import { CefLogo } from "@/components/layout/cef-logo";
 import { CardBeam } from "@/components/ui/card-beam";
@@ -14,7 +15,12 @@ export const metadata = {
   title: "Entrar — CRM CEF",
 };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ cadastro?: string }>;
+}) {
+  const { cadastro } = await searchParams;
   return (
     <div className="grid min-h-screen flex-1 lg:grid-cols-[1.15fr_1fr]">
       {/* Painel hero — montanha + transição de marca */}
@@ -89,8 +95,23 @@ export default function LoginPage() {
                 Acesse o painel com seu e-mail e senha.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              {cadastro === "ok" && (
+                <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm">
+                  Cadastro enviado! Sua conta será liberada após aprovação do
+                  clube. Você receberá acesso assim que aprovada.
+                </div>
+              )}
               <LoginForm />
+              <p className="text-center text-sm text-muted-foreground">
+                Ainda não tem conta?{" "}
+                <Link
+                  href="/criar-conta"
+                  className="font-medium text-primary hover:underline"
+                >
+                  Criar conta
+                </Link>
+              </p>
             </CardContent>
           </Card>
 

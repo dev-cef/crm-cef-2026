@@ -28,6 +28,10 @@ export class TwoFactorRequiredError extends CredentialsSignin {
 export class TwoFactorInvalidError extends CredentialsSignin {
   code = "2fa_invalid";
 }
+// Conta de auto-cadastro ainda não aprovada pelo admin.
+export class AccountPendingError extends CredentialsSignin {
+  code = "account_pending";
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -91,6 +95,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           });
           return null;
         }
+
+        // Conta de auto-cadastro aguardando aprovação do admin.
+        if (!user.approved) throw new AccountPendingError();
 
         // Senha OK — segundo fator quando habilitado.
         if (user.totpEnabled && user.totpSecret) {
