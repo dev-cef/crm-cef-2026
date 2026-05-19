@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { hasAtLeast, scopedMemberWhere, toSessionUser } from "@/lib/rbac";
 import { formatCpf, stripCpf } from "@/lib/cpf";
 import { toBrDate } from "@/lib/format";
 
@@ -15,12 +16,19 @@ export async function GET(request: Request) {
   if (!session?.user) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
+  if (!hasAtLeast(session.user, "DEPARTAMENTO")) {
+    return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+  }
+  const user = toSessionUser(session.user);
 
   const { searchParams } = new URL(request.url);
   const q = (searchParams.get("q") ?? "").trim();
   const status = searchParams.get("status") ?? "ALL";
 
-  const where: Record<string, unknown> = { deletedAt: null };
+  const where: Record<string, unknown> = {
+    deletedAt: null,
+    ...scopedMemberWhere(user),
+  };
   if (status === "ACTIVE" || status === "INACTIVE") where.status = status;
   if (q) {
     const digits = stripCpf(q);

@@ -14,6 +14,8 @@ import {
   CalendarClock,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/authz";
+import { scopedMemberWhere } from "@/lib/rbac";
 import { cn } from "@/lib/utils";
 import { stripCpf } from "@/lib/cpf";
 import { calculateAge, toBrDate } from "@/lib/format";
@@ -81,6 +83,7 @@ export default async function AssociadosPage({
 }: {
   searchParams: SearchParams;
 }) {
+  const user = await requireRole("DEPARTAMENTO");
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();
   const status = sp.status ?? "ACTIVE";
@@ -94,7 +97,7 @@ export default async function AssociadosPage({
 
   // ── Where clause ──────────────────────────────────────────────────
   type AndClause = Record<string, unknown>;
-  const and: AndClause[] = [{ deletedAt: null }];
+  const and: AndClause[] = [{ deletedAt: null }, scopedMemberWhere(user)];
 
   if (status === "ACTIVE" || status === "INACTIVE") and.push({ status });
 

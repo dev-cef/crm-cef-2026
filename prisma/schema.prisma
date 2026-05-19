@@ -15,11 +15,46 @@ model User {
   name         String
   email        String     @unique
   passwordHash String
-  role         String     @default("ADMIN") // ADMIN
-  image        String?
+  role         String     @default("ADMIN") // ADMIN | DEPARTAMENTO | ASSOCIADO
+
+  // Endurecimento — bloqueio de conta (lockout com backoff)
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+  lockoutCount        Int       @default(0) // nº de lockouts consecutivos → backoff exponencial
+
+  image       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  auditLogs   AuditLog[]
+  member      Member?
+  departments UserDepartment[]
+}
+
+model Department {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users   UserDepartment[]
+  members Member[]
+  events  Event[]
+}
+
+// Vínculo M:N usuário↔departamento. Permissão é aditiva (nunca subtrativa).
+model UserDepartment {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  auditLogs    AuditLog[]
+
+  @@unique([userId, departmentId])
+  @@index([departmentId])
 }
 
 model Plan {
@@ -85,6 +120,14 @@ model Member {
   inactiveAt     DateTime? // data de saída informada pelo admin (pode diferir de deletedAt)
   planId    String?
   plan      Plan?     @relation(fields: [planId], references: [id])
+
+  // Conta de login do associado (nível ASSOCIADO). null = sem acesso ao sistema.
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id])
+
+  // Departamento ao qual o associado está vinculado (escopo do nível DEPARTAMENTO)
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
 
   // Plano Família: dependente aponta para o titular
   titularId  String?  @unique
@@ -153,11 +196,16 @@ model Event {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // Departamento responsável pelo evento (escopo do nível DEPARTAMENTO)
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
   registrations EventRegistration[]
   photos        EventPhoto[]
 
   @@index([status])
   @@index([dateTime])
+  @@index([departmentId])
 }
 
 model EventRegistration {

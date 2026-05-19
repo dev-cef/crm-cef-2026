@@ -5,11 +5,16 @@ declare module "next-auth" {
     user: {
       id: string;
       role: string;
+      memberId: string | null;
+      departmentIds: string[];
+      expiresAt: number; // epoch (s) — expiração absoluta por papel
     } & DefaultSession["user"];
   }
 
   interface User {
     role?: string;
+    memberId?: string | null;
+    departmentIds?: string[];
   }
 }
 
@@ -17,5 +22,8 @@ declare module "next-auth/jwt" {
   interface JWT {
     id?: string;
     role?: string;
+    memberId?: string | null;
+    departmentIds?: string[];
+    expiresAt?: number;
   }
 }

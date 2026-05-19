@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { isAdmin } from "@/lib/rbac";
 import { recordAudit } from "@/lib/audit";
 import { stripCpf } from "@/lib/cpf";
 import { formatPersonName, parseBrDate } from "@/lib/format";
@@ -242,7 +243,7 @@ export async function softDeleteMember(
   exitDateStr: string,
 ): Promise<ActionResult> {
   const session = await auth();
-  if (session?.user?.role !== "ADMIN")
+  if (!isAdmin(session?.user))
     return { ok: false, error: "Apenas administradores podem desativar associados." };
 
   const exitDate = parseBrDate(exitDateStr) ?? new Date();

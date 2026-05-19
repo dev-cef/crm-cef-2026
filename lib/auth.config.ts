@@ -1,16 +1,23 @@
 import type { NextAuthConfig } from "next-auth";
+import {
+  MAX_SESSION_AGE_SECONDS,
+  SESSION_MAX_AGE_SECONDS,
+  isRouteAllowed,
+  normalizeRole,
+} from "@/lib/rbac";
 
 // Configuração base, sem provedores nem acesso ao banco.
-// Usada tanto pelo proxy (route protection) quanto pela config completa.
+// Usada tanto pelo proxy (route protection, edge) quanto pela config completa.
 export const authConfig = {
   trustHost: true,
   pages: {
     signIn: "/login",
   },
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: MAX_SESSION_AGE_SECONDS },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = !!auth?.user;
+      const user = auth?.user;
+      const isLoggedIn = !!user;
       const isOnLogin = nextUrl.pathname.startsWith("/login");
 
       // Rota pública de validação da carteirinha (via QR Code)
@@ -23,20 +30,41 @@ export const authConfig = {
         return true;
       }
 
-      // Qualquer outra rota exige login; NextAuth redireciona p/ pages.signIn
-      return isLoggedIn;
+      if (!isLoggedIn) return false;
+
+      // Expiração absoluta por papel — sessão vencida volta ao login.
+      if (user.expiresAt && Date.now() / 1000 > user.expiresAt) {
+        return false;
+      }
+
+      // Gate de rota por papel (ADMIN passa em tudo).
+      const role = normalizeRole(user.role);
+      if (!isRouteAllowed(nextUrl.pathname, role)) {
+        return Response.redirect(new URL("/dashboard", nextUrl));
+      }
+
+      return true;
     },
     jwt({ token, user }) {
       if (user) {
         token.id = user.id as string;
-        token.role = (user as { role?: string }).role ?? "ADMIN";
+        const role = normalizeRole((user as { role?: string }).role);
+        token.role = role;
+        token.memberId = (user as { memberId?: string | null }).memberId ?? null;
+        token.departmentIds =
+          (user as { departmentIds?: string[] }).departmentIds ?? [];
+        token.expiresAt =
+          Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SECONDS[role];
       }
       return token;
     },
     session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = (token.role as string) ?? "ADMIN";
+        session.user.role = normalizeRole(token.role);
+        session.user.memberId = (token.memberId as string | null) ?? null;
+        session.user.departmentIds = (token.departmentIds as string[]) ?? [];
+        session.user.expiresAt = (token.expiresAt as number) ?? 0;
       }
       return session;
     },

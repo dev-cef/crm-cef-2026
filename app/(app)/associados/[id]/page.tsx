@@ -11,6 +11,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/authz";
+import { scopedMemberWhere } from "@/lib/rbac";
 import { cn } from "@/lib/utils";
 import { formatCpf } from "@/lib/cpf";
 import {
@@ -70,10 +72,11 @@ export default async function AssociadoPerfilPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const user = await requireRole("DEPARTAMENTO");
   const { id } = await params;
 
   const member = await prisma.member.findFirst({
-    where: { id, deletedAt: null },
+    where: { id, deletedAt: null, ...scopedMemberWhere(user) },
     include: {
       plan: true,
       payments: { orderBy: [{ referenceYear: "desc" }, { referenceMonth: "desc" }] },

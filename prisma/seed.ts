@@ -4,6 +4,11 @@ import { PrismaClient } from "../app/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { generateCpf } from "../lib/cpf";
+import { passwordSchema } from "../lib/validations/auth";
+
+// Senha padrão dos usuários semeados — compatível com a política (≥12, maiúscula,
+// minúscula, número, símbolo). Validada abaixo antes do hash.
+const SEED_PASSWORD = "Cef@2026Friburgo!";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -78,12 +83,16 @@ async function main() {
   await prisma.eventPhoto.deleteMany();
   await prisma.event.deleteMany();
   await prisma.payment.deleteMany();
+  await prisma.userDepartment.deleteMany();
   await prisma.member.deleteMany();
+  await prisma.department.deleteMany();
   await prisma.plan.deleteMany();
   await prisma.user.deleteMany();
 
   console.log("👤 Criando administradores...");
-  const passwordHash = await bcrypt.hash("senha123", 10);
+  // Enforce a política de senha no ponto onde a senha é definida.
+  passwordSchema.parse(SEED_PASSWORD);
+  const passwordHash = await bcrypt.hash(SEED_PASSWORD, 12);
   await prisma.user.createMany({
     data: [
       { name: "Administrador CEF", email: "admin@cef.org.br", passwordHash, role: "ADMIN" },
@@ -115,6 +124,16 @@ async function main() {
     },
   });
   const plans = [efetivo, familiar, estudante];
+
+  console.log("🏔️  Criando departamentos...");
+  const departments = await Promise.all(
+    [
+      { name: "Trilhas e Caminhadas", slug: "trilhas" },
+      { name: "Escalada", slug: "escalada" },
+      { name: "Cicloturismo", slug: "cicloturismo" },
+      { name: "Espeleologia", slug: "espeleologia" },
+    ].map((d) => prisma.department.create({ data: d })),
+  );
 
   console.log("🧗 Criando 30 associados...");
   const now = new Date(2026, 4, 16); // 2026-05-16 (mês 4 = Maio)
@@ -172,6 +191,7 @@ async function main() {
         suggestions: null,
         status: Math.random() < 0.85 ? "ACTIVE" : "INACTIVE",
         planId: plan.id,
+        departmentId: pick(departments).id,
       },
     });
     memberIds.push(member.id);
@@ -210,6 +230,43 @@ async function main() {
       });
     }
   }
+
+  console.log("🔐 Criando usuário de departamento e associado...");
+  const trilhas = departments[0];
+  const deptUser = await prisma.user.create({
+    data: {
+      name: "Coordenador Trilhas",
+      email: "trilhas@cef.org.br",
+      passwordHash,
+      role: "DEPARTAMENTO",
+      departments: { create: { departmentId: trilhas.id } },
+    },
+  });
+  // Garante que o coordenador tenha associados visíveis no seu escopo.
+  await prisma.member.updateMany({
+    where: { id: { in: memberIds.slice(0, 8) } },
+    data: { departmentId: trilhas.id },
+  });
+
+  // Um associado com login (nível ASSOCIADO) vinculado ao seu cadastro.
+  const firstMember = await prisma.member.findUnique({
+    where: { id: memberIds[0] },
+  });
+  if (firstMember) {
+    const assocUser = await prisma.user.create({
+      data: {
+        name: firstMember.fullName,
+        email: "associado@cef.org.br",
+        passwordHash,
+        role: "ASSOCIADO",
+      },
+    });
+    await prisma.member.update({
+      where: { id: firstMember.id },
+      data: { userId: assocUser.id },
+    });
+  }
+  void deptUser;
 
   console.log("📅 Criando eventos...");
   const events = await Promise.all([
@@ -271,6 +328,14 @@ async function main() {
     }),
   ]);
 
+  // Vincula cada evento a um departamento (escopo do nível DEPARTAMENTO)
+  for (let e = 0; e < events.length; e++) {
+    await prisma.event.update({
+      where: { id: events[e].id },
+      data: { departmentId: departments[e % departments.length].id },
+    });
+  }
+
   console.log("📝 Inscrevendo associados em eventos...");
   for (const event of events) {
     const count = randInt(5, Math.min(event.slots, 18));
@@ -292,8 +357,10 @@ async function main() {
   });
 
   console.log("✅ Seed concluído!");
-  console.log("   Login: admin@cef.org.br / senha123");
-  console.log("   Login: dario@wedesign.com.br / senha123");
+  console.log(`   ADMIN        admin@cef.org.br     / ${SEED_PASSWORD}`);
+  console.log(`   ADMIN        dario@wedesign.com.br / ${SEED_PASSWORD}`);
+  console.log(`   DEPARTAMENTO trilhas@cef.org.br   / ${SEED_PASSWORD}`);
+  console.log(`   ASSOCIADO    associado@cef.org.br / ${SEED_PASSWORD}`);
 }
 
 main()
