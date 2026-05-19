@@ -1,5 +1,4 @@
-// CRM CEF 2026 — Prisma schema (SQLite)
-// Enums are not used: SQLite via Prisma does not support native enums.
+// CRM CEF 2026 — Prisma schema (PostgreSQL / Neon)
 // String fields hold constrained values, validated at the app boundary with Zod.
 
 generator client {
@@ -8,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model User {
