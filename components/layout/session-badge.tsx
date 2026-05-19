@@ -4,9 +4,8 @@ import { useEffect, useState } from "react";
 import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Badge informativo com o tempo restante da sessão (expiração absoluta
-// por papel). Renovar sem relogin depende do sliding-timeout (deferido):
-// perto de expirar, orienta o usuário a salvar o trabalho.
+// Badge informativo: tempo restante até logout por inatividade. A janela
+// desliza a cada navegação/ação — então isto reflete o tempo ocioso.
 export function SessionBadge({ expiresAt }: { expiresAt: number }) {
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
 
@@ -32,8 +31,8 @@ export function SessionBadge({ expiresAt }: { expiresAt: number }) {
     <span
       title={
         expired
-          ? "Sua sessão expirou — recarregue a página para entrar novamente."
-          : `Sessão expira em ${label}`
+          ? "Sessão encerrada por inatividade — recarregue para entrar de novo."
+          : `Logout por inatividade em ${label} (renova ao usar o sistema)`
       }
       aria-live="polite"
       className={cn(

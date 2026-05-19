@@ -14,7 +14,13 @@ export const authConfig = {
   pages: {
     signIn: "/login",
   },
-  session: { strategy: "jwt", maxAge: MAX_SESSION_AGE_SECONDS },
+  // updateAge: 0 → cookie de sessão reescrito a cada requisição, para
+  // o expiresAt deslizado (idle timeout) persistir entre requests.
+  session: {
+    strategy: "jwt",
+    maxAge: MAX_SESSION_AGE_SECONDS,
+    updateAge: 0,
+  },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const user = auth?.user;
@@ -52,6 +58,7 @@ export const authConfig = {
       return true;
     },
     jwt({ token, user }) {
+      const nowS = Math.floor(Date.now() / 1000);
       if (user) {
         token.id = user.id as string;
         const role = normalizeRole((user as { role?: string }).role);
@@ -61,8 +68,15 @@ export const authConfig = {
           (user as { departmentIds?: string[] }).departmentIds ?? [];
         token.totpEnabled =
           (user as { totpEnabled?: boolean }).totpEnabled ?? false;
-        token.expiresAt =
-          Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SECONDS[role];
+        token.expiresAt = nowS + SESSION_MAX_AGE_SECONDS[role];
+        return token;
+      }
+      // Chamada subsequente = atividade. Se ainda dentro da janela,
+      // desliza o vencimento (idle timeout). Se já expirou, NÃO desliza
+      // — authorized() rejeita e manda pro login.
+      const role = normalizeRole(token.role);
+      if (typeof token.expiresAt === "number" && nowS <= token.expiresAt) {
+        token.expiresAt = nowS + SESSION_MAX_AGE_SECONDS[role];
       }
       return token;
     },
