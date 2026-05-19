@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   CalendarDays,
   HeartPulse,
+  LogOut,
   Mountain,
   Pencil,
   Phone,
@@ -288,6 +289,27 @@ export default async function AssociadoPerfilPage({
             )}
           </CardContent>
         </Card>
+
+        {/* Motivo de desligamento (apenas quando inativo) */}
+        {member.status === "INACTIVE" && (member.inactiveReason || member.inactiveAt) && (
+          <Card className="md:col-span-3 border-destructive/40 bg-destructive/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base text-destructive">
+                <LogOut className="size-4" /> Desligamento
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              {member.inactiveAt && (
+                <Info label="Data de saída" value={toBrDate(member.inactiveAt)} />
+              )}
+              {member.inactiveReason && (
+                <div className="sm:col-span-2">
+                  <Info label="Motivo do desligamento" value={member.inactiveReason} />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Plano Família */}
         {member.plan?.name.includes("Família") && (

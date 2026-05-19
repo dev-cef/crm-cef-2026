@@ -98,7 +98,9 @@ export default async function PagamentosPage({
       include: {
         member: { select: { id: true, fullName: true, cpf: true } },
         plan: { select: { name: true } },
+        // notes incluído para distinguir taxa de inscrição de mensalidade no recibo
       },
+      // notes já vem no select padrão do Payment
       orderBy: [{ dueDate: "desc" }, { member: { fullName: "asc" } }],
     }),
   ]);
@@ -301,6 +303,7 @@ export default async function PagamentosPage({
                     dueDate={p.dueDate.toISOString()}
                     paidAt={p.paidAt?.toISOString() ?? null}
                     receiptNumber={p.receiptNumber ?? null}
+                    notes={p.notes ?? null}
                   />
                 </TableCell>
               </TableRow>

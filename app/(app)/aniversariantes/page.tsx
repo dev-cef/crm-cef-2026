@@ -79,7 +79,7 @@ export default async function AniversariantesPage({
   const sp = await searchParams;
   const today = new Date();
   const period = (
-    ["dia", "semana", "mes", "ano"].includes(sp.period ?? "") ? sp.period : "mes"
+    ["dia", "semana", "mes", "ano"].includes(sp.period ?? "") ? sp.period : "ano"
   ) as BirthdayPeriod;
   const month = Math.min(
     12,

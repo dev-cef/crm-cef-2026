@@ -1,7 +1,9 @@
 import Link from "next/link";
 import {
   AlertTriangle,
+  ArrowDownCircle,
   ArrowRight,
+  ArrowUpCircle,
   CircleDollarSign,
   CreditCard,
   TrendingUp,
@@ -20,6 +22,7 @@ import {
 } from "@/components/ui/card";
 import { CountUp } from "@/components/unlumen-ui/count-up";
 import { CardBeam } from "@/components/ui/card-beam";
+import { LaunchMonthly } from "@/components/modules/financeiro/launch-monthly";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +30,20 @@ export default async function FinanceiroPage() {
   const now = new Date();
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
+
+  const startOfMonth = new Date(Date.UTC(year, month - 1, 1));
+  const endOfMonth = new Date(Date.UTC(year, month, 0, 23, 59, 59));
+
+  const [caixaTx] = await Promise.all([
+    prisma.transaction.findMany({
+      where: { date: { gte: startOfMonth, lte: endOfMonth } },
+      select: { type: true, amount: true },
+    }),
+  ]);
+
+  const caixaEntradas = caixaTx.filter((t) => t.type === "ENTRADA").reduce((s, t) => s + t.amount, 0);
+  const caixaSaidas = caixaTx.filter((t) => t.type === "SAIDA").reduce((s, t) => s + t.amount, 0);
+  const caixaSaldo = caixaEntradas - caixaSaidas;
 
   const monthPayments = await prisma.payment.findMany({
     where: { referenceMonth: month, referenceYear: year },
@@ -69,7 +86,14 @@ export default async function FinanceiroPage() {
       <PageHeader
         title="Financeiro"
         description="Resumo financeiro do clube"
-      />
+      >
+        <LaunchMonthly
+          month={month}
+          year={year}
+          label={`${monthName(month)}/${year}`}
+          buttonLabel="Lançar Valores"
+        />
+      </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-3">
         {stats.map((s) => (
@@ -110,7 +134,47 @@ export default async function FinanceiroPage() {
         ))}
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+      {/* Caixa — resumo do mês */}
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        {[
+          { label: "Entradas do mês", value: caixaEntradas, icon: ArrowUpCircle, color: "text-green-600 dark:text-green-400" },
+          { label: "Saídas do mês",   value: caixaSaidas,   icon: ArrowDownCircle, color: "text-destructive" },
+          { label: "Saldo do mês",    value: caixaSaldo,    icon: Wallet, color: caixaSaldo >= 0 ? "text-green-600 dark:text-green-400" : "text-destructive" },
+        ].map((s) => (
+          <Link key={s.label} href="/financeiro/caixa">
+            <Card className="group relative overflow-hidden transition-colors hover:bg-accent/40">
+              <CardBeam />
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardDescription>{s.label}</CardDescription>
+                <s.icon className={cn("size-4", s.color)} />
+              </CardHeader>
+              <CardContent>
+                <p className={cn("font-display text-2xl font-semibold", s.color)}>
+                  <span className="mr-1 text-base text-muted-foreground">R$</span>
+                  <CountUp to={Math.round(Math.abs(s.value))} duration={1.4} digitEffect="none" separator="." />
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
+      </div>
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        <Link href="/financeiro/caixa">
+          <Card className="group relative overflow-hidden transition-colors hover:bg-accent/40">
+            <CardBeam />
+            <CardContent className="flex items-center gap-4 py-6">
+              <div className="flex size-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Wallet className="size-5" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium">Caixa</p>
+                <p className="text-sm text-muted-foreground">Entradas e saídas do clube</p>
+              </div>
+              <ArrowRight className="size-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </Link>
         <Link href="/financeiro/planos">
           <Card className="group relative overflow-hidden transition-colors hover:bg-accent/40">
             <CardBeam />
@@ -147,14 +211,6 @@ export default async function FinanceiroPage() {
         </Link>
       </div>
 
-      <div className="mt-6">
-        <Link
-          href="/financeiro/pagamentos"
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-        >
-          Ir para pagamentos <ArrowRight className="size-4" />
-        </Link>
-      </div>
     </div>
   );
 }

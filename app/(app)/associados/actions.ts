@@ -83,9 +83,28 @@ export async function createMember(
         _max: { registration: true },
       });
       const nextReg = (agg._max.registration ?? 999) + 1;
-      return tx.member.create({
+      const created = await tx.member.create({
         data: { ...n.data, registration: nextReg },
       });
+
+      // Lançar taxa de inscrição automaticamente
+      const cfg = await tx.systemConfig.findFirst();
+      const enrollmentFee = cfg?.enrollmentFee ?? 50;
+      const now = new Date();
+      await tx.payment.create({
+        data: {
+          memberId: created.id,
+          planId: created.planId ?? null,
+          amount: enrollmentFee,
+          referenceMonth: now.getMonth() + 1,
+          referenceYear: now.getFullYear(),
+          status: "PENDENTE",
+          dueDate: now,
+          notes: "Taxa de inscrição",
+        },
+      });
+
+      return created;
     });
 
     await recordAudit({
@@ -98,6 +117,7 @@ export async function createMember(
 
     revalidatePath("/associados");
     revalidatePath("/dashboard");
+    revalidatePath("/financeiro/pagamentos");
     return { ok: true, id: member.id };
   } catch (e) {
     return { ok: false, error: dbError(e) };
@@ -216,12 +236,25 @@ export async function removeDependent(
   }
 }
 
-export async function softDeleteMember(id: string): Promise<ActionResult> {
+export async function softDeleteMember(
+  id: string,
+  reason: string,
+  exitDateStr: string,
+): Promise<ActionResult> {
   const session = await auth();
+  if (session?.user?.role !== "ADMIN")
+    return { ok: false, error: "Apenas administradores podem desativar associados." };
+
+  const exitDate = parseBrDate(exitDateStr) ?? new Date();
+
   try {
     await prisma.member.update({
       where: { id },
-      data: { deletedAt: new Date(), status: "INACTIVE" },
+      data: {
+        status: "INACTIVE",
+        inactiveReason: reason.trim() || null,
+        inactiveAt: exitDate,
+      },
     });
 
     await recordAudit({
@@ -229,12 +262,14 @@ export async function softDeleteMember(id: string): Promise<ActionResult> {
       action: "DELETE",
       entity: "Member",
       entityId: id,
+      metadata: { reason: reason.trim(), exitDate: exitDateStr },
     });
 
     revalidatePath("/associados");
     revalidatePath("/dashboard");
     return { ok: true, id };
-  } catch {
-    return { ok: false, error: "Erro ao excluir o associado." };
+  } catch (e) {
+    console.error("[softDeleteMember]", e);
+    return { ok: false, error: dbError(e) };
   }
 }

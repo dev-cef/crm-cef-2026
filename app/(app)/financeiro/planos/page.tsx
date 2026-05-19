@@ -17,16 +17,21 @@ import {
 } from "@/components/ui/table";
 import { PlanDialog } from "@/components/modules/financeiro/plan-dialog";
 import { PlanActions } from "@/components/modules/financeiro/plan-actions";
+import { EnrollmentFeeDialog } from "@/components/modules/financeiro/enrollment-fee-dialog";
+import { getSystemConfig } from "@/app/(app)/financeiro/actions";
 
 export const dynamic = "force-dynamic";
 
-const ENROLLMENT_FEE = 50;
-
 export default async function PlanosPage() {
-  const plans = await prisma.plan.findMany({
-    orderBy: [{ billingPeriod: "asc" }, { name: "asc" }],
-    include: { _count: { select: { members: true } } },
-  });
+  const [plans, config] = await Promise.all([
+    prisma.plan.findMany({
+      orderBy: [{ billingPeriod: "asc" }, { name: "asc" }],
+      include: { _count: { select: { members: true } } },
+    }),
+    getSystemConfig(),
+  ]);
+
+  const enrollmentFee = config.enrollmentFee;
 
   const mensais = plans.filter((p) => p.billingPeriod === "MENSAL");
   const anuais = plans.filter((p) => p.billingPeriod === "ANUAL");
@@ -53,22 +58,19 @@ export default async function PlanosPage() {
       {/* Taxa de inscrição */}
       <Card className="mb-6 border-amber-500/40 bg-amber-500/5">
         <CardContent className="flex flex-wrap items-center gap-4 pt-4">
-          <span className="flex size-10 items-center justify-center rounded-full bg-amber-500/15 text-amber-600">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-600">
             <BadgePercent className="size-5" />
           </span>
           <div className="flex-1">
             <p className="font-semibold text-amber-700 dark:text-amber-400">
-              Taxa de Inscrição — {formatBRL(ENROLLMENT_FEE)} (única)
+              Taxa de Inscrição — {formatBRL(enrollmentFee)}{" "}
+              <span className="text-sm font-normal">(cobrança única)</span>
             </p>
             <p className="text-sm text-muted-foreground">
-              Obrigatória para todo novo associado. Inclui a carteirinha e já cobre a mensalidade do primeiro mês.
+              Obrigatória para todo novo associado ao se filiar ao clube.
             </p>
           </div>
-          <div className="flex flex-col gap-1 text-right text-xs text-muted-foreground">
-            <span>Plano mensal individual: R$ 50 → 1º mês incluso</span>
-            <span>Plano anual individual: R$ 50 + R$ 200 = <strong>R$ 250</strong></span>
-            <span>Plano anual família: R$ 50 + R$ 300 = <strong>R$ 350</strong></span>
-          </div>
+          <EnrollmentFeeDialog current={enrollmentFee} />
         </CardContent>
       </Card>
 

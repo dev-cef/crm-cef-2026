@@ -24,6 +24,7 @@ type Props = {
   dueDate: string;
   paidAt: string | null;
   receiptNumber: string | null;
+  notes: string | null;
 };
 
 function toAmountWords(value: number): string {
@@ -60,6 +61,7 @@ export function ReciboModal({
   dueDate,
   paidAt,
   receiptNumber,
+  notes,
 }: Props) {
   const [confirmed, setConfirmed] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
@@ -68,6 +70,10 @@ export function ReciboModal({
   const paidDate = paidAt ? new Date(paidAt) : new Date();
   const dueObj = new Date(dueDate);
   const amountWords = toAmountWords(amount);
+  const isEnrollment = notes === "Taxa de inscrição";
+  const descricao = isEnrollment
+    ? "Taxa de Inscrição (cobrança única)"
+    : `mensalidade do plano ${planName}`;
 
   function handlePrint() {
     const content = printRef.current?.innerHTML ?? "";
@@ -106,8 +112,8 @@ export function ReciboModal({
   <div class="row"><span><b>Emitido em:</b> ${formatDate(new Date())}</span><span><b>Valor:</b> ${formatBRL(amount)}</span></div>
   <div class="body-text">
     Recebemos de <b>${memberName}</b>, CPF <b>${formatCpf(memberCpf)}</b>, a importância de
-    <b>${formatBRL(amount)}</b> (${amountWords}), referente à mensalidade do plano
-    <b>${planName}</b>, com vencimento em <b>${formatDate(dueObj)}</b>,
+    <b>${formatBRL(amount)}</b> (${amountWords}), referente à
+    <b>${descricao}</b>, com vencimento em <b>${formatDate(dueObj)}</b>,
     pago em <b>${formatDate(paidDate)}</b>.
   </div>
   <div class="amount-big">${formatBRL(amount)}</div>
@@ -203,9 +209,8 @@ export function ReciboModal({
             Recebemos de{" "}
             <strong>{memberName}</strong>, CPF{" "}
             <strong>{formatCpf(memberCpf)}</strong>, a importância de{" "}
-            <strong>{formatBRL(amount)}</strong> ({amountWords}), referente à
-            mensalidade do plano{" "}
-            <strong>{planName}</strong>, com vencimento em{" "}
+            <strong>{formatBRL(amount)}</strong> ({amountWords}), referente à{" "}
+            <strong>{descricao}</strong>, com vencimento em{" "}
             <strong>{formatDate(dueObj)}</strong>, pago em{" "}
             <strong>{formatDate(paidDate)}</strong>.
           </p>

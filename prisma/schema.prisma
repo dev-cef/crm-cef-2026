@@ -81,7 +81,9 @@ model Member {
   interestEcological Int     @default(0)
   suggestions        String?
 
-  status    String    @default("ACTIVE") // ACTIVE | INACTIVE
+  status         String    @default("ACTIVE") // ACTIVE | INACTIVE
+  inactiveReason String?   // motivo de desligamento (preenchido pelo admin ao desativar)
+  inactiveAt     DateTime? // data de saída informada pelo admin (pode diferir de deletedAt)
   planId    String?
   plan      Plan?     @relation(fields: [planId], references: [id])
 
@@ -123,6 +125,21 @@ model Payment {
   @@unique([memberId, referenceMonth, referenceYear])
   @@index([status])
   @@index([referenceYear, referenceMonth])
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  type        String   // ENTRADA | SAIDA
+  category    String
+  description String
+  amount      Float
+  date        DateTime
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type])
+  @@index([date])
 }
 
 model Event {
@@ -168,6 +185,12 @@ model BirthdayMessageConfig {
   template  String   @default("Feliz aniversario, {nome}! O Clube Excursionista de Friburgo deseja um dia incrivel!")
   enabled   Boolean  @default(true)
   updatedAt DateTime @updatedAt
+}
+
+model SystemConfig {
+  id            String   @id @default(cuid())
+  enrollmentFee Float    @default(50) // taxa de inscrição única para novos associados
+  updatedAt     DateTime @updatedAt
 }
 
 model BirthdayMessageLog {

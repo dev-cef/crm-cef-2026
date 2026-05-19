@@ -21,10 +21,12 @@ export function LaunchMonthly({
   month,
   year,
   label,
+  buttonLabel = "Lançar mensalidade",
 }: {
   month: number;
   year: number;
   label: string;
+  buttonLabel?: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -52,7 +54,7 @@ export function LaunchMonthly({
       <DialogTrigger
         render={
           <Button size="sm">
-            <PlayCircle className="size-4" /> Lançar mensalidade
+            <PlayCircle className="size-4" /> {buttonLabel}
           </Button>
         }
       />

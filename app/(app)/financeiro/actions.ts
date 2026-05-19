@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { recordAudit } from "@/lib/audit";
-import { planSchema, type PlanFormValues } from "@/lib/validations/finance";
+import { parseBrDate } from "@/lib/format";
+import { planSchema, type PlanFormValues, transactionSchema, type TransactionFormValues } from "@/lib/validations/finance";
 
 type Result = { ok: boolean; error?: string };
 
@@ -212,5 +213,99 @@ export async function setPaymentStatus(
     return { ok: true };
   } catch {
     return { ok: false, error: "Erro ao atualizar o pagamento." };
+  }
+}
+
+// ─── System Config ───────────────────────────────────────────────────────────
+
+export async function getSystemConfig() {
+  let cfg = await prisma.systemConfig.findFirst();
+  if (!cfg) cfg = await prisma.systemConfig.create({ data: {} });
+  return cfg;
+}
+
+export async function saveEnrollmentFee(fee: number): Promise<Result> {
+  const session = await auth();
+  if (fee < 0) return { ok: false, error: "O valor não pode ser negativo." };
+  try {
+    const cfg = await getSystemConfig();
+    await prisma.systemConfig.update({
+      where: { id: cfg.id },
+      data: { enrollmentFee: fee },
+    });
+    await recordAudit({
+      userId: session?.user?.id,
+      action: "UPDATE",
+      entity: "SystemConfig",
+      entityId: cfg.id,
+      metadata: { enrollmentFee: fee },
+    });
+    revalidatePath("/financeiro/planos");
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Erro ao salvar a taxa de inscrição." };
+  }
+}
+
+// ─── Transactions (Entrada / Saída) ──────────────────────────────────────────
+
+export async function saveTransaction(
+  values: TransactionFormValues,
+  id?: string,
+): Promise<Result> {
+  const session = await auth();
+  const parsed = transactionSchema.safeParse(values);
+  if (!parsed.success)
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Inválido" };
+
+  const d = parsed.data;
+  const date = parseBrDate(d.date);
+  if (!date) return { ok: false, error: "Data inválida." };
+
+  const data = {
+    type: d.type,
+    category: d.category,
+    description: d.description,
+    amount: d.amount,
+    date,
+    notes: d.notes?.trim() || null,
+  };
+
+  try {
+    const tx = id
+      ? await prisma.transaction.update({ where: { id }, data })
+      : await prisma.transaction.create({ data });
+
+    await recordAudit({
+      userId: session?.user?.id,
+      action: id ? "UPDATE" : "CREATE",
+      entity: "Transaction",
+      entityId: tx.id,
+      metadata: { type: tx.type, amount: tx.amount },
+    });
+
+    revalidatePath("/financeiro/caixa");
+    revalidatePath("/financeiro");
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Erro ao salvar a transação." };
+  }
+}
+
+export async function deleteTransaction(id: string): Promise<Result> {
+  const session = await auth();
+  try {
+    await prisma.transaction.delete({ where: { id } });
+    await recordAudit({
+      userId: session?.user?.id,
+      action: "DELETE",
+      entity: "Transaction",
+      entityId: id,
+    });
+    revalidatePath("/financeiro/caixa");
+    revalidatePath("/financeiro");
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Erro ao excluir a transação." };
   }
 }

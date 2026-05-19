@@ -18,6 +18,7 @@ type Props = {
   dueDate: string;
   paidAt: string | null;
   receiptNumber: string | null;
+  notes: string | null;
 };
 
 export function PaymentRowActions({
@@ -30,6 +31,7 @@ export function PaymentRowActions({
   dueDate,
   paidAt,
   receiptNumber,
+  notes,
 }: Props) {
   const router = useRouter();
   const [baixaOpen, setBaixaOpen] = useState(false);
@@ -110,6 +112,7 @@ export function PaymentRowActions({
         dueDate={dueDate}
         paidAt={paidAt}
         receiptNumber={receiptNumber}
+        notes={notes}
       />
     </>
   );

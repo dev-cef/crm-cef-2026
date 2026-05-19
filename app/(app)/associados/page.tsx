@@ -39,12 +39,12 @@ const PAGE_SIZE = 20;
 function membershipLabel(createdAt: Date): string {
   const now = new Date();
   const years = calculateAge(createdAt);
-  if (years >= 1) return `${years} ${years === 1 ? "ano" : "anos"} de sócio`;
+  if (years >= 1) return `Sócio há: ${years} ${years === 1 ? "ano" : "anos"}`;
   const months =
     (now.getFullYear() - createdAt.getFullYear()) * 12 +
     (now.getMonth() - createdAt.getMonth());
-  if (months <= 0) return "Menos de 1 mês de sócio";
-  return `${months} ${months === 1 ? "mês" : "meses"} de sócio`;
+  if (months <= 0) return "Sócio há: < 1 mês";
+  return `Sócio há: ${months} ${months === 1 ? "mês" : "meses"}`;
 }
 type Role = "titular" | "dependente" | "individual";
 type Since = "lt1" | "1to5" | "5to10" | "10to20" | "gt30";
@@ -342,8 +342,8 @@ export default async function AssociadosPage({
               <TableHead>Associado</TableHead>
               {since !== "ALL" ? (
                 <>
-                  <TableHead className="hidden md:table-cell">Mat.</TableHead>
-                  <TableHead className="hidden md:table-cell">Tempo de sócio</TableHead>
+                  <TableHead className="hidden md:table-cell">Inscrição</TableHead>
+                  <TableHead className="hidden md:table-cell">Sócio há</TableHead>
                   <TableHead className="hidden md:table-cell">Sócio desde</TableHead>
                 </>
               ) : (
