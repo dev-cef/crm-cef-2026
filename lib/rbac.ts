@@ -95,8 +95,9 @@ export const ROUTE_ACCESS: { prefix: string; roles: Role[] }[] = [
   { prefix: "/associados", roles: ["ADMIN", "DEPARTAMENTO"] },
   { prefix: "/aniversariantes", roles: ["ADMIN", "DEPARTAMENTO"] },
   { prefix: "/eventos", roles: ["ADMIN", "DEPARTAMENTO"] },
+  { prefix: "/meu-espaco", roles: ["ADMIN", "ASSOCIADO"] },
   { prefix: "/carteirinha", roles: ["ADMIN", "DEPARTAMENTO", "ASSOCIADO"] },
-  { prefix: "/dashboard", roles: ["ADMIN", "DEPARTAMENTO", "ASSOCIADO"] },
+  { prefix: "/dashboard", roles: ["ADMIN", "DEPARTAMENTO"] },
 ];
 
 export function isRouteAllowed(pathname: string, role: Role): boolean {
@@ -105,3 +106,27 @@ export function isRouteAllowed(pathname: string, role: Role): boolean {
   if (!match) return true; // rota não mapeada: não bloqueia (telas neutras)
   return match.roles.includes(role);
 }
+
+// Página inicial de cada papel após login / ao bater em rota bloqueada.
+export function homePathForRole(role: Role): string {
+  return role === "ASSOCIADO" ? "/meu-espaco" : "/dashboard";
+}
+
+// Itens de navegação com o papel mínimo exigido. A sidebar usa isto
+// para decidir mostrar normal / mostrar com cadeado / esconder.
+export type NavRole = Role | "HIDDEN";
+
+export const NAV_ITEMS: {
+  href: string;
+  label: string;
+  // papéis que enxergam o item (mesmo que travado). Ausente = todos.
+  visibleTo?: Role[];
+}[] = [
+  { href: "/dashboard", label: "Dashboard", visibleTo: ["ADMIN", "DEPARTAMENTO"] },
+  { href: "/meu-espaco", label: "Meu Espaço", visibleTo: ["ASSOCIADO"] },
+  { href: "/associados", label: "Associados", visibleTo: ["ADMIN", "DEPARTAMENTO"] },
+  { href: "/carteirinha", label: "Carteirinha" },
+  { href: "/aniversariantes", label: "Aniversariantes", visibleTo: ["ADMIN", "DEPARTAMENTO"] },
+  { href: "/financeiro", label: "Financeiro", visibleTo: ["ADMIN", "DEPARTAMENTO"] },
+  { href: "/eventos", label: "Eventos", visibleTo: ["ADMIN", "DEPARTAMENTO"] },
+];

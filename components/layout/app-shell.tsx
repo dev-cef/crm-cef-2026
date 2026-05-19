@@ -8,13 +8,22 @@ import {
   CalendarDays,
   CreditCard,
   LayoutDashboard,
+  Lock,
   LogOut,
   Menu,
+  UserCircle,
   Users,
   Wallet,
 } from "lucide-react";
 import { CefLogo } from "@/components/layout/cef-logo";
+import { SessionBadge } from "@/components/layout/session-badge";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
+import {
+  NAV_ITEMS,
+  isRouteAllowed,
+  normalizeRole,
+  type Role,
+} from "@/lib/rbac";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -29,21 +38,52 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { logoutAction } from "@/app/(app)/actions";
 
-const NAV = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/associados", label: "Associados", icon: Users },
-  { href: "/carteirinha", label: "Carteirinha", icon: CreditCard },
-  { href: "/aniversariantes", label: "Aniversariantes", icon: Cake },
-  { href: "/financeiro", label: "Financeiro", icon: Wallet },
-  { href: "/eventos", label: "Eventos", icon: CalendarDays },
-];
+const ICONS: Record<string, typeof Users> = {
+  "/dashboard": LayoutDashboard,
+  "/meu-espaco": UserCircle,
+  "/associados": Users,
+  "/carteirinha": CreditCard,
+  "/aniversariantes": Cake,
+  "/financeiro": Wallet,
+  "/eventos": CalendarDays,
+};
 
-function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+function NavLinks({
+  role,
+  onNavigate,
+}: {
+  role: Role;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
+  const items = NAV_ITEMS.filter(
+    (item) => !item.visibleTo || item.visibleTo.includes(role),
+  );
+
   return (
     <nav className="flex flex-col gap-1 p-3">
-      {NAV.map(({ href, label, icon: Icon }) => {
-        const active = pathname === href || pathname.startsWith(`${href}/`);
+      {items.map(({ href, label }) => {
+        const Icon = ICONS[href] ?? CreditCard;
+        const allowed = isRouteAllowed(href, role);
+        const active =
+          allowed && (pathname === href || pathname.startsWith(`${href}/`));
+
+        if (!allowed) {
+          // Visível mas sem acesso (ex.: Financeiro p/ DEPARTAMENTO)
+          return (
+            <span
+              key={href}
+              title="Acesso restrito — solicite ao Administrador"
+              aria-disabled="true"
+              className="group relative flex cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/35"
+            >
+              <Icon className="size-4" />
+              <span className="flex-1">{label}</span>
+              <Lock className="size-3.5" />
+            </span>
+          );
+        }
+
         return (
           <Link
             key={href}
@@ -91,10 +131,16 @@ export function AppShell({
   user,
   children,
 }: {
-  user: { name?: string | null; email?: string | null };
+  user: {
+    name?: string | null;
+    email?: string | null;
+    role?: string | null;
+    expiresAt?: number;
+  };
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const role = normalizeRole(user.role);
   const initials = (user.name ?? user.email ?? "?")
     .split(" ")
     .map((s) => s[0])
@@ -107,7 +153,7 @@ export function AppShell({
       <aside className="hidden w-60 shrink-0 flex-col border-r border-sidebar-border bg-gradient-to-b from-sidebar to-background md:flex">
         <Brand />
         <div className="flex-1 overflow-y-auto">
-          <NavLinks />
+          <NavLinks role={role} />
         </div>
       </aside>
 
@@ -129,11 +175,14 @@ export function AppShell({
             <SheetContent side="left" className="w-64 p-0">
               <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
               <Brand />
-              <NavLinks onNavigate={() => setOpen(false)} />
+              <NavLinks role={role} onNavigate={() => setOpen(false)} />
             </SheetContent>
           </Sheet>
 
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex items-center gap-2">
+            {user.expiresAt ? (
+              <SessionBadge expiresAt={user.expiresAt} />
+            ) : null}
             <AnimatedThemeToggler
               aria-label="Alternar tema"
               className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground [&_svg]:size-4"

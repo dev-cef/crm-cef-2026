@@ -2,6 +2,7 @@ import type { NextAuthConfig } from "next-auth";
 import {
   MAX_SESSION_AGE_SECONDS,
   SESSION_MAX_AGE_SECONDS,
+  homePathForRole,
   isRouteAllowed,
   normalizeRole,
 } from "@/lib/rbac";
@@ -25,7 +26,10 @@ export const authConfig = {
 
       if (isOnLogin) {
         if (isLoggedIn) {
-          return Response.redirect(new URL("/dashboard", nextUrl));
+          const role = normalizeRole(user.role);
+          return Response.redirect(
+            new URL(homePathForRole(role), nextUrl),
+          );
         }
         return true;
       }
@@ -40,7 +44,9 @@ export const authConfig = {
       // Gate de rota por papel (ADMIN passa em tudo).
       const role = normalizeRole(user.role);
       if (!isRouteAllowed(nextUrl.pathname, role)) {
-        return Response.redirect(new URL("/dashboard", nextUrl));
+        return Response.redirect(
+          new URL(homePathForRole(role), nextUrl),
+        );
       }
 
       return true;
