@@ -12,6 +12,8 @@ import {
   CornerDownRight,
   X,
   CalendarClock,
+  Clock,
+  ArrowRight,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/authz";
@@ -84,6 +86,7 @@ export default async function AssociadosPage({
   searchParams: SearchParams;
 }) {
   const user = await requireRole("DEPARTAMENTO");
+  const isAdmin = user.role === "ADMIN";
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();
   const status = sp.status ?? "ACTIVE";
@@ -135,7 +138,7 @@ export default async function AssociadosPage({
 
   const where = { AND: and };
 
-  const [total, raw] = await Promise.all([
+  const [total, raw, pendingCount] = await Promise.all([
     prisma.member.count({ where }),
     prisma.member.findMany({
       where,
@@ -151,11 +154,13 @@ export default async function AssociadosPage({
             status: true,
           },
         },
+        user: { select: { approved: true } },
       },
       orderBy: { fullName: "asc" },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
     }),
+    isAdmin ? prisma.user.count({ where: { approved: false } }) : Promise.resolve(0),
   ]);
 
   // ── Grouping ───────────────────────────────────────────────────────
@@ -246,6 +251,33 @@ export default async function AssociadosPage({
           <UserPlus className="size-4" /> Novo associado
         </Link>
       </PageHeader>
+
+      {/* ── Banner: aprovações pendentes ── */}
+      {isAdmin && pendingCount > 0 && (
+        <Link
+          href="/configuracoes/aprovacoes"
+          className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 transition-colors hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/40 dark:hover:bg-amber-950/60"
+        >
+          <div className="flex items-center gap-3">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-amber-400/20">
+              <Clock className="size-4 text-amber-600 dark:text-amber-400" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                {pendingCount === 1
+                  ? "1 associado aguardando aprovação"
+                  : `${pendingCount} associados aguardando aprovação`}
+              </p>
+              <p className="text-xs text-amber-600/80 dark:text-amber-400/70">
+                Auto-cadastros pelo site — aprovação libera o acesso ao sistema
+              </p>
+            </div>
+          </div>
+          <span className="flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400">
+            Revisar <ArrowRight className="size-3.5" />
+          </span>
+        </Link>
+      )}
 
       {/* ── Filtros de busca ── */}
       <form method="get" className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -374,6 +406,7 @@ export default async function AssociadosPage({
               const isFamilyPlan = m.plan?.name.includes("Família");
               const isTitular = isFamilyPlan && !isDependent;
               const hasDependente = !!m.dependente;
+              const isPending = m.user?.approved === false;
 
               const prev = i > 0 ? grouped[i - 1] : null;
               const isAdjacentDependent = isDependent && prev?.id === m.titularId;
@@ -383,9 +416,11 @@ export default async function AssociadosPage({
                   key={m.id}
                   className={cn(
                     "group/row transition-colors",
-                    (isTitular && hasDependente) || isAdjacentDependent
-                      ? "bg-amber-500/[0.03] hover:bg-amber-500/[0.07]"
-                      : undefined,
+                    isPending
+                      ? "bg-amber-50/60 hover:bg-amber-50 dark:bg-amber-950/20 dark:hover:bg-amber-950/30"
+                      : (isTitular && hasDependente) || isAdjacentDependent
+                        ? "bg-amber-500/[0.03] hover:bg-amber-500/[0.07]"
+                        : undefined,
                     isTitular && hasDependente && i > 0 && !isAdjacentDependent
                       ? "border-t-2 border-t-amber-500/20"
                       : undefined,
@@ -444,6 +479,11 @@ export default async function AssociadosPage({
                         {isDependent && (
                           <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">
                             <UserCheck className="size-2.5" /> Dependente
+                          </span>
+                        )}
+                        {isPending && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+                            <Clock className="size-2.5" /> Aguardando aprovação
                           </span>
                         )}
                       </div>

@@ -125,7 +125,7 @@ export function MemberForm({ mode, plans, member }: MemberFormProps) {
       birthDate: member?.birthDate ?? "",
       cpf: member?.cpf ?? "",
       photoUrl: member?.photoUrl ?? "",
-      cep: member?.cep ?? "",
+      cep: maskCepInput(member?.cep ?? ""),
       street: member?.street ?? "",
       number: member?.number ?? "",
       complement: member?.complement ?? "",
@@ -497,10 +497,12 @@ export function MemberForm({ mode, plans, member }: MemberFormProps) {
                   {...register("cep")}
                   onChange={(e) => {
                     const v = maskCepInput(e.target.value);
-                    setValue("cep", v);
+                    setValue("cep", v, { shouldValidate: true });
                     if (v.replace(/\D/g, "").length === 8) lookupCep(v);
                   }}
-                  placeholder="99999-999"
+                  placeholder="00000-000"
+                  maxLength={9}
+                  inputMode="numeric"
                 />
                 <Err msg={errors.cep?.message} />
               </div>

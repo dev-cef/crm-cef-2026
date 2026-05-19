@@ -40,7 +40,7 @@ export const memberSchema = z
     cep: z
       .string()
       .trim()
-      .refine((v) => v.replace(/\D/g, "").length === 8, "CEP inválido"),
+      .refine((v) => /^\d{5}-\d{3}$/.test(v), "CEP inválido (formato: 00000-000)"),
     street: z.string().trim().min(1, "Informe o logradouro"),
     number: z.string().trim().min(1, "Informe o número"),
     complement: z.string().trim().optional().or(z.literal("")),
