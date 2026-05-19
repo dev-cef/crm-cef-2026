@@ -59,6 +59,8 @@ export const authConfig = {
         token.memberId = (user as { memberId?: string | null }).memberId ?? null;
         token.departmentIds =
           (user as { departmentIds?: string[] }).departmentIds ?? [];
+        token.totpEnabled =
+          (user as { totpEnabled?: boolean }).totpEnabled ?? false;
         token.expiresAt =
           Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SECONDS[role];
       }
@@ -70,6 +72,7 @@ export const authConfig = {
         session.user.role = normalizeRole(token.role);
         session.user.memberId = (token.memberId as string | null) ?? null;
         session.user.departmentIds = (token.departmentIds as string[]) ?? [];
+        session.user.totpEnabled = (token.totpEnabled as boolean) ?? false;
         session.user.expiresAt = (token.expiresAt as number) ?? 0;
       }
       return session;

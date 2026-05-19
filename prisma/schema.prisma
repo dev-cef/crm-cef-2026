@@ -22,6 +22,11 @@ model User {
   lockedUntil         DateTime?
   lockoutCount        Int       @default(0) // nº de lockouts consecutivos → backoff exponencial
 
+  // 2FA TOTP (opcional). totpSecret só é válido quando totpEnabled = true.
+  totpSecret        String?
+  totpEnabled       Boolean @default(false)
+  totpRecoveryCodes String  @default("[]") // JSON: bcrypt hashes de uso único
+
   image       String?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt

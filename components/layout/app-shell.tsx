@@ -11,6 +11,8 @@ import {
   Lock,
   LogOut,
   Menu,
+  ShieldAlert,
+  ShieldCheck,
   UserCircle,
   Users,
   Wallet,
@@ -136,11 +138,13 @@ export function AppShell({
     email?: string | null;
     role?: string | null;
     expiresAt?: number;
+    totpEnabled?: boolean;
   };
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const role = normalizeRole(user.role);
+  const isAdminUser = role === "ADMIN";
   const initials = (user.name ?? user.email ?? "?")
     .split(" ")
     .map((s) => s[0])
@@ -210,6 +214,24 @@ export function AppShell({
                   {user.email}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                {isAdminUser && (
+                  <>
+                    <DropdownMenuItem
+                      render={
+                        <Link href="/configuracoes/seguranca" className="w-full" />
+                      }
+                    >
+                      {user.totpEnabled ? (
+                        <ShieldCheck className="size-4 text-primary" />
+                      ) : (
+                        <ShieldAlert className="size-4 text-amber-500" />
+                      )}
+                      Segurança · 2FA{" "}
+                      {user.totpEnabled ? "ativo" : "inativo"}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <form action={logoutAction}>
                   <DropdownMenuItem
                     variant="destructive"

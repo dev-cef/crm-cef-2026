@@ -7,6 +7,7 @@ declare module "next-auth" {
       role: string;
       memberId: string | null;
       departmentIds: string[];
+      totpEnabled: boolean;
       expiresAt: number; // epoch (s) — expiração absoluta por papel
     } & DefaultSession["user"];
   }
@@ -15,6 +16,7 @@ declare module "next-auth" {
     role?: string;
     memberId?: string | null;
     departmentIds?: string[];
+    totpEnabled?: boolean;
   }
 }
 
@@ -24,6 +26,7 @@ declare module "next-auth/jwt" {
     role?: string;
     memberId?: string | null;
     departmentIds?: string[];
+    totpEnabled?: boolean;
     expiresAt?: number;
   }
 }

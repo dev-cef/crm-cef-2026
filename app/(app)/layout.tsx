@@ -19,6 +19,7 @@ export default async function AppLayout({
         email: session.user.email,
         role: session.user.role,
         expiresAt: session.user.expiresAt,
+        totpEnabled: session.user.totpEnabled,
       }}
     >
       {children}
