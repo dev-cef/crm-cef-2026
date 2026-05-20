@@ -105,13 +105,17 @@ function ConfigNavGroup({
 function NavLinks({
   role,
   onNavigate,
+  hiddenModules = [],
 }: {
   role: Role;
   onNavigate?: () => void;
+  hiddenModules?: string[];
 }) {
   const pathname = usePathname();
   const items = NAV_ITEMS.filter(
-    (item) => !item.visibleTo || item.visibleTo.includes(role),
+    (item) =>
+      (!item.visibleTo || item.visibleTo.includes(role)) &&
+      (!item.moduleSlug || !hiddenModules.includes(item.moduleSlug)),
   );
 
   return (
@@ -226,6 +230,7 @@ function SidebarFooter({
 export function AppShell({
   user,
   children,
+  hiddenModules = [],
 }: {
   user: {
     name?: string | null;
@@ -234,6 +239,7 @@ export function AppShell({
     expiresAt?: number;
     totpEnabled?: boolean;
   };
+  hiddenModules?: string[];
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -251,7 +257,7 @@ export function AppShell({
       <aside className="hidden w-60 shrink-0 flex-col border-r border-sidebar-border bg-gradient-to-b from-sidebar to-background md:flex">
         <Brand />
         <div className="flex-1 overflow-y-auto">
-          <NavLinks role={role} />
+          <NavLinks role={role} hiddenModules={hiddenModules} />
         </div>
         <SidebarFooter
           name={user.name}
@@ -280,7 +286,7 @@ export function AppShell({
               <div className="flex h-full flex-col">
                 <Brand />
                 <div className="flex-1 overflow-y-auto">
-                  <NavLinks role={role} onNavigate={() => setOpen(false)} />
+                  <NavLinks role={role} onNavigate={() => setOpen(false)} hiddenModules={hiddenModules} />
                 </div>
                 <SidebarFooter
                   name={user.name}

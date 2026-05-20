@@ -119,16 +119,16 @@ export type NavRole = Role | "HIDDEN";
 export const NAV_ITEMS: {
   href: string;
   label: string;
-  // papéis que enxergam o item (mesmo que travado). Ausente = todos.
   visibleTo?: Role[];
+  moduleSlug?: string; // se definido, item é ocultado quando canView=false para esse módulo
 }[] = [
-  { href: "/dashboard", label: "Dashboard", visibleTo: ["ADMIN", "DEPARTAMENTO"] },
-  { href: "/meu-espaco", label: "Meu Espaço", visibleTo: ["ASSOCIADO"] },
-  { href: "/associados", label: "Associados", visibleTo: ["ADMIN", "DEPARTAMENTO"] },
-  { href: "/carteirinha", label: "Carteirinha" },
-  { href: "/aniversariantes", label: "Aniversariantes", visibleTo: ["ADMIN", "DEPARTAMENTO"] },
-  { href: "/financeiro", label: "Financeiro", visibleTo: ["ADMIN", "DEPARTAMENTO"] },
-  { href: "/eventos", label: "Eventos", visibleTo: ["ADMIN", "DEPARTAMENTO"] },
+  { href: "/dashboard",       label: "Dashboard",       visibleTo: ["ADMIN", "DEPARTAMENTO"] },
+  { href: "/meu-espaco",      label: "Meu Espaço",      visibleTo: ["ASSOCIADO"] },
+  { href: "/associados",      label: "Associados",      visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "associados" },
+  { href: "/carteirinha",     label: "Carteirinha",     moduleSlug: "carteirinha" },
+  { href: "/aniversariantes", label: "Aniversariantes", visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "aniversariantes" },
+  { href: "/financeiro",      label: "Financeiro",      visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "financeiro" },
+  { href: "/eventos",         label: "Eventos",         visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "eventos" },
 ];
 
 export const CONFIG_NAV_ITEMS: { href: string; label: string }[] = [

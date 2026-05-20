@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { toSessionUser } from "@/lib/rbac";
+import { resolveUserPermissions } from "@/lib/permissions";
 import { AppShell } from "@/components/layout/app-shell";
 
 export default async function AppLayout({
@@ -12,6 +14,14 @@ export default async function AppLayout({
     redirect("/login");
   }
 
+  const sessionUser = toSessionUser(session.user);
+  const permMap = await resolveUserPermissions(sessionUser);
+
+  // Módulos onde canView=false — o menu lateral os omite para este usuário
+  const hiddenModules = Object.entries(permMap)
+    .filter(([, p]) => !p.view)
+    .map(([slug]) => slug);
+
   return (
     <AppShell
       user={{
@@ -21,6 +31,7 @@ export default async function AppLayout({
         expiresAt: session.user.expiresAt,
         totpEnabled: session.user.totpEnabled,
       }}
+      hiddenModules={hiddenModules}
     >
       {children}
     </AppShell>
