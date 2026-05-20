@@ -64,7 +64,7 @@ export function TransactionRowActions({ id, initial }: Props) {
           {canEdit && (
             <DropdownMenuItem
               className="cursor-pointer"
-              onSelect={() => setEditOpen(true)}
+              onClick={() => setEditOpen(true)}
             >
               <Pencil className="mr-2 size-4" /> Editar
             </DropdownMenuItem>
@@ -73,7 +73,7 @@ export function TransactionRowActions({ id, initial }: Props) {
           {canDelete && (
             <DropdownMenuItem
               className="cursor-pointer text-destructive focus:text-destructive"
-              onSelect={() => setConfirmOpen(true)}
+              onClick={() => setConfirmOpen(true)}
             >
               <Trash2 className="mr-2 size-4" /> Excluir
             </DropdownMenuItem>
