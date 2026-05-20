@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Eye, EyeOff, KeyRound, Mail } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Mail, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import {
   setUserDepartment,
   resetUserPassword,
   updateUserEmail,
+  deleteUser,
 } from "@/app/(app)/configuracoes/seguranca/actions";
 
 type Department = { id: string; name: string };
@@ -188,6 +189,75 @@ function ResetPasswordDialog({ userId, name }: { userId: string; name: string })
   );
 }
 
+function DeleteUserDialog({
+  userId,
+  name,
+  email,
+}: {
+  userId: string;
+  name: string;
+  email: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+
+  function handleConfirm() {
+    startTransition(async () => {
+      const res = await deleteUser(userId);
+      if (res.ok) {
+        toast.success(`Usuário ${name} excluído`);
+        setOpen(false);
+      } else {
+        toast.error(res.error ?? "Erro ao excluir usuário");
+      }
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!pending) setOpen(v); }}>
+      <DialogTrigger
+        render={
+          <Button variant="ghost" size="icon-sm" title="Excluir usuário" className="text-destructive hover:bg-destructive/10 hover:text-destructive">
+            <Trash2 className="size-4" />
+          </Button>
+        }
+      />
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Excluir usuário</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 py-1 text-sm text-muted-foreground">
+          <p>
+            Tem certeza que deseja excluir <strong className="text-foreground">{name}</strong>?
+          </p>
+          <p className="text-xs">{email}</p>
+          <p className="text-xs text-destructive">
+            Esta ação é irreversível. O usuário perderá acesso imediatamente.
+          </p>
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={pending}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={handleConfirm}
+            disabled={pending}
+          >
+            {pending ? "Excluindo…" : "Excluir usuário"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function UserRoleDeptRow({
   userId,
   name,
@@ -289,6 +359,9 @@ export function UserRoleDeptRow({
         <div className="flex items-center gap-1">
           <UpdateEmailDialog userId={userId} name={name} currentEmail={email} />
           <ResetPasswordDialog userId={userId} name={name} />
+          {!isSelf && (
+            <DeleteUserDialog userId={userId} name={name} email={email} />
+          )}
         </div>
       </td>
     </tr>

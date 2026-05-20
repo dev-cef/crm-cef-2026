@@ -146,6 +146,40 @@ export async function setUserRole(
   return { ok: true };
 }
 
+export async function deleteUser(
+  userId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const session = await auth();
+  await requireAdmin();
+
+  if (userId === session?.user?.id) {
+    return { ok: false, error: "Você não pode excluir sua própria conta." };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true, email: true, role: true },
+  });
+  if (!user) return { ok: false, error: "Usuário não encontrado." };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.userDepartment.deleteMany({ where: { userId } });
+    await tx.userModuleOverride.deleteMany({ where: { userId } });
+    await tx.user.delete({ where: { id: userId } });
+  });
+
+  await recordAudit({
+    userId: session?.user?.id,
+    action: "DELETE",
+    entity: "User",
+    entityId: userId,
+    metadata: { name: user.name, email: user.email, role: user.role },
+  });
+
+  revalidatePath("/configuracoes/seguranca");
+  return { ok: true };
+}
+
 export async function setUserDepartment(
   userId: string,
   departmentId: string | null,
