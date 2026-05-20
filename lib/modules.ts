@@ -2,6 +2,7 @@
 // ADMIN sempre tem acesso total; este sistema afeta apenas DEPARTAMENTO.
 
 export const CRM_MODULES = [
+  { slug: "dashboard",       label: "Dashboard",       icon: "LayoutDashboard" },
   { slug: "associados",      label: "Associados",      icon: "Users" },
   { slug: "financeiro",      label: "Financeiro",      icon: "Wallet" },
   { slug: "eventos",         label: "Eventos",         icon: "CalendarDays" },

@@ -122,7 +122,7 @@ export const NAV_ITEMS: {
   visibleTo?: Role[];
   moduleSlug?: string; // se definido, item é ocultado quando canView=false para esse módulo
 }[] = [
-  { href: "/dashboard",       label: "Dashboard",       visibleTo: ["ADMIN", "DEPARTAMENTO"] },
+  { href: "/dashboard",       label: "Dashboard",       visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "dashboard" },
   { href: "/meu-espaco",      label: "Meu Espaço",      visibleTo: ["ASSOCIADO"] },
   { href: "/associados",      label: "Associados",      visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "associados" },
   { href: "/carteirinha",     label: "Carteirinha",     moduleSlug: "carteirinha" },
