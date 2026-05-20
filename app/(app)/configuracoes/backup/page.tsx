@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { BackupDownloadButton } from "@/components/modules/configuracoes/backup-download-button";
+import { RestoreSection } from "@/components/modules/configuracoes/restore-section";
 import {
   Database,
   Users,
@@ -99,6 +100,19 @@ export default async function BackupPage() {
             </div>
           </div>
           <BackupDownloadButton />
+        </CardContent>
+      </Card>
+
+      <Card className="max-w-2xl">
+        <CardHeader>
+          <CardTitle>Restaurar backup</CardTitle>
+          <CardDescription>
+            Carregue um arquivo de backup para restaurar os dados. Os registros
+            existentes serão sobrescritos; novos usuários são ignorados (sem senha).
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RestoreSection />
         </CardContent>
       </Card>
     </div>
