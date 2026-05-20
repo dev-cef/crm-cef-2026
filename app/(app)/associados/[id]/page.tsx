@@ -12,7 +12,9 @@ import {
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/authz";
-import { scopedMemberWhere } from "@/lib/rbac";
+import { scopedMemberWhere, toSessionUser } from "@/lib/rbac";
+import { auth } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { formatCpf } from "@/lib/cpf";
 import {
@@ -75,6 +77,13 @@ export default async function AssociadoPerfilPage({
   const user = await requireRole("DEPARTAMENTO");
   const { id } = await params;
 
+  const session = await auth();
+  const sessionUser = toSessionUser(session!.user);
+  const [canEdit, canDelete] = await Promise.all([
+    can(sessionUser, "associados", "edit"),
+    can(sessionUser, "associados", "delete"),
+  ]);
+
   const member = await prisma.member.findFirst({
     where: { id, deletedAt: null, ...scopedMemberWhere(user) },
     include: {
@@ -107,22 +116,26 @@ export default async function AssociadoPerfilPage({
       </Link>
 
       <PageHeader title={member.fullName} description={`Matrícula #${member.registration}`}>
-        <Link
-          href={`/associados/${member.id}/editar`}
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-        >
-          <Pencil className="size-4" /> Editar
-        </Link>
-        <DeleteMemberDialog
-          id={member.id}
-          name={member.fullName}
-          redirectTo="/associados"
-          trigger={
-            <Button variant="destructive" size="sm">
-              <Trash2 className="size-4" /> Desativar
-            </Button>
-          }
-        />
+        {canEdit && (
+          <Link
+            href={`/associados/${member.id}/editar`}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            <Pencil className="size-4" /> Editar
+          </Link>
+        )}
+        {canDelete && (
+          <DeleteMemberDialog
+            id={member.id}
+            name={member.fullName}
+            redirectTo="/associados"
+            trigger={
+              <Button variant="destructive" size="sm">
+                <Trash2 className="size-4" /> Desativar
+              </Button>
+            }
+          />
+        )}
       </PageHeader>
 
       <div className="grid gap-4 md:grid-cols-3">

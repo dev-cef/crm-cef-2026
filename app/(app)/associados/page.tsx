@@ -17,7 +17,9 @@ import {
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/authz";
-import { scopedMemberWhere } from "@/lib/rbac";
+import { scopedMemberWhere, toSessionUser } from "@/lib/rbac";
+import { auth } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { stripCpf } from "@/lib/cpf";
 import { calculateAge, toBrDate } from "@/lib/format";
@@ -87,6 +89,16 @@ export default async function AssociadosPage({
 }) {
   const user = await requireRole("DEPARTAMENTO");
   const isAdmin = user.role === "ADMIN";
+
+  const session = await auth();
+  const sessionUser = toSessionUser(session!.user);
+  const [canCreate, canEdit, canDelete, canExport] = await Promise.all([
+    can(sessionUser, "associados", "create"),
+    can(sessionUser, "associados", "edit"),
+    can(sessionUser, "associados", "delete"),
+    can(sessionUser, "associados", "export"),
+  ]);
+
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();
   const status = sp.status ?? "ACTIVE";
@@ -240,16 +252,20 @@ export default async function AssociadosPage({
         title="Associados"
         description={`${total} associado(s) encontrado(s)`}
       >
-        <Link
-          href={exportHref}
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-          prefetch={false}
-        >
-          <Download className="size-4" /> Exportar CSV
-        </Link>
-        <Link href="/associados/novo" className={cn(buttonVariants({ size: "sm" }))}>
-          <UserPlus className="size-4" /> Novo associado
-        </Link>
+        {canExport && (
+          <Link
+            href={exportHref}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            prefetch={false}
+          >
+            <Download className="size-4" /> Exportar CSV
+          </Link>
+        )}
+        {canCreate && (
+          <Link href="/associados/novo" className={cn(buttonVariants({ size: "sm" }))}>
+            <UserPlus className="size-4" /> Novo associado
+          </Link>
+        )}
       </PageHeader>
 
       {/* ── Banner: aprovações pendentes ── */}
@@ -574,27 +590,31 @@ export default async function AssociadosPage({
                       >
                         <Eye className="size-4" />
                       </Link>
-                      <Link
-                        href={`/associados/${m.id}/editar`}
-                        className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
-                        aria-label="Editar"
-                      >
-                        <Pencil className="size-4" />
-                      </Link>
-                      <DeleteMemberDialog
-                        id={m.id}
-                        name={m.fullName}
-                        trigger={
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label="Desativar"
-                            className="text-destructive"
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        }
-                      />
+                      {canEdit && (
+                        <Link
+                          href={`/associados/${m.id}/editar`}
+                          className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
+                          aria-label="Editar"
+                        >
+                          <Pencil className="size-4" />
+                        </Link>
+                      )}
+                      {canDelete && (
+                        <DeleteMemberDialog
+                          id={m.id}
+                          name={m.fullName}
+                          trigger={
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label="Desativar"
+                              className="text-destructive"
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          }
+                        />
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
