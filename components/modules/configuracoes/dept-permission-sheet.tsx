@@ -99,7 +99,19 @@ export function DeptPermissionSheet({ open, onClose, departmentId, departmentNam
 
   function save() {
     start(async () => {
-      const r = await salvarPermissoesDept(departmentId, perms);
+      const payload = Object.fromEntries(
+        Object.entries(perms).map(([slug, p]) => [
+          slug,
+          {
+            canView:   p.view,
+            canEdit:   p.edit,
+            canCreate: p.create,
+            canDelete: p.delete,
+            canExport: p.export,
+          },
+        ]),
+      );
+      const r = await salvarPermissoesDept(departmentId, payload);
       if (r.ok) { toast.success("Permissões salvas."); onClose(); }
       else toast.error(r.error ?? "Falha ao salvar.");
     });
