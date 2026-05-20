@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
   ScrollText,
+  Settings,
   UserCheck,
   ShieldAlert,
   ShieldCheck,
@@ -51,6 +52,7 @@ const ICONS: Record<string, typeof Users> = {
   "/aniversariantes": Cake,
   "/financeiro": Wallet,
   "/eventos": CalendarDays,
+  "/configuracoes/seguranca": Settings,
 };
 
 function NavLinks({

@@ -129,4 +129,5 @@ export const NAV_ITEMS: {
   { href: "/aniversariantes", label: "Aniversariantes", visibleTo: ["ADMIN", "DEPARTAMENTO"] },
   { href: "/financeiro", label: "Financeiro", visibleTo: ["ADMIN", "DEPARTAMENTO"] },
   { href: "/eventos", label: "Eventos", visibleTo: ["ADMIN", "DEPARTAMENTO"] },
+  { href: "/configuracoes/seguranca", label: "Configurações", visibleTo: ["ADMIN"] },
 ];
