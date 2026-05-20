@@ -90,7 +90,7 @@ export function scopedEventWhere(user: SessionUser) {
 
 // Mapa de acesso por prefixo de rota. ADMIN acessa tudo.
 export const ROUTE_ACCESS: { prefix: string; roles: Role[] }[] = [
-  { prefix: "/financeiro", roles: ["ADMIN"] },
+  { prefix: "/financeiro", roles: ["ADMIN", "DEPARTAMENTO"] },
   { prefix: "/configuracoes", roles: ["ADMIN"] },
   { prefix: "/associados", roles: ["ADMIN", "DEPARTAMENTO"] },
   { prefix: "/aniversariantes", roles: ["ADMIN", "DEPARTAMENTO"] },

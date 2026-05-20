@@ -134,44 +134,45 @@ export function DeptPermissionSheet({ open, onClose, departmentId, departmentNam
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto py-4">
-          {/* Header da tabela */}
-          <div className="mb-2 grid grid-cols-[1fr_repeat(5,_auto)] gap-x-4 px-1 text-xs font-medium text-muted-foreground">
-            <span>Módulo</span>
-            {PERMISSION_ACTIONS.map(({ key, label }) => (
-              <span key={key} className="w-16 text-center">{label}</span>
-            ))}
-          </div>
+          <div className="overflow-x-auto">
+            {/* Header da tabela */}
+            <div className="mb-2 grid min-w-[420px] grid-cols-[140px_repeat(5,_1fr)] gap-x-2 px-1 text-xs font-medium text-muted-foreground">
+              <span>Módulo</span>
+              {PERMISSION_ACTIONS.map(({ key, label }) => (
+                <span key={key} className="text-center">{label}</span>
+              ))}
+            </div>
 
-          <div className="space-y-1">
-            {CRM_MODULES.map(({ slug, label }) => (
-              <div
-                key={slug}
-                className={cn(
-                  "grid grid-cols-[1fr_repeat(5,_auto)] items-center gap-x-4 rounded-lg px-1 py-2.5 transition-colors",
-                  perms[slug as ModuleSlug].view ? "hover:bg-muted/40" : "opacity-50",
-                )}
-              >
-                <Label className="cursor-pointer text-sm font-medium">{label}</Label>
-                {PERMISSION_ACTIONS.map(({ key, requires }) => {
-                  const isOn = perms[slug as ModuleSlug][key];
-                  // Visualmente desabilitado se dependências não atendidas.
-                  const depsMet = !requires || requires.every(
-                    (dep) => perms[slug as ModuleSlug][dep],
-                  );
-                  return (
-                    <div key={key} className="flex w-16 justify-center">
-                      <Switch
-                        checked={isOn}
-                        onCheckedChange={() => toggle(slug as ModuleSlug, key)}
-                        disabled={!depsMet && !isOn}
-                        aria-label={`${label} — ${key}`}
-                        className="data-[state=checked]:bg-primary"
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
+            <div className="space-y-1">
+              {CRM_MODULES.map(({ slug, label }) => (
+                <div
+                  key={slug}
+                  className={cn(
+                    "grid min-w-[420px] grid-cols-[140px_repeat(5,_1fr)] items-center gap-x-2 rounded-lg px-1 py-2.5 transition-colors",
+                    perms[slug as ModuleSlug].view ? "hover:bg-muted/40" : "opacity-50",
+                  )}
+                >
+                  <Label className="cursor-pointer text-sm font-medium">{label}</Label>
+                  {PERMISSION_ACTIONS.map(({ key, requires }) => {
+                    const isOn = perms[slug as ModuleSlug][key];
+                    const depsMet = !requires || requires.every(
+                      (dep) => perms[slug as ModuleSlug][dep],
+                    );
+                    return (
+                      <div key={key} className="flex justify-center">
+                        <Switch
+                          checked={isOn}
+                          onCheckedChange={() => toggle(slug as ModuleSlug, key)}
+                          disabled={!depsMet && !isOn}
+                          aria-label={`${label} — ${key}`}
+                          className="data-[state=checked]:bg-primary"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
           </div>
 
           <p className="mt-4 text-xs text-muted-foreground">
