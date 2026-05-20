@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { MembershipCard } from "@/components/modules/carteirinha/membership-card";
 import { CardSettingsForm } from "@/components/modules/carteirinha/card-settings-form";
+import { ServerPermissionGate } from "@/components/auth/ServerPermissionGate";
 
 export const dynamic = "force-dynamic";
 
@@ -64,11 +65,13 @@ export default async function CarteirinhaMemberPage({
       />
 
       <div className="mt-4 flex justify-center">
-        <CardSettingsForm
-          memberId={member.id}
-          registration={member.registration}
-          cardValidUntil={member.cardValidUntil?.toISOString() ?? null}
-        />
+        <ServerPermissionGate module="carteirinha" action="edit">
+          <CardSettingsForm
+            memberId={member.id}
+            registration={member.registration}
+            cardValidUntil={member.cardValidUntil?.toISOString() ?? null}
+          />
+        </ServerPermissionGate>
       </div>
     </div>
   );
