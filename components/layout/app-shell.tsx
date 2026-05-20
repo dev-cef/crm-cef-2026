@@ -379,15 +379,13 @@ export function AppShell({
                     <DropdownMenuSeparator />
                   </>
                 )}
-                <form action={logoutAction}>
-                  <DropdownMenuItem
-                    variant="destructive"
-                    render={<button type="submit" className="w-full" />}
-                  >
-                    <LogOut className="size-4" />
-                    Sair
-                  </DropdownMenuItem>
-                </form>
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => logoutAction()}
+                >
+                  <LogOut className="size-4" />
+                  Sair
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
