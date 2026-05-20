@@ -70,15 +70,11 @@ export function hasAtLeast(
 
 // Filtro Prisma de isolamento por papel — combinar (AND) com o where existente:
 //   where: { ...filtrosAtuais, ...scopedMemberWhere(user) }
-// ADMIN: {} (vê tudo, comportamento atual preservado)
-// DEPARTAMENTO: só associados do(s) seu(s) departamento(s)
+// ADMIN / DEPARTAMENTO: {} (veem todos os associados; acesso controlado pelo módulo de permissões)
 // ASSOCIADO: só o próprio registro
 export function scopedMemberWhere(user: SessionUser) {
-  if (user.role === "ADMIN") return {};
-  if (user.role === "DEPARTAMENTO") {
-    return { departmentId: { in: user.departmentIds } };
-  }
-  return { userId: user.id };
+  if (user.role === "ASSOCIADO") return { userId: user.id };
+  return {};
 }
 
 // Isolamento de eventos por papel. ASSOCIADO não tem escopo departamental
