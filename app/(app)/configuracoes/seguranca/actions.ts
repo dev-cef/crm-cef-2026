@@ -59,6 +59,35 @@ export async function createUser(
   return { ok: true };
 }
 
+export async function resetUserPassword(
+  userId: string,
+  newPassword: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const session = await auth();
+  await requireAdmin();
+
+  const parsed = passwordSchema.safeParse(newPassword);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Senha inválida" };
+  }
+
+  const passwordHash = await bcrypt.hash(parsed.data, 12);
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash, failedLoginAttempts: 0, lockedUntil: null },
+  });
+
+  await recordAudit({
+    userId: session?.user?.id,
+    action: "UPDATE",
+    entity: "User",
+    entityId: userId,
+    metadata: { action: "password_reset" },
+  });
+
+  return { ok: true };
+}
+
 export async function setUserRole(
   userId: string,
   role: string,

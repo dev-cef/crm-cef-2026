@@ -1,9 +1,22 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Eye, EyeOff, KeyRound } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { setUserRole, setUserDepartment } from "@/app/(app)/configuracoes/seguranca/actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  setUserRole,
+  setUserDepartment,
+  resetUserPassword,
+} from "@/app/(app)/configuracoes/seguranca/actions";
 
 type Department = { id: string; name: string };
 
@@ -28,6 +41,78 @@ const ROLE_BADGE: Record<string, string> = {
   DEPARTAMENTO: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
   ASSOCIADO: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
 };
+
+function ResetPasswordDialog({ userId, name }: { userId: string; name: string }) {
+  const [open, setOpen] = useState(false);
+  const [showPw, setShowPw] = useState(false);
+  const [password, setPassword] = useState("");
+  const [pending, startTransition] = useTransition();
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    startTransition(async () => {
+      const res = await resetUserPassword(userId, password);
+      if (res.ok) {
+        toast.success(`Senha de ${name} alterada com sucesso`);
+        setOpen(false);
+        setPassword("");
+      } else {
+        toast.error(res.error ?? "Erro ao alterar senha");
+      }
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!pending) { setOpen(v); if (!v) setPassword(""); } }}>
+      <DialogTrigger
+        render={
+          <Button variant="ghost" size="icon-sm" title="Alterar senha">
+            <KeyRound className="size-4" />
+          </Button>
+        }
+      />
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Alterar senha — {name}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <div className="relative">
+              <Input
+                type={showPw ? "text" : "password"}
+                placeholder="Nova senha"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="pr-10"
+                autoFocus
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                tabIndex={-1}
+              >
+                {showPw ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Mín. 12 caracteres com maiúscula, minúscula, número e símbolo.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={pending}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={pending || !password}>
+              {pending ? "Salvando…" : "Salvar senha"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export function UserRoleDeptRow({
   userId,
@@ -123,6 +208,11 @@ export function UserRoleDeptRow({
         ) : (
           <span className="text-xs text-muted-foreground">—</span>
         )}
+      </td>
+
+      {/* Ações */}
+      <td className="px-4 py-3">
+        <ResetPasswordDialog userId={userId} name={name} />
       </td>
     </tr>
   );

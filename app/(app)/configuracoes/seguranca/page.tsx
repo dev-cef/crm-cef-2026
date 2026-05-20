@@ -65,6 +65,7 @@ export default async function SegurancaPage() {
                   <th className="px-4 py-2.5 text-left">Papel atual</th>
                   <th className="px-4 py-2.5 text-left">Alterar papel</th>
                   <th className="px-4 py-2.5 text-left">Departamento</th>
+                  <th className="px-4 py-2.5 text-left">Ações</th>
                 </tr>
               </thead>
               <tbody>
