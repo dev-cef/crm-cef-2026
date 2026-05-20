@@ -1,4 +1,3 @@
-@AGENTS.md
 
 # CRM CEF 2026 — Prompt de Desenvolvimento
 
@@ -220,12 +219,3 @@ npm run db:push  # Aplicar schema do Prisma ao banco SQLite
   schema.prisma
   seed.ts
 ```
-
----
-
-## Notas de Implementação (decisões desta sessão)
-
-- **Next.js 16** (App Router) — versão estável atual; spec original dizia 15. Funcionalmente equivalente.
-- **Autenticação:** apenas email/senha por enquanto (NextAuth.js v5 / Credentials + bcrypt). Google OAuth não implementado nesta fase.
-- **Ordem de construção:** fundação primeiro (Next + Prisma + Auth + layout + Dashboard) + módulo Associados completo e verificado, depois Carteirinha, Aniversariantes, Financeiro e Eventos.
-- `node_modules/next/dist/docs/` é a fonte de verdade para APIs do Next 16 (ver `@AGENTS.md`).
