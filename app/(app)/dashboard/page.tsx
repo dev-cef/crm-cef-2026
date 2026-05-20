@@ -30,16 +30,34 @@ import { CountUp } from "@/components/unlumen-ui/count-up";
 import { ConfettiHover } from "@/components/modules/dashboard/confetti-hover";
 import { SexDonut } from "@/components/modules/dashboard/sex-donut";
 import { AgeBars } from "@/components/modules/dashboard/age-bars";
+import { RevenueBars } from "@/components/modules/dashboard/revenue-bars";
+import { PaymentStatusDonut } from "@/components/modules/dashboard/payment-status-donut";
+import { MemberGrowthBars } from "@/components/modules/dashboard/member-growth-bars";
 import { CardBeam } from "@/components/ui/card-beam";
 
 export const dynamic = "force-dynamic";
+
+function last6Months() {
+  return Array.from({ length: 6 }, (_, i) => {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - (5 - i));
+    return { year: d.getFullYear(), month: d.getMonth() + 1, label: d.toLocaleString("pt-BR", { month: "short" }) };
+  });
+}
 
 async function getData() {
   const now = new Date();
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
 
-  const [activeCount, sexGroups, members, monthPayments, upcomingEvents] =
+  const months6 = last6Months();
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setDate(1);
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+  sixMonthsAgo.setHours(0, 0, 0, 0);
+
+  const [activeCount, sexGroups, members, monthPayments, upcomingEvents, revenuePayments, newMembersRaw] =
     await Promise.all([
       prisma.member.count({
         where: { status: "ACTIVE", deletedAt: null },
@@ -67,6 +85,17 @@ async function getData() {
         orderBy: { dateTime: "asc" },
         take: 5,
         include: { _count: { select: { registrations: true } } },
+      }),
+      prisma.payment.findMany({
+        where: {
+          status: "PAGO",
+          OR: months6.map((m) => ({ referenceYear: m.year, referenceMonth: m.month })),
+        },
+        select: { amount: true, referenceMonth: true, referenceYear: true },
+      }),
+      prisma.member.findMany({
+        where: { createdAt: { gte: sixMonthsAgo }, deletedAt: null },
+        select: { createdAt: true },
       }),
     ]);
 
@@ -103,6 +132,29 @@ async function getData() {
     .filter((p) => p.status !== "PAGO")
     .reduce((s, p) => s + p.amount, 0);
 
+  // Gráfico receita — últimos 6 meses
+  const revenueBars = months6.map((m) => ({
+    label: m.label,
+    value: revenuePayments
+      .filter((p) => p.referenceYear === m.year && p.referenceMonth === m.month)
+      .reduce((s, p) => s + p.amount, 0),
+  }));
+
+  // Gráfico novos associados — últimos 6 meses
+  const memberGrowthBars = months6.map((m) => {
+    const start = new Date(m.year, m.month - 1, 1);
+    const end = new Date(m.year, m.month, 1);
+    return {
+      label: m.label,
+      value: newMembersRaw.filter((r) => r.createdAt >= start && r.createdAt < end).length,
+    };
+  });
+
+  // Status de pagamentos do mês atual
+  const pagoCount = monthPayments.filter((p) => p.status === "PAGO").length;
+  const pendenteCount = monthPayments.filter((p) => p.status === "PENDENTE").length;
+  const atrasadoCount = monthPayments.filter((p) => p.status === "ATRASADO").length;
+
   let birthdayMessage: string;
   if (todays.length > 0) {
     const extra =
@@ -128,6 +180,11 @@ async function getData() {
     pending,
     upcomingEvents,
     month,
+    revenueBars,
+    memberGrowthBars,
+    pagoCount,
+    pendenteCount,
+    atrasadoCount,
   };
 }
 
@@ -304,9 +361,54 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
+      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+        <Card
+          className="cef-rise border-border/70 lg:col-span-2"
+          style={{ "--i": 7 } as React.CSSProperties}
+        >
+          <CardHeader>
+            <CardTitle>Receita mensal</CardTitle>
+            <CardDescription>Pagamentos recebidos nos últimos 6 meses</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RevenueBars bars={data.revenueBars} />
+          </CardContent>
+        </Card>
+
+        <Card
+          className="cef-rise border-border/70"
+          style={{ "--i": 8 } as React.CSSProperties}
+        >
+          <CardHeader>
+            <CardTitle>Pagamentos do mês</CardTitle>
+            <CardDescription>Status das cobranças de {monthName(data.month)}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PaymentStatusDonut
+              pago={data.pagoCount}
+              pendente={data.pendenteCount}
+              atrasado={data.atrasadoCount}
+            />
+          </CardContent>
+        </Card>
+      </div>
+
       <Card
         className="cef-rise mt-4 border-border/70"
-        style={{ "--i": 7 } as React.CSSProperties}
+        style={{ "--i": 9 } as React.CSSProperties}
+      >
+        <CardHeader>
+          <CardTitle>Novos associados</CardTitle>
+          <CardDescription>Cadastros realizados nos últimos 6 meses</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <MemberGrowthBars bars={data.memberGrowthBars} />
+        </CardContent>
+      </Card>
+
+      <Card
+        className="cef-rise mt-4 border-border/70"
+        style={{ "--i": 10 } as React.CSSProperties}
       >
         <CardHeader>
           <CardTitle>Próximos eventos</CardTitle>
