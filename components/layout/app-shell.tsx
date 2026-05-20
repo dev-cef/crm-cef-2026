@@ -20,12 +20,15 @@ import {
   Users,
   Wallet,
   Building2,
+  KeyRound,
+  ClipboardList,
 } from "lucide-react";
 import { CefLogo } from "@/components/layout/cef-logo";
 import { SessionBadge } from "@/components/layout/session-badge";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import {
   NAV_ITEMS,
+  CONFIG_NAV_ITEMS,
   isRouteAllowed,
   normalizeRole,
   type Role,
@@ -52,8 +55,52 @@ const ICONS: Record<string, typeof Users> = {
   "/aniversariantes": Cake,
   "/financeiro": Wallet,
   "/eventos": CalendarDays,
-  "/configuracoes/seguranca": Settings,
 };
+
+const CONFIG_ICONS: Record<string, typeof Users> = {
+  "/configuracoes/seguranca":     Users,
+  "/configuracoes/departamentos": Building2,
+  "/configuracoes/aprovacoes":    UserCheck,
+  "/configuracoes/auditoria":     ScrollText,
+};
+
+function ConfigNavGroup({
+  onNavigate,
+}: {
+  onNavigate?: () => void;
+}) {
+  const pathname = usePathname();
+  const isInConfig = pathname.startsWith("/configuracoes");
+
+  return (
+    <div className="px-3 pb-2">
+      <p className="mb-1 flex items-center gap-2 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
+        <Settings className="size-3" /> Configurações
+      </p>
+      {CONFIG_NAV_ITEMS.map(({ href, label }) => {
+        const Icon = CONFIG_ICONS[href] ?? Settings;
+        const active = pathname === href || pathname.startsWith(`${href}/`);
+        return (
+          <Link
+            key={href}
+            href={href}
+            onClick={onNavigate}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
+              active
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-sidebar-foreground/70 hover:bg-primary/8 hover:text-sidebar-foreground",
+            )}
+          >
+            <Icon className="size-4" />
+            {label}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
 
 function NavLinks({
   role,
@@ -76,7 +123,6 @@ function NavLinks({
           allowed && (pathname === href || pathname.startsWith(`${href}/`));
 
         if (!allowed) {
-          // Visível mas sem acesso (ex.: Financeiro p/ DEPARTAMENTO)
           return (
             <span
               key={href}
@@ -114,6 +160,13 @@ function NavLinks({
           </Link>
         );
       })}
+
+      {role === "ADMIN" && (
+        <>
+          <div className="my-2 h-px bg-sidebar-border" />
+          <ConfigNavGroup onNavigate={onNavigate} />
+        </>
+      )}
     </nav>
   );
 }

@@ -129,5 +129,11 @@ export const NAV_ITEMS: {
   { href: "/aniversariantes", label: "Aniversariantes", visibleTo: ["ADMIN", "DEPARTAMENTO"] },
   { href: "/financeiro", label: "Financeiro", visibleTo: ["ADMIN", "DEPARTAMENTO"] },
   { href: "/eventos", label: "Eventos", visibleTo: ["ADMIN", "DEPARTAMENTO"] },
-  { href: "/configuracoes/seguranca", label: "Configurações", visibleTo: ["ADMIN"] },
+];
+
+export const CONFIG_NAV_ITEMS: { href: string; label: string }[] = [
+  { href: "/configuracoes/seguranca",    label: "Usuários" },
+  { href: "/configuracoes/departamentos", label: "Departamentos" },
+  { href: "/configuracoes/aprovacoes",   label: "Aprovações" },
+  { href: "/configuracoes/auditoria",    label: "Auditoria" },
 ];
