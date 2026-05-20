@@ -22,6 +22,7 @@ import {
   Building2,
   KeyRound,
   ClipboardList,
+  HardDriveDownload,
 } from "lucide-react";
 import { CefLogo } from "@/components/layout/cef-logo";
 import { SessionBadge } from "@/components/layout/session-badge";
@@ -62,6 +63,7 @@ const CONFIG_ICONS: Record<string, typeof Users> = {
   "/configuracoes/departamentos": Building2,
   "/configuracoes/aprovacoes":    UserCheck,
   "/configuracoes/auditoria":     ScrollText,
+  "/configuracoes/backup":        HardDriveDownload,
 };
 
 function ConfigNavGroup({
