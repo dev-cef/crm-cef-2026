@@ -33,9 +33,10 @@ model User {
   image       String?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
-  auditLogs   AuditLog[]
-  member      Member?
-  departments UserDepartment[]
+  auditLogs       AuditLog[]
+  member          Member?
+  departments     UserDepartment[]
+  moduleOverrides UserModuleOverride[]
 }
 
 model Department {
@@ -43,13 +44,52 @@ model Department {
   name        String
   slug        String   @unique
   description String?
+  color       String   @default("#6366f1")
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  users   UserDepartment[]
-  members Member[]
-  events  Event[]
+  users       UserDepartment[]
+  members     Member[]
+  events      Event[]
+  permissions DeptModulePermission[]
+}
+
+// Permissões granulares de um departamento por módulo do CRM.
+model DeptModulePermission {
+  id           String     @id @default(cuid())
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  moduleSlug   String     // "associados" | "financeiro" | "eventos" | "aniversariantes" | "carteirinha"
+  canView      Boolean    @default(true)
+  canEdit      Boolean    @default(false)
+  canCreate    Boolean    @default(false)
+  canDelete    Boolean    @default(false)
+  canExport    Boolean    @default(false)
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([departmentId, moduleSlug])
+  @@index([departmentId])
+}
+
+// Override individual de permissão — sobrepõe o departamento.
+// null = não sobrepõe (usa a permissão do departamento).
+model UserModuleOverride {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moduleSlug   String
+  canView      Boolean?
+  canEdit      Boolean?
+  canCreate    Boolean?
+  canDelete    Boolean?
+  canExport    Boolean?
+  overriddenBy String?  // userId do admin que configurou
+  overriddenAt DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, moduleSlug])
+  @@index([userId])
 }
 
 // Vínculo M:N usuário↔departamento. Permissão é aditiva (nunca subtrativa).

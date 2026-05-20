@@ -18,6 +18,7 @@ import {
   UserCircle,
   Users,
   Wallet,
+  Building2,
 } from "lucide-react";
 import { CefLogo } from "@/components/layout/cef-logo";
 import { SessionBadge } from "@/components/layout/session-badge";
@@ -302,6 +303,17 @@ export function AppShell({
                     >
                       <UserCheck className="size-4" />
                       Aprovações
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      render={
+                        <Link
+                          href="/configuracoes/departamentos"
+                          className="w-full"
+                        />
+                      }
+                    >
+                      <Building2 className="size-4" />
+                      Departamentos
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                   </>
