@@ -17,10 +17,14 @@ import {
   Users,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { toSessionUser } from "@/lib/rbac";
+import { can } from "@/lib/permissions";
 import { calculateAge, monthName } from "@/lib/format";
 import { isBirthdayInPeriod, type BirthdayPeriod } from "@/lib/birthday";
 import { cn } from "@/lib/utils";
 import { getBirthdayConfig } from "@/app/(app)/aniversariantes/actions";
+import { ServerPermissionGate } from "@/components/auth/ServerPermissionGate";
 import { PageHeader } from "@/components/layout/page-header";
 import {
   Card,
@@ -76,6 +80,15 @@ export default async function AniversariantesPage({
     dir?: string;
   }>;
 }) {
+  const session = await auth();
+  const sessionUser = toSessionUser(session!.user);
+  const [canCreateMember, canExport, canEditMember, canDeleteMember] = await Promise.all([
+    can(sessionUser, "associados", "create"),
+    can(sessionUser, "aniversariantes", "export"),
+    can(sessionUser, "associados", "edit"),
+    can(sessionUser, "associados", "delete"),
+  ]);
+
   const sp = await searchParams;
   const today = new Date();
   const period = (
@@ -219,12 +232,14 @@ export default async function AniversariantesPage({
         title="Aniversariantes"
         description="Análise e gestão dos aniversariantes do clube"
       >
-        <Link
-          href="/associados/novo"
-          className={cn(buttonVariants({ size: "sm" }))}
-        >
-          <UserPlus className="size-4" /> Novo associado
-        </Link>
+        {canCreateMember && (
+          <Link
+            href="/associados/novo"
+            className={cn(buttonVariants({ size: "sm" }))}
+          >
+            <UserPlus className="size-4" /> Novo associado
+          </Link>
+        )}
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -325,19 +340,23 @@ export default async function AniversariantesPage({
               sort={sort}
               dir={dir}
             />
-            <Link
-              href={`/aniversariantes/export?${query}&format=csv`}
-              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-            >
-              <FileSpreadsheet className="size-4" /> Exportar Excel
-            </Link>
-            <Link
-              href={`/aniversariantes/export?${query}&format=txt`}
-              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-            >
-              <FileText className="size-4" />{" "}
-              {period === "mes" ? monthName(month) : "Lista"} (.txt)
-            </Link>
+            {canExport && (
+              <Link
+                href={`/aniversariantes/export?${query}&format=csv`}
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+              >
+                <FileSpreadsheet className="size-4" /> Exportar Excel
+              </Link>
+            )}
+            {canExport && (
+              <Link
+                href={`/aniversariantes/export?${query}&format=txt`}
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+              >
+                <FileText className="size-4" />{" "}
+                {period === "mes" ? monthName(month) : "Lista"} (.txt)
+              </Link>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -468,32 +487,36 @@ export default async function AniversariantesPage({
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">
-                        <Link
-                          href={`/associados/${m.id}/editar`}
-                          className={cn(
-                            buttonVariants({
-                              variant: "ghost",
-                              size: "icon-sm",
-                            }),
-                          )}
-                          aria-label="Editar"
-                        >
-                          <Pencil className="size-4" />
-                        </Link>
-                        <DeleteMemberDialog
-                          id={m.id}
-                          name={m.fullName}
-                          trigger={
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              aria-label="Excluir"
-                              className="text-destructive"
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                          }
-                        />
+                        {canEditMember && (
+                          <Link
+                            href={`/associados/${m.id}/editar`}
+                            className={cn(
+                              buttonVariants({
+                                variant: "ghost",
+                                size: "icon-sm",
+                              }),
+                            )}
+                            aria-label="Editar"
+                          >
+                            <Pencil className="size-4" />
+                          </Link>
+                        )}
+                        {canDeleteMember && (
+                          <DeleteMemberDialog
+                            id={m.id}
+                            name={m.fullName}
+                            trigger={
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label="Excluir"
+                                className="text-destructive"
+                              >
+                                <Trash2 className="size-4" />
+                              </Button>
+                            }
+                          />
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -517,10 +540,12 @@ export default async function AniversariantesPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ConfigForm
-              initialTemplate={cfg.template}
-              initialEnabled={cfg.enabled}
-            />
+            <ServerPermissionGate module="aniversariantes" action="edit">
+              <ConfigForm
+                initialTemplate={cfg.template}
+                initialEnabled={cfg.enabled}
+              />
+            </ServerPermissionGate>
           </CardContent>
         </Card>
 
