@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/card";
 import { BackupDownloadButton } from "@/components/modules/configuracoes/backup-download-button";
 import { RestoreSection } from "@/components/modules/configuracoes/restore-section";
+import { SnapshotManager } from "@/components/modules/configuracoes/snapshot-manager";
+import { listSnapshots } from "@/app/(app)/configuracoes/backup/snapshot-actions";
 import {
   Database,
   Users,
@@ -24,6 +26,8 @@ export const dynamic = "force-dynamic";
 
 export default async function BackupPage() {
   await requireAdmin();
+
+  const snapshots = await listSnapshots();
 
   const [
     memberCount,
@@ -100,6 +104,19 @@ export default async function BackupPage() {
             </div>
           </div>
           <BackupDownloadButton />
+        </CardContent>
+      </Card>
+
+      <Card className="max-w-2xl">
+        <CardHeader>
+          <CardTitle>Snapshots</CardTitle>
+          <CardDescription>
+            Salve um ponto de restauração diretamente no sistema — sem precisar
+            baixar arquivos. Ideal para antes de importações ou mudanças em massa.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <SnapshotManager initialSnapshots={snapshots} />
         </CardContent>
       </Card>
 

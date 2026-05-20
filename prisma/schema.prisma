@@ -313,3 +313,14 @@ model AuditLog {
   @@index([userId])
   @@index([createdAt])
 }
+
+model Snapshot {
+  id          String   @id @default(cuid())
+  label       String
+  data        String   // JSON completo de todos os dados
+  sizeBytes   Int      @default(0)
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}
