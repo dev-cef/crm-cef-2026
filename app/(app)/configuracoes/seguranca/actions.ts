@@ -59,6 +59,35 @@ export async function createUser(
   return { ok: true };
 }
 
+export async function updateUserEmail(
+  userId: string,
+  newEmail: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const session = await auth();
+  await requireAdmin();
+
+  const parsed = z.email("E-mail inválido").safeParse(newEmail.trim().toLowerCase());
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "E-mail inválido" };
+
+  const existing = await prisma.user.findFirst({
+    where: { email: parsed.data, NOT: { id: userId } },
+  });
+  if (existing) return { ok: false, error: "Este e-mail já está em uso por outro usuário." };
+
+  await prisma.user.update({ where: { id: userId }, data: { email: parsed.data } });
+
+  await recordAudit({
+    userId: session?.user?.id,
+    action: "UPDATE",
+    entity: "User",
+    entityId: userId,
+    metadata: { action: "email_update", newEmail: parsed.data },
+  });
+
+  revalidatePath("/configuracoes/seguranca");
+  return { ok: true };
+}
+
 export async function resetUserPassword(
   userId: string,
   newPassword: string,

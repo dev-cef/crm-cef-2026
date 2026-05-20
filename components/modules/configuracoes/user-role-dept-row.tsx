@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Eye, EyeOff, KeyRound } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import {
   setUserRole,
   setUserDepartment,
   resetUserPassword,
+  updateUserEmail,
 } from "@/app/(app)/configuracoes/seguranca/actions";
 
 type Department = { id: string; name: string };
@@ -41,6 +42,79 @@ const ROLE_BADGE: Record<string, string> = {
   DEPARTAMENTO: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
   ASSOCIADO: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
 };
+
+function UpdateEmailDialog({
+  userId,
+  name,
+  currentEmail,
+}: {
+  userId: string;
+  name: string;
+  currentEmail: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState(currentEmail);
+  const [pending, startTransition] = useTransition();
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    startTransition(async () => {
+      const res = await updateUserEmail(userId, email);
+      if (res.ok) {
+        toast.success(`E-mail de ${name} atualizado`);
+        setOpen(false);
+      } else {
+        toast.error(res.error ?? "Erro ao atualizar e-mail");
+      }
+    });
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => { if (!pending) setOpen(v); }}
+    >
+      <DialogTrigger
+        render={
+          <Button variant="ghost" size="icon-sm" title="Alterar e-mail">
+            <Mail className="size-4" />
+          </Button>
+        }
+      />
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Alterar e-mail — {name}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            type="email"
+            placeholder="novo@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            autoFocus
+          />
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={pending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={pending || !email || email === currentEmail}
+            >
+              {pending ? "Salvando…" : "Salvar e-mail"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function ResetPasswordDialog({ userId, name }: { userId: string; name: string }) {
   const [open, setOpen] = useState(false);
@@ -212,7 +286,10 @@ export function UserRoleDeptRow({
 
       {/* Ações */}
       <td className="px-4 py-3">
-        <ResetPasswordDialog userId={userId} name={name} />
+        <div className="flex items-center gap-1">
+          <UpdateEmailDialog userId={userId} name={name} currentEmail={email} />
+          <ResetPasswordDialog userId={userId} name={name} />
+        </div>
       </td>
     </tr>
   );
