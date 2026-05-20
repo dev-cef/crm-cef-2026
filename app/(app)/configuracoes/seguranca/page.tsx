@@ -9,19 +9,85 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { TotpSetup } from "@/components/modules/configuracoes/totp-setup";
+import { UserRoleDeptRow } from "@/components/modules/configuracoes/user-role-dept-row";
 
 export const dynamic = "force-dynamic";
 
 export default async function SegurancaPage() {
-  const user = await requireAdmin();
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { totpEnabled: true },
-  });
+  const admin = await requireAdmin();
+
+  const [dbUser, users, departments] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: admin.id },
+      select: { totpEnabled: true },
+    }),
+    prisma.user.findMany({
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        departments: { select: { departmentId: true } },
+      },
+    }),
+    prisma.department.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
 
   return (
     <div className="space-y-6">
       <PageHeader title="Segurança" />
+
+      {/* ── Usuários do sistema ── */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Usuários do sistema</CardTitle>
+          <CardDescription>
+            Gerencie o papel e o departamento de cada usuário. Usuários com papel
+            <strong> Departamento</strong> só enxergam associados vinculados ao seu
+            departamento.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <th className="px-4 py-2.5 text-left">Usuário</th>
+                  <th className="px-4 py-2.5 text-left">Papel atual</th>
+                  <th className="px-4 py-2.5 text-left">Alterar papel</th>
+                  <th className="px-4 py-2.5 text-left">Departamento</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((u) => (
+                  <UserRoleDeptRow
+                    key={u.id}
+                    userId={u.id}
+                    name={u.name}
+                    email={u.email}
+                    role={u.role}
+                    currentDeptId={u.departments[0]?.departmentId ?? null}
+                    departments={departments}
+                    isSelf={u.id === admin.id}
+                  />
+                ))}
+              </tbody>
+            </table>
+            {users.length === 0 && (
+              <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+                Nenhum usuário cadastrado.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── 2FA ── */}
       <Card className="max-w-2xl">
         <CardHeader>
           <CardTitle>Verificação em duas etapas (2FA)</CardTitle>
