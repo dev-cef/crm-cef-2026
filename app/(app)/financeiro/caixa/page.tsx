@@ -247,12 +247,21 @@ export default async function CaixaPage({
                   </Badge>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {t.category}
+                  <span>{t.category}</span>
+                  {t.subcategory && (
+                    <p className="text-xs text-muted-foreground/70">{t.subcategory}</p>
+                  )}
                 </TableCell>
                 <TableCell className="text-sm">
                   <span>{t.description}</span>
+                  {t.payerName && (
+                    <p className="text-xs text-muted-foreground">{t.payerName}</p>
+                  )}
+                  {t.paymentMethod && (
+                    <p className="text-xs text-muted-foreground">{t.paymentMethod}</p>
+                  )}
                   {t.notes && (
-                    <p className="text-xs text-muted-foreground">{t.notes}</p>
+                    <p className="text-xs text-muted-foreground italic">{t.notes}</p>
                   )}
                 </TableCell>
                 <TableCell
@@ -272,9 +281,16 @@ export default async function CaixaPage({
                     initial={{
                       type: t.type as "ENTRADA" | "SAIDA",
                       category: t.category,
+                      subcategory: t.subcategory ?? "",
                       description: t.description,
                       amount: t.amount,
                       date: toBrDate(t.date),
+                      competenceMonth: t.competenceMonth ?? null,
+                      competenceYear: t.competenceYear ?? null,
+                      clubAccount: t.clubAccount ?? "",
+                      payerName: t.payerName ?? "",
+                      linkedActivity: t.linkedActivity ?? "",
+                      paymentMethod: t.paymentMethod ?? "",
                       notes: t.notes ?? "",
                     }}
                   />

@@ -7,6 +7,9 @@ import { toast } from "sonner";
 import { saveTransaction } from "@/app/(app)/financeiro/actions";
 import {
   TRANSACTION_CATEGORIES,
+  TRANSACTION_SUBCATEGORIES,
+  PAYMENT_METHODS,
+  MONTHS,
   type TransactionFormValues,
   type TransactionFormState,
 } from "@/lib/validations/finance";
@@ -38,6 +41,9 @@ function todayBr() {
   return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
 }
 
+function currentMonth() { return new Date().getMonth() + 1; }
+function currentYear() { return new Date().getFullYear(); }
+
 type Props = {
   defaultType?: "ENTRADA" | "SAIDA";
   editId?: string;
@@ -50,11 +56,20 @@ type Props = {
 const EMPTY: FormState = {
   type: "ENTRADA",
   category: "",
+  subcategory: "",
   description: "",
   amount: 0,
   date: todayBr(),
+  competenceMonth: null,
+  competenceYear: null,
+  clubAccount: "",
+  payerName: "",
+  linkedActivity: "",
+  paymentMethod: "",
   notes: "",
 };
+
+const YEARS = Array.from({ length: 6 }, (_, i) => currentYear() - 2 + i);
 
 export function TransactionDialog({
   defaultType = "ENTRADA",
@@ -70,6 +85,8 @@ export function TransactionDialog({
   const [form, setForm] = useState<FormState>({
     ...EMPTY,
     type: defaultType,
+    competenceMonth: currentMonth(),
+    competenceYear: currentYear(),
     ...initial,
   });
   const [pending, startTransition] = useTransition();
@@ -77,11 +94,24 @@ export function TransactionDialog({
 
   useEffect(() => {
     if (open) {
-      setForm({ ...EMPTY, type: defaultType, ...initial });
+      setForm({
+        ...EMPTY,
+        type: defaultType,
+        competenceMonth: currentMonth(),
+        competenceYear: currentYear(),
+        ...initial,
+      });
     }
   }, [open, defaultType, initial]);
 
   const categories = TRANSACTION_CATEGORIES[form.type];
+  const subcategories = form.category ? (TRANSACTION_SUBCATEGORIES[form.category] ?? []) : [];
+  const isEntry = form.type === "ENTRADA";
+
+  // Clear subcategory when category changes
+  function setCategory(v: string) {
+    setForm((prev) => ({ ...prev, category: v, subcategory: "" }));
+  }
 
   function set<K extends keyof FormState>(k: K, v: FormState[K]) {
     setForm((prev) => ({ ...prev, [k]: v }));
@@ -102,7 +132,6 @@ export function TransactionDialog({
     });
   }
 
-  const isEntry = form.type === "ENTRADA";
   const canSubmit =
     form.description.trim() !== "" &&
     form.category !== "" &&
@@ -110,6 +139,11 @@ export function TransactionDialog({
     /^\d{2}\/\d{2}\/\d{4}$/.test(form.date);
 
   const isControlled = controlledOnOpenChange !== undefined;
+
+  // Context-specific optional fields
+  const showPayerName = isEntry && (form.category === "Mensalidade" || form.category === "Inscrições" || form.category === "Patrocínio");
+  const showLinkedActivity = isEntry && form.category === "Inscrições";
+  const showCompetence = isEntry && (form.category === "Mensalidade" || form.category === "Inscrições");
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -129,7 +163,7 @@ export function TransactionDialog({
           }
         />
       )}
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
             {editId
@@ -148,7 +182,7 @@ export function TransactionDialog({
                 <button
                   key={t}
                   type="button"
-                  onClick={() => set("type", t)}
+                  onClick={() => setForm((prev) => ({ ...prev, type: t, category: "", subcategory: "" }))}
                   className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                     form.type === t
                       ? t === "ENTRADA"
@@ -183,29 +217,110 @@ export function TransactionDialog({
           {/* Categoria */}
           <div className="space-y-1.5">
             <Label htmlFor="tx-category">Categoria <span className="text-destructive">*</span></Label>
-            <Select
-              value={form.category}
-              onValueChange={(v) => v && set("category", v)}
-            >
+            <Select value={form.category} onValueChange={(v) => v && setCategory(v)}>
               <SelectTrigger id="tx-category">
                 <SelectValue placeholder="Selecione…" />
               </SelectTrigger>
               <SelectContent>
                 {categories.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+
+          {/* Subcategoria — só aparece se houver opções */}
+          {subcategories.length > 0 && (
+            <div className="space-y-1.5">
+              <Label htmlFor="tx-subcategory">Subcategoria</Label>
+              <Select
+                value={form.subcategory ?? ""}
+                onValueChange={(v) => set("subcategory", v ?? undefined)}
+              >
+                <SelectTrigger id="tx-subcategory">
+                  <SelectValue placeholder="Selecione…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subcategories.map((s) => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Competência (mês/ano) — para Mensalidade e Inscrições */}
+          {showCompetence && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Mês de competência</Label>
+                <Select
+                  value={form.competenceMonth ? String(form.competenceMonth) : ""}
+                  onValueChange={(v) => setForm((prev) => ({ ...prev, competenceMonth: v ? Number(v) : null }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Mês…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MONTHS.map((m) => (
+                      <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Ano de competência</Label>
+                <Select
+                  value={form.competenceYear ? String(form.competenceYear) : ""}
+                  onValueChange={(v) => setForm((prev) => ({ ...prev, competenceYear: v ? Number(v) : null }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Ano…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {YEARS.map((y) => (
+                      <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          {/* Sócio / Pagante */}
+          {showPayerName && (
+            <div className="space-y-1.5">
+              <Label htmlFor="tx-payer">
+                {form.category === "Patrocínio" ? "Patrocinador" : "Sócio / Pagante"}
+              </Label>
+              <Input
+                id="tx-payer"
+                placeholder="Nome do sócio ou pagante"
+                value={form.payerName ?? ""}
+                onChange={(e) => set("payerName", e.target.value)}
+              />
+            </div>
+          )}
+
+          {/* Atividade vinculada — para Inscrições */}
+          {showLinkedActivity && (
+            <div className="space-y-1.5">
+              <Label htmlFor="tx-activity">Atividade vinculada</Label>
+              <Input
+                id="tx-activity"
+                placeholder="Ex: Trilha Pico da Caledônia — Mai/2026"
+                value={form.linkedActivity ?? ""}
+                onChange={(e) => set("linkedActivity", e.target.value)}
+              />
+            </div>
+          )}
 
           {/* Descrição */}
           <div className="space-y-1.5">
             <Label htmlFor="tx-desc">Descrição <span className="text-destructive">*</span></Label>
             <Input
               id="tx-desc"
-              placeholder="Ex: Patrocínio empresa X"
+              placeholder={isEntry ? "Ex: Mensalidade João Silva — Mai/2026" : "Ex: Compra de equipamentos"}
               value={form.description}
               onChange={(e) => set("description", e.target.value)}
             />
@@ -222,6 +337,35 @@ export function TransactionDialog({
               placeholder="0,00"
               value={form.amount > 0 ? String(form.amount) : ""}
               onChange={(e) => set("amount", parseFloat(e.target.value) || 0)}
+            />
+          </div>
+
+          {/* Forma de pagamento */}
+          <div className="space-y-1.5">
+            <Label htmlFor="tx-method">Forma de pagamento</Label>
+            <Select
+              value={form.paymentMethod ?? ""}
+              onValueChange={(v) => set("paymentMethod", v ?? undefined)}
+            >
+              <SelectTrigger id="tx-method">
+                <SelectValue placeholder="Selecione…" />
+              </SelectTrigger>
+              <SelectContent>
+                {PAYMENT_METHODS.map((m) => (
+                  <SelectItem key={m} value={m}>{m}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Conta do clube */}
+          <div className="space-y-1.5">
+            <Label htmlFor="tx-account">Conta do clube</Label>
+            <Input
+              id="tx-account"
+              placeholder="Ex: Conta corrente Bradesco"
+              value={form.clubAccount ?? ""}
+              onChange={(e) => set("clubAccount", e.target.value)}
             />
           </div>
 

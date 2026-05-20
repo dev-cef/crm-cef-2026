@@ -221,9 +221,16 @@ model Transaction {
   id          String   @id @default(cuid())
   type        String   // ENTRADA | SAIDA
   category    String
+  subcategory String?
   description String
   amount      Float
   date        DateTime
+  competenceMonth Int?
+  competenceYear  Int?
+  clubAccount     String?
+  payerName       String?
+  linkedActivity  String?
+  paymentMethod   String?
   notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

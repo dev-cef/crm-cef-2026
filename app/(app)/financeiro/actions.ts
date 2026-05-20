@@ -265,9 +265,16 @@ export async function saveTransaction(
   const data = {
     type: d.type,
     category: d.category,
+    subcategory: d.subcategory?.trim() || null,
     description: d.description,
     amount: d.amount,
     date,
+    competenceMonth: d.competenceMonth ?? null,
+    competenceYear: d.competenceYear ?? null,
+    clubAccount: d.clubAccount?.trim() || null,
+    payerName: d.payerName?.trim() || null,
+    linkedActivity: d.linkedActivity?.trim() || null,
+    paymentMethod: d.paymentMethod?.trim() || null,
     notes: d.notes?.trim() || null,
   };
 
