@@ -5,7 +5,7 @@ import {
   Search,
   Trash2,
   UserPlus,
-  Download,
+  FileSpreadsheet,
   Upload,
   Crown,
   UserCheck,
@@ -260,7 +260,7 @@ export default async function AssociadosPage({
             className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
             prefetch={false}
           >
-            <Download className="size-4" /> Exportar CSV
+            <FileSpreadsheet className="size-4" /> Exportar Excel
           </Link>
         )}
         {canCreate && (
