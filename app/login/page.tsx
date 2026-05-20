@@ -12,7 +12,8 @@ import {
 } from "@/components/ui/card";
 
 const HERO_IMAGES = [
-  "/assets/login/fotos-de-montanha-radominicas/caixa-de-fosforo.jpg",
+  "/assets/login/fotos-de-montanha-radominicas/caixa-01.jpeg.jpg",
+  "/assets/login/fotos-de-montanha-radominicas/caixa-02.jpg",
   "/assets/login/fotos-de-montanha-radominicas/mountain-hero-01.jpeg",
   "/assets/login/fotos-de-montanha-radominicas/tres_picos.jpg",
   "/mountain-hero.jpg",
