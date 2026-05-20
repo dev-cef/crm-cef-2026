@@ -31,7 +31,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["@neondatabase/serverless", "@prisma/adapter-neon", "@prisma/client"],
+  serverExternalPackages: ["@neondatabase/serverless", "@prisma/adapter-neon", "@prisma/adapter-pg", "@prisma/client"],
   experimental: {
     serverActions: {
       bodySizeLimit: "4mb",
