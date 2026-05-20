@@ -43,6 +43,8 @@ type Props = {
   editId?: string;
   initial?: Partial<TransactionFormState>;
   trigger?: React.ReactElement;
+  open?: boolean;
+  onOpenChange?: (v: boolean) => void;
 };
 
 const EMPTY: FormState = {
@@ -59,8 +61,12 @@ export function TransactionDialog({
   editId,
   initial,
   trigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: Props) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = controlledOnOpenChange ?? setInternalOpen;
   const [form, setForm] = useState<FormState>({
     ...EMPTY,
     type: defaultType,
@@ -103,22 +109,26 @@ export function TransactionDialog({
     Number(form.amount) > 0 &&
     /^\d{2}\/\d{2}\/\d{4}$/.test(form.date);
 
+  const isControlled = controlledOnOpenChange !== undefined;
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={
-          trigger ?? (
-            <Button size="sm" variant={isEntry ? "default" : "destructive"}>
-              {editId ? (
-                <Pencil className="size-4" />
-              ) : (
-                <PlusCircle className="size-4" />
-              )}
-              {editId ? "Editar" : isEntry ? "Nova Entrada" : "Nova Saída"}
-            </Button>
-          )
-        }
-      />
+      {!isControlled && (
+        <DialogTrigger
+          render={
+            trigger ?? (
+              <Button size="sm" variant={isEntry ? "default" : "destructive"}>
+                {editId ? (
+                  <Pencil className="size-4" />
+                ) : (
+                  <PlusCircle className="size-4" />
+                )}
+                {editId ? "Editar" : isEntry ? "Nova Entrada" : "Nova Saída"}
+              </Button>
+            )
+          }
+        />
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>

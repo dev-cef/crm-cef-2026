@@ -34,6 +34,7 @@ type Props = {
 export function TransactionRowActions({ id, initial }: Props) {
   const { can } = usePermissions();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -61,19 +62,12 @@ export function TransactionRowActions({ id, initial }: Props) {
         <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label="Ações"><MoreHorizontal className="size-4" /></Button>} />
         <DropdownMenuContent align="end">
           {canEdit && (
-            <TransactionDialog
-              editId={id}
-              initial={initial}
-              defaultType={initial.type as "ENTRADA" | "SAIDA"}
-              trigger={
-                <DropdownMenuItem
-                  onSelect={(e) => e.preventDefault()}
-                  className="cursor-pointer"
-                >
-                  <Pencil className="mr-2 size-4" /> Editar
-                </DropdownMenuItem>
-              }
-            />
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onSelect={() => setEditOpen(true)}
+            >
+              <Pencil className="mr-2 size-4" /> Editar
+            </DropdownMenuItem>
           )}
           {canEdit && canDelete && <DropdownMenuSeparator />}
           {canDelete && (
@@ -86,6 +80,14 @@ export function TransactionRowActions({ id, initial }: Props) {
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <TransactionDialog
+        editId={id}
+        initial={initial}
+        defaultType={initial.type as "ENTRADA" | "SAIDA"}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+      />
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
