@@ -23,6 +23,7 @@ import {
 import { CountUp } from "@/components/unlumen-ui/count-up";
 import { CardBeam } from "@/components/ui/card-beam";
 import { LaunchMonthly } from "@/components/modules/financeiro/launch-monthly";
+import { ServerPermissionGate } from "@/components/auth/ServerPermissionGate";
 
 export const dynamic = "force-dynamic";
 
@@ -87,12 +88,14 @@ export default async function FinanceiroPage() {
         title="Financeiro"
         description="Resumo financeiro do clube"
       >
-        <LaunchMonthly
-          month={month}
-          year={year}
-          label={`${monthName(month)}/${year}`}
-          buttonLabel="Lançar Valores"
-        />
+        <ServerPermissionGate module="financeiro" action="create">
+          <LaunchMonthly
+            month={month}
+            year={year}
+            label={`${monthName(month)}/${year}`}
+            buttonLabel="Lançar Valores"
+          />
+        </ServerPermissionGate>
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-3">

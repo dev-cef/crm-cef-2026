@@ -24,6 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { TransactionDialog } from "./transaction-dialog";
+import { usePermissions } from "@/hooks/usePermissions";
 
 type Props = {
   id: string;
@@ -31,9 +32,15 @@ type Props = {
 };
 
 export function TransactionRowActions({ id, initial }: Props) {
+  const { can } = usePermissions();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+
+  const canEdit = can("financeiro", "edit");
+  const canDelete = can("financeiro", "delete");
+
+  if (!canEdit && !canDelete) return null;
 
   function handleDelete() {
     startTransition(async () => {
@@ -53,26 +60,30 @@ export function TransactionRowActions({ id, initial }: Props) {
       <DropdownMenu>
         <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label="Ações"><MoreHorizontal className="size-4" /></Button>} />
         <DropdownMenuContent align="end">
-          <TransactionDialog
-            editId={id}
-            initial={initial}
-            defaultType={initial.type as "ENTRADA" | "SAIDA"}
-            trigger={
-              <DropdownMenuItem
-                onSelect={(e) => e.preventDefault()}
-                className="cursor-pointer"
-              >
-                <Pencil className="mr-2 size-4" /> Editar
-              </DropdownMenuItem>
-            }
-          />
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="cursor-pointer text-destructive focus:text-destructive"
-            onSelect={() => setConfirmOpen(true)}
-          >
-            <Trash2 className="mr-2 size-4" /> Excluir
-          </DropdownMenuItem>
+          {canEdit && (
+            <TransactionDialog
+              editId={id}
+              initial={initial}
+              defaultType={initial.type as "ENTRADA" | "SAIDA"}
+              trigger={
+                <DropdownMenuItem
+                  onSelect={(e) => e.preventDefault()}
+                  className="cursor-pointer"
+                >
+                  <Pencil className="mr-2 size-4" /> Editar
+                </DropdownMenuItem>
+              }
+            />
+          )}
+          {canEdit && canDelete && <DropdownMenuSeparator />}
+          {canDelete && (
+            <DropdownMenuItem
+              className="cursor-pointer text-destructive focus:text-destructive"
+              onSelect={() => setConfirmOpen(true)}
+            >
+              <Trash2 className="mr-2 size-4" /> Excluir
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 

@@ -19,6 +19,7 @@ import { PlanDialog } from "@/components/modules/financeiro/plan-dialog";
 import { PlanActions } from "@/components/modules/financeiro/plan-actions";
 import { EnrollmentFeeDialog } from "@/components/modules/financeiro/enrollment-fee-dialog";
 import { getSystemConfig } from "@/app/(app)/financeiro/actions";
+import { ServerPermissionGate } from "@/components/auth/ServerPermissionGate";
 
 export const dynamic = "force-dynamic";
 
@@ -46,13 +47,15 @@ export default async function PlanosPage() {
       </Link>
 
       <PageHeader title="Planos" description={`${plans.length} plano(s) cadastrado(s)`}>
-        <PlanDialog
-          trigger={
-            <Button size="sm">
-              <Plus className="size-4" /> Novo plano
-            </Button>
-          }
-        />
+        <ServerPermissionGate module="financeiro" action="create">
+          <PlanDialog
+            trigger={
+              <Button size="sm">
+                <Plus className="size-4" /> Novo plano
+              </Button>
+            }
+          />
+        </ServerPermissionGate>
       </PageHeader>
 
       {/* Taxa de inscrição */}
@@ -70,7 +73,9 @@ export default async function PlanosPage() {
               Obrigatória para todo novo associado ao se filiar ao clube.
             </p>
           </div>
-          <EnrollmentFeeDialog current={enrollmentFee} />
+          <ServerPermissionGate module="financeiro" action="edit">
+            <EnrollmentFeeDialog current={enrollmentFee} />
+          </ServerPermissionGate>
         </CardContent>
       </Card>
 

@@ -30,6 +30,7 @@ import { CardBeam } from "@/components/ui/card-beam";
 import { TransactionDialog } from "@/components/modules/financeiro/transaction-dialog";
 import { TransactionRowActions } from "@/components/modules/financeiro/transaction-row-actions";
 import { CaixaPeriodFilter } from "@/components/modules/financeiro/caixa-period-filter";
+import { ServerPermissionGate } from "@/components/auth/ServerPermissionGate";
 
 export const dynamic = "force-dynamic";
 
@@ -139,8 +140,12 @@ export default async function CaixaPage({
         title="Caixa"
         description="Controle de entradas e saídas do clube"
       >
-        <TransactionDialog defaultType="SAIDA" />
-        <TransactionDialog defaultType="ENTRADA" />
+        <ServerPermissionGate module="financeiro" action="create">
+          <TransactionDialog defaultType="SAIDA" />
+        </ServerPermissionGate>
+        <ServerPermissionGate module="financeiro" action="create">
+          <TransactionDialog defaultType="ENTRADA" />
+        </ServerPermissionGate>
       </PageHeader>
 
       {/* Summary cards */}

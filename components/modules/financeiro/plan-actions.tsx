@@ -17,6 +17,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { PlanDialog } from "@/components/modules/financeiro/plan-dialog";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export function PlanActions({
   plan,
@@ -30,9 +31,13 @@ export function PlanActions({
     active: boolean;
   };
 }) {
+  const { can } = usePermissions();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [delOpen, setDelOpen] = useState(false);
+
+  const canEdit = can("financeiro", "edit");
+  const canDelete = can("financeiro", "delete");
 
   function toggle() {
     startTransition(async () => {
@@ -55,25 +60,32 @@ export function PlanActions({
     });
   }
 
+  if (!canEdit && !canDelete) return null;
+
   return (
     <div className="flex justify-end gap-1">
-      <PlanDialog
-        plan={plan}
-        trigger={
-          <Button variant="ghost" size="icon-sm" aria-label="Editar">
-            <Pencil className="size-4" />
-          </Button>
-        }
-      />
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={toggle}
-        disabled={pending}
-        aria-label="Ativar/Desativar"
-      >
-        <Power className="size-4" />
-      </Button>
+      {canEdit && (
+        <PlanDialog
+          plan={plan}
+          trigger={
+            <Button variant="ghost" size="icon-sm" aria-label="Editar">
+              <Pencil className="size-4" />
+            </Button>
+          }
+        />
+      )}
+      {canEdit && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={toggle}
+          disabled={pending}
+          aria-label="Ativar/Desativar"
+        >
+          <Power className="size-4" />
+        </Button>
+      )}
+      {canDelete && (
       <Dialog open={delOpen} onOpenChange={setDelOpen}>
         <DialogTrigger
           render={
@@ -115,6 +127,7 @@ export function PlanActions({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      )}
     </div>
   );
 }

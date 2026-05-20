@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { LaunchMonthly } from "@/components/modules/financeiro/launch-monthly";
+import { ServerPermissionGate } from "@/components/auth/ServerPermissionGate";
 import { PaymentRowActions } from "@/components/modules/financeiro/payment-row-actions";
 import { PaymentPeriodFilter } from "@/components/modules/financeiro/payment-period-filter";
 import { PaymentSearch } from "@/components/modules/financeiro/payment-search";
@@ -159,18 +160,22 @@ export default async function PagamentosPage({
       </Link>
 
       <PageHeader title="Financeiro" description="Cobranças e histórico financeiro de todos os associados.">
-        <Link
-          href={`/financeiro/pagamentos/export?${exportParams}`}
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-          prefetch={false}
-        >
-          <Download className="size-4" /> Exportar CSV
-        </Link>
-        <LaunchMonthly
-          month={launchMonth}
-          year={launchYear}
-          label={`${monthName(launchMonth)}/${launchYear}`}
-        />
+        <ServerPermissionGate module="financeiro" action="export">
+          <Link
+            href={`/financeiro/pagamentos/export?${exportParams}`}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            prefetch={false}
+          >
+            <Download className="size-4" /> Exportar CSV
+          </Link>
+        </ServerPermissionGate>
+        <ServerPermissionGate module="financeiro" action="create">
+          <LaunchMonthly
+            month={launchMonth}
+            year={launchYear}
+            label={`${monthName(launchMonth)}/${launchYear}`}
+          />
+        </ServerPermissionGate>
       </PageHeader>
 
       {/* Period filter */}
