@@ -14,6 +14,8 @@ import {
 const HERO_IMAGES = [
   "/assets/login/fotos-de-montanha-radominicas/caixa-de-fosforo.jpg",
   "/assets/login/fotos-de-montanha-radominicas/mountain-hero-01.jpeg",
+  "/assets/login/fotos-de-montanha-radominicas/tres_picos.jpg",
+  "/mountain-hero.jpg",
 ];
 
 export const metadata = {
