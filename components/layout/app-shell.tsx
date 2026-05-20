@@ -120,7 +120,7 @@ function NavLinks({
 
   return (
     <nav className="flex flex-col gap-1 p-3">
-      {items.map(({ href, label }) => {
+      {items.map(({ href, label, children }) => {
         const Icon = ICONS[href] ?? CreditCard;
         const allowed = isRouteAllowed(href, role);
         const active =
@@ -142,26 +142,50 @@ function NavLinks({
         }
 
         return (
-          <Link
-            key={href}
-            href={href}
-            onClick={onNavigate}
-            aria-current={active ? "page" : undefined}
-            className={cn(
-              "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
-              active
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-sidebar-foreground/70 hover:bg-primary/8 hover:text-sidebar-foreground",
-            )}
-          >
-            <Icon
+          <div key={href}>
+            <Link
+              href={href}
+              onClick={onNavigate}
+              aria-current={active ? "page" : undefined}
               className={cn(
-                "size-4 transition-transform",
-                !active && "group-hover:scale-110",
+                "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
+                active
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-sidebar-foreground/70 hover:bg-primary/8 hover:text-sidebar-foreground",
               )}
-            />
-            {label}
-          </Link>
+            >
+              <Icon
+                className={cn(
+                  "size-4 transition-transform",
+                  !active && "group-hover:scale-110",
+                )}
+              />
+              {label}
+            </Link>
+            {children && active && (
+              <div className="ml-3 mt-0.5 flex flex-col gap-0.5 border-l border-sidebar-border pl-3">
+                {children.map((child) => {
+                  const childActive = pathname === child.href || pathname.startsWith(`${child.href}/`);
+                  return (
+                    <Link
+                      key={child.href}
+                      href={child.href}
+                      onClick={onNavigate}
+                      aria-current={childActive ? "page" : undefined}
+                      className={cn(
+                        "rounded-md px-2 py-1.5 text-xs font-medium transition-all",
+                        childActive
+                          ? "text-primary"
+                          : "text-sidebar-foreground/60 hover:text-sidebar-foreground",
+                      )}
+                    >
+                      {child.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         );
       })}
 

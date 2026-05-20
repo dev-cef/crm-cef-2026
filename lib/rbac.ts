@@ -117,13 +117,24 @@ export const NAV_ITEMS: {
   label: string;
   visibleTo?: Role[];
   moduleSlug?: string; // se definido, item é ocultado quando canView=false para esse módulo
+  children?: { href: string; label: string }[];
 }[] = [
   { href: "/dashboard",       label: "Dashboard",       visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "dashboard" },
   { href: "/meu-espaco",      label: "Meu Espaço",      visibleTo: ["ASSOCIADO"] },
   { href: "/associados",      label: "Associados",      visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "associados" },
   { href: "/carteirinha",     label: "Carteirinha",     moduleSlug: "carteirinha" },
   { href: "/aniversariantes", label: "Aniversariantes", visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "aniversariantes" },
-  { href: "/financeiro",      label: "Financeiro",      visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "financeiro" },
+  {
+    href: "/financeiro",
+    label: "Financeiro",
+    visibleTo: ["ADMIN", "DEPARTAMENTO"],
+    moduleSlug: "financeiro",
+    children: [
+      { href: "/financeiro/caixa",       label: "Caixa" },
+      { href: "/financeiro/pagamentos",  label: "Pagamentos" },
+      { href: "/financeiro/planos",      label: "Planos" },
+    ],
+  },
   { href: "/eventos",         label: "Eventos",         visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "eventos" },
 ];
 
