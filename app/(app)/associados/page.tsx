@@ -6,6 +6,7 @@ import {
   Trash2,
   UserPlus,
   Download,
+  Upload,
   Crown,
   UserCheck,
   Users,
@@ -37,6 +38,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DeleteMemberDialog } from "@/components/modules/associados/delete-member-dialog";
+import { ImportCsvDialog } from "@/components/modules/associados/import-csv-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -260,6 +262,13 @@ export default async function AssociadosPage({
           >
             <Download className="size-4" /> Exportar CSV
           </Link>
+        )}
+        {canCreate && (
+          <ImportCsvDialog>
+            <Button variant="outline" size="sm">
+              <Upload className="size-4" /> Importar CSV
+            </Button>
+          </ImportCsvDialog>
         )}
         {canCreate && (
           <Link href="/associados/novo" className={cn(buttonVariants({ size: "sm" }))}>
