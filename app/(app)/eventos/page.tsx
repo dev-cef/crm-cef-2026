@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { CalendarPlus, MapPin, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { toSessionUser } from "@/lib/rbac";
+import { can } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/format";
 import { EVENT_DIFFICULTY, EVENT_STATUS, labelFrom } from "@/lib/constants";
@@ -28,6 +31,10 @@ export default async function EventosPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
+  const session = await auth();
+  const sessionUser = toSessionUser(session!.user);
+  const canCreate = await can(sessionUser, "eventos", "create");
+
   const sp = await searchParams;
   const status = sp.status ?? "ALL";
 
@@ -46,12 +53,14 @@ export default async function EventosPage({
         title="Eventos"
         description={`${events.length} evento(s)`}
       >
-        <Link
-          href="/eventos/novo"
-          className={cn(buttonVariants({ size: "sm" }))}
-        >
-          <CalendarPlus className="size-4" /> Novo evento
-        </Link>
+        {canCreate && (
+          <Link
+            href="/eventos/novo"
+            className={cn(buttonVariants({ size: "sm" }))}
+          >
+            <CalendarPlus className="size-4" /> Novo evento
+          </Link>
+        )}
       </PageHeader>
 
       <form method="get" className="mb-4 flex gap-2">

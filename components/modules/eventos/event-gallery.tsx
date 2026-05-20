@@ -6,6 +6,7 @@ import { ImagePlus, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { addPhotos, removePhoto } from "@/app/(app)/eventos/actions";
 import { Button } from "@/components/ui/button";
+import { usePermissions } from "@/hooks/usePermissions";
 
 function readFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -23,6 +24,8 @@ export function EventGallery({
   eventId: string;
   photos: { id: string; url: string }[];
 }) {
+  const { can } = usePermissions();
+  const canEdit = can("eventos", "edit");
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
@@ -70,29 +73,31 @@ export function EventGallery({
 
   return (
     <div className="space-y-3">
-      <div>
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          multiple
-          className="hidden"
-          onChange={onFiles}
-        />
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => inputRef.current?.click()}
-          disabled={busy}
-        >
-          {busy ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <ImagePlus className="size-4" />
-          )}
-          Adicionar fotos
-        </Button>
-      </div>
+      {canEdit && (
+        <div>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            className="hidden"
+            onChange={onFiles}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => inputRef.current?.click()}
+            disabled={busy}
+          >
+            {busy ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <ImagePlus className="size-4" />
+            )}
+            Adicionar fotos
+          </Button>
+        </div>
+      )}
 
       {photos.length === 0 ? (
         <p className="py-2 text-sm text-muted-foreground">
@@ -111,15 +116,17 @@ export function EventGallery({
                 alt="Foto do evento"
                 className="size-full object-cover"
               />
-              <button
-                type="button"
-                onClick={() => remove(p.id)}
-                disabled={pending}
-                className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                aria-label="Remover foto"
-              >
-                <X className="size-3" />
-              </button>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => remove(p.id)}
+                  disabled={pending}
+                  className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                  aria-label="Remover foto"
+                >
+                  <X className="size-3" />
+                </button>
+              )}
             </div>
           ))}
         </div>

@@ -9,6 +9,7 @@ import {
   removeRegistration,
 } from "@/app/(app)/eventos/actions";
 import { Button } from "@/components/ui/button";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export function EventRegistrations({
   eventId,
@@ -19,6 +20,8 @@ export function EventRegistrations({
   registered: { id: string; memberId: string; fullName: string }[];
   available: { id: string; fullName: string }[];
 }) {
+  const { can } = usePermissions();
+  const canEdit = can("eventos", "edit");
   const router = useRouter();
   const [selected, setSelected] = useState("");
   const [pending, startTransition] = useTransition();
@@ -51,32 +54,34 @@ export function EventRegistrations({
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-2">
-        <select
-          value={selected}
-          onChange={(e) => setSelected(e.target.value)}
-          className="h-9 flex-1 rounded-md border bg-background px-3 text-sm outline-none"
-        >
-          <option value="">Selecione um associado…</option>
-          {available.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.fullName}
-            </option>
-          ))}
-        </select>
-        <Button
-          size="sm"
-          onClick={add}
-          disabled={pending || !selected}
-        >
-          {pending ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <UserPlus className="size-4" />
-          )}
-          Inscrever
-        </Button>
-      </div>
+      {canEdit && (
+        <div className="flex gap-2">
+          <select
+            value={selected}
+            onChange={(e) => setSelected(e.target.value)}
+            className="h-9 flex-1 rounded-md border bg-background px-3 text-sm outline-none"
+          >
+            <option value="">Selecione um associado…</option>
+            {available.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.fullName}
+              </option>
+            ))}
+          </select>
+          <Button
+            size="sm"
+            onClick={add}
+            disabled={pending || !selected}
+          >
+            {pending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <UserPlus className="size-4" />
+            )}
+            Inscrever
+          </Button>
+        </div>
+      )}
 
       {registered.length === 0 ? (
         <p className="py-2 text-sm text-muted-foreground">
@@ -90,15 +95,17 @@ export function EventRegistrations({
               className="flex items-center justify-between px-3 py-2 text-sm"
             >
               <span>{r.fullName}</span>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => remove(r.id)}
-                disabled={pending}
-                aria-label="Remover inscrição"
-              >
-                <X className="size-4" />
-              </Button>
+              {canEdit && (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => remove(r.id)}
+                  disabled={pending}
+                  aria-label="Remover inscrição"
+                >
+                  <X className="size-4" />
+                </Button>
+              )}
             </li>
           ))}
         </ul>

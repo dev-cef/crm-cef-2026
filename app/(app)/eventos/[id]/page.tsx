@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, MapPin, Pencil, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { toSessionUser } from "@/lib/rbac";
+import { can } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/format";
 import { EVENT_DIFFICULTY, EVENT_STATUS, labelFrom } from "@/lib/constants";
@@ -34,6 +37,13 @@ export default async function EventoDetalhePage({
 }) {
   const { id } = await params;
 
+  const session = await auth();
+  const sessionUser = toSessionUser(session!.user);
+  const [canEdit, canDelete] = await Promise.all([
+    can(sessionUser, "eventos", "edit"),
+    can(sessionUser, "eventos", "delete"),
+  ]);
+
   const ev = await prisma.event.findUnique({
     where: { id },
     include: {
@@ -65,13 +75,15 @@ export default async function EventoDetalhePage({
       </Link>
 
       <PageHeader title={ev.name} description={ev.location}>
-        <Link
-          href={`/eventos/${ev.id}/editar`}
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-        >
-          <Pencil className="size-4" /> Editar
-        </Link>
-        <DeleteEventDialog id={ev.id} name={ev.name} />
+        {canEdit && (
+          <Link
+            href={`/eventos/${ev.id}/editar`}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            <Pencil className="size-4" /> Editar
+          </Link>
+        )}
+        {canDelete && <DeleteEventDialog id={ev.id} name={ev.name} />}
       </PageHeader>
 
       <div className="grid gap-4 md:grid-cols-3">

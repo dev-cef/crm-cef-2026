@@ -1,7 +1,10 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { toSessionUser } from "@/lib/rbac";
+import { can } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { toDatetimeLocal } from "@/lib/format";
 import { PageHeader } from "@/components/layout/page-header";
@@ -16,6 +19,11 @@ export default async function EditarEventoPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+  const user = toSessionUser(session.user);
+  if (!(await can(user, "eventos", "edit"))) redirect(`/eventos/${id}`);
+
   const ev = await prisma.event.findUnique({ where: { id } });
   if (!ev) notFound();
 
