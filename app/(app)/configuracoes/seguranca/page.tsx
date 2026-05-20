@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { TotpSetup } from "@/components/modules/configuracoes/totp-setup";
 import { UserRoleDeptRow } from "@/components/modules/configuracoes/user-role-dept-row";
+import { CreateUserDialog } from "@/components/modules/configuracoes/create-user-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -44,13 +45,16 @@ export default async function SegurancaPage() {
 
       {/* ── Usuários do sistema ── */}
       <Card>
-        <CardHeader>
-          <CardTitle>Usuários do sistema</CardTitle>
-          <CardDescription>
-            Gerencie o papel e o departamento de cada usuário. Usuários com papel
-            <strong> Departamento</strong> só enxergam associados vinculados ao seu
-            departamento.
-          </CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div>
+            <CardTitle>Usuários do sistema</CardTitle>
+            <CardDescription>
+              Gerencie o papel e o departamento de cada usuário. Usuários com papel
+              <strong> Departamento</strong> só enxergam associados vinculados ao seu
+              departamento.
+            </CardDescription>
+          </div>
+          <CreateUserDialog departments={departments} />
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
