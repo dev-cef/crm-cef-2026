@@ -11,6 +11,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+const HERO_IMAGES = [
+  "/assets/login/fotos-de-montanha-radominicas/caixa-de-fosforo.jpg",
+  "/assets/login/fotos-de-montanha-radominicas/mountain-hero-01.jpeg",
+];
+
 export const metadata = {
   title: "Entrar — CRM CEF",
 };
@@ -21,13 +26,15 @@ export default async function LoginPage({
   searchParams: Promise<{ cadastro?: string }>;
 }) {
   const { cadastro } = await searchParams;
+  const heroSrc = HERO_IMAGES[Math.floor(Math.random() * HERO_IMAGES.length)];
+
   return (
     <div className="grid min-h-screen flex-1 lg:grid-cols-[1.15fr_1fr]">
       {/* Painel hero — montanha + transição de marca */}
       <aside className="relative hidden overflow-hidden lg:block">
         <Image
-          src="/mountain-hero.jpg"
-          alt="Pico nevado emergindo das nuvens"
+          src={heroSrc}
+          alt="Montanha da Serra dos Órgãos"
           fill
           priority
           sizes="60vw"
