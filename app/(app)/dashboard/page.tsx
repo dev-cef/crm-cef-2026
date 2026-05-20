@@ -9,6 +9,9 @@ import {
   Users,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { toSessionUser } from "@/lib/rbac";
+import { can } from "@/lib/permissions";
 import { calculateAge, formatDateTime, monthName } from "@/lib/format";
 import { labelFrom } from "@/lib/constants";
 import { EVENT_DIFFICULTY } from "@/lib/constants";
@@ -129,6 +132,13 @@ async function getData() {
 }
 
 export default async function DashboardPage() {
+  const session = await auth();
+  const sessionUser = toSessionUser(session!.user);
+  const [canCreateMember, canCreateEvent] = await Promise.all([
+    can(sessionUser, "associados", "create"),
+    can(sessionUser, "eventos", "create"),
+  ]);
+
   const data = await getData();
 
   const stats = [
@@ -180,18 +190,22 @@ export default async function DashboardPage() {
         title="Dashboard"
         description="Visão geral do Clube Excursionista de Friburgo"
       >
-        <Link
-          href="/associados/novo"
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-        >
-          <UserPlus className="size-4" /> Novo associado
-        </Link>
-        <Link
-          href="/eventos"
-          className={cn(buttonVariants({ size: "sm" }))}
-        >
-          <CalendarPlus className="size-4" /> Novo evento
-        </Link>
+        {canCreateMember && (
+          <Link
+            href="/associados/novo"
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            <UserPlus className="size-4" /> Novo associado
+          </Link>
+        )}
+        {canCreateEvent && (
+          <Link
+            href="/eventos/novo"
+            className={cn(buttonVariants({ size: "sm" }))}
+          >
+            <CalendarPlus className="size-4" /> Novo evento
+          </Link>
+        )}
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
