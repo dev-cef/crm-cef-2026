@@ -86,12 +86,6 @@ export function MembershipCard(props: Props) {
                   <p className="text-[10px] uppercase text-zinc-500">CPF</p>
                   <p className="font-mono text-xs">{props.maskedCpf}</p>
                 </div>
-                <div>
-                  <p className="text-[10px] uppercase text-zinc-500">
-                    Validade
-                  </p>
-                  <p className="text-xs">{props.validity}</p>
-                </div>
                 <div className="col-span-2">
                   <p className="text-[10px] uppercase text-zinc-500">
                     Matrícula
@@ -101,7 +95,7 @@ export function MembershipCard(props: Props) {
               </div>
             </div>
 
-            <div className="shrink-0">
+            <div className="flex shrink-0 flex-col items-center gap-1">
               <Image
                 src={props.qrDataUrl}
                 alt="QR Code de validação"
@@ -110,6 +104,10 @@ export function MembershipCard(props: Props) {
                 unoptimized
                 className="rounded"
               />
+              <div className="text-center">
+                <p className="text-[10px] uppercase text-zinc-500">Validade</p>
+                <p className="text-xs">{props.validity}</p>
+              </div>
             </div>
           </div>
 
