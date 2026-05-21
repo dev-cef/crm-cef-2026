@@ -76,7 +76,6 @@ export function MembershipCard(props: Props) {
 
             <div className="min-w-0 flex-1 space-y-1 text-zinc-900">
               <div>
-                <p className="text-[10px] uppercase text-zinc-500">Nome</p>
                 <p className="truncate text-sm font-semibold">
                   {props.fullName}
                 </p>
