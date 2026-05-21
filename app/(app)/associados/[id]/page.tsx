@@ -31,6 +31,7 @@ import {
   labelFrom,
   SEX_OPTIONS,
 } from "@/lib/constants";
+import { STAGE_LABELS, type PhysicalCardStage } from "@/lib/physical-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +71,15 @@ const PAYMENT_BADGE: Record<string, "default" | "secondary" | "destructive"> = {
   PAGO: "default",
   PENDENTE: "secondary",
   ATRASADO: "destructive",
+};
+
+const STAGE_BADGE: Record<PhysicalCardStage, string> = {
+  minimum_requirements: "border-yellow-500/40 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
+  issuance_pending: "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+  in_production: "border-blue-600/60 bg-blue-600/20 text-blue-800 dark:text-blue-300",
+  awaiting_pickup: "border-purple-500/40 bg-purple-500/10 text-purple-700 dark:text-purple-400",
+  delivered: "border-border bg-muted text-muted-foreground",
+  rejected: "border-destructive/40 bg-destructive/10 text-destructive",
 };
 
 export default async function AssociadoPerfilPage({
@@ -168,6 +178,16 @@ export default async function AssociadoPerfilPage({
                 {member.status === "ACTIVE" ? "Ativo" : "Inativo"}
               </Badge>
               {member.plan && <Badge variant="secondary">{member.plan.name}</Badge>}
+              {member.physicalCardRequests[0] && (
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+                    STAGE_BADGE[member.physicalCardRequests[0].currentStage as PhysicalCardStage],
+                  )}
+                >
+                  Carteirinha: {STAGE_LABELS[member.physicalCardRequests[0].currentStage as PhysicalCardStage]}
+                </span>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -426,7 +446,7 @@ export default async function AssociadoPerfilPage({
         </Card>
         {/* Histórico de carteirinhas físicas */}
         {isAdminUser && member.physicalCardRequests.length > 0 && (
-          <Card>
+          <Card className="md:col-span-3">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 Carteirinhas Físicas
@@ -445,9 +465,18 @@ export default async function AssociadoPerfilPage({
                 <TableBody>
                   {member.physicalCardRequests.map((r) => (
                     <TableRow key={r.id}>
-                      <TableCell>{r.quarter}º tri/{r.year}</TableCell>
-                      <TableCell className="capitalize text-muted-foreground">
-                        {r.currentStage.replace(/_/g, " ")}
+                      <TableCell className="text-muted-foreground">
+                        {r.quarter}º tri/{r.year}
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={cn(
+                            "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium",
+                            STAGE_BADGE[r.currentStage as PhysicalCardStage],
+                          )}
+                        >
+                          {STAGE_LABELS[r.currentStage as PhysicalCardStage]}
+                        </span>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {r.deliveredAt
