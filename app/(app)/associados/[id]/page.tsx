@@ -372,6 +372,7 @@ export default async function AssociadoPerfilPage({
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Descrição</TableHead>
                     <TableHead>Referência</TableHead>
                     <TableHead>Valor</TableHead>
                     <TableHead>Vencimento</TableHead>
@@ -383,7 +384,18 @@ export default async function AssociadoPerfilPage({
                   {member.payments.map((p) => (
                     <TableRow key={p.id}>
                       <TableCell>
-                        {monthName(p.referenceMonth)}/{p.referenceYear}
+                        {p.notes === "Taxa de inscrição" ? (
+                          <Badge variant="outline" className="border-blue-500/50 text-blue-600 dark:text-blue-400">
+                            Inscrição
+                          </Badge>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Mensalidade</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {p.notes === "Taxa de inscrição"
+                          ? "—"
+                          : `${monthName(p.referenceMonth)}/${p.referenceYear}`}
                       </TableCell>
                       <TableCell>{formatBRL(p.amount)}</TableCell>
                       <TableCell>{formatDate(p.dueDate)}</TableCell>

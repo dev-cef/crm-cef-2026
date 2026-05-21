@@ -256,6 +256,7 @@ export default async function PagamentosPage({
           <TableHeader>
             <TableRow>
               <TableHead>Associado</TableHead>
+              <TableHead className="hidden lg:table-cell">Descrição</TableHead>
               <TableHead>Vencimento</TableHead>
               <TableHead>Valor</TableHead>
               <TableHead>Status</TableHead>
@@ -267,7 +268,7 @@ export default async function PagamentosPage({
             {payments.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
                   {q
@@ -286,6 +287,15 @@ export default async function PagamentosPage({
                     {p.member.fullName}
                     <ExternalLink className="size-3 text-muted-foreground" />
                   </Link>
+                </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  {p.notes === "Taxa de inscrição" ? (
+                    <Badge variant="outline" className="border-blue-500/50 text-blue-600 dark:text-blue-400">
+                      Inscrição
+                    </Badge>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Mensalidade</span>
+                  )}
                 </TableCell>
                 <TableCell className="text-sm">{formatDate(p.dueDate)}</TableCell>
                 <TableCell className="font-medium">{formatBRL(p.amount)}</TableCell>

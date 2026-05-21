@@ -75,7 +75,7 @@ export function MembershipCard(props: Props) {
             </div>
 
             <div className="min-w-0 flex-1 space-y-1 text-zinc-900">
-              <div className="mt-[5px]">
+              <div className="mt-[4px]">
                 <p className="truncate text-sm font-semibold">
                   {props.fullName}
                 </p>
