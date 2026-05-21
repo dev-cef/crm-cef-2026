@@ -182,7 +182,11 @@ export default async function AssociadoPerfilPage({
             />
             <Info
               label="Associado desde"
-              value={`${toBrDate(member.createdAt)} (${calculateAge(member.createdAt)} anos)`}
+              value={(() => {
+                const years = calculateAge(member.createdAt);
+                const suffix = years === 0 ? "menos de 1 ano" : years === 1 ? "1 ano" : `${years} anos`;
+                return `${toBrDate(member.createdAt)} (${suffix})`;
+              })()}
             />
           </CardContent>
         </Card>

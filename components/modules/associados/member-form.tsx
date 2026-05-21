@@ -756,7 +756,7 @@ export function MemberForm({ mode, plans, member }: MemberFormProps) {
                     Administração
                   </p>
                   <div>
-                    <Label htmlFor="createdAt">Data de cadastro</Label>
+                    <Label htmlFor="createdAt">Associado desde (data de inscrição)</Label>
                     <Input
                       id="createdAt"
                       placeholder="DD/MM/AAAA"
