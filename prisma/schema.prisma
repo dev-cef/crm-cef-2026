@@ -161,6 +161,7 @@ model Member {
   interestCourse     Int     @default(0)
   interestBike       Int     @default(0)
   interestEcological Int     @default(0)
+  interestEvent      Int     @default(0)
   suggestions        String?
 
   status         String    @default("ACTIVE") // ACTIVE | INACTIVE

@@ -78,6 +78,7 @@ export default async function EditarAssociadoPage({
           interestCourse: member.interestCourse,
           interestBike: member.interestBike,
           interestEcological: member.interestEcological,
+          interestEvent: member.interestEvent,
           suggestions: member.suggestions,
           planId: member.planId,
           status: member.status,

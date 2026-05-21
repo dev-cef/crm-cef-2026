@@ -72,6 +72,7 @@ export const memberSchema = z
     interestCourse: interest,
     interestBike: interest,
     interestEcological: interest,
+    interestEvent: interest,
     suggestions: z.string().trim().optional().or(z.literal("")),
 
     // Vínculo
@@ -124,5 +125,6 @@ export const STEP_FIELDS: Record<number, (keyof MemberFormValues)[]> = {
     "interestCourse",
     "interestBike",
     "interestEcological",
+    "interestEvent",
   ],
 };

@@ -45,6 +45,7 @@ export function normalizeMember(values: MemberFormValues) {
       interestCourse: d.interestCourse,
       interestBike: d.interestBike,
       interestEcological: d.interestEcological,
+      interestEvent: d.interestEvent,
       suggestions: d.suggestions || null,
       planId: d.planId || null,
       status: d.status,

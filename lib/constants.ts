@@ -86,6 +86,7 @@ export const INTEREST_FIELDS = [
   { key: "interestCourse", label: "Curso de Montanhismo / Escalada" },
   { key: "interestBike", label: "Bike" },
   { key: "interestEcological", label: "Campanhas Ecológicas" },
+  { key: "interestEvent", label: "Ajuda em evento?" },
 ] as const;
 
 export function labelFrom(

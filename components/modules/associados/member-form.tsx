@@ -99,6 +99,7 @@ export type MemberFormProps = {
     interestCourse: number;
     interestBike: number;
     interestEcological: number;
+    interestEvent: number;
     suggestions: string | null;
     planId: string | null;
     status: string;
@@ -148,6 +149,7 @@ export function MemberForm({ mode, plans, member }: MemberFormProps) {
       interestCourse: member?.interestCourse ?? 3,
       interestBike: member?.interestBike ?? 3,
       interestEcological: member?.interestEcological ?? 3,
+      interestEvent: member?.interestEvent ?? 3,
       suggestions: member?.suggestions ?? "",
       planId: member?.planId ?? "",
       status: (member?.status as "ACTIVE" | "INACTIVE") ?? "ACTIVE",
