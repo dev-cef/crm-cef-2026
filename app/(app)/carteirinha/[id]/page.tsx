@@ -16,7 +16,9 @@ import { PageHeader } from "@/components/layout/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { MembershipCard } from "@/components/modules/carteirinha/membership-card";
 import { CardSettingsForm } from "@/components/modules/carteirinha/card-settings-form";
+import { WalletButtons } from "@/components/modules/carteirinha/wallet-buttons";
 import { ServerPermissionGate } from "@/components/auth/ServerPermissionGate";
+import { appleWalletEnabled, googleWalletEnabled } from "@/lib/wallet";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +65,14 @@ export default async function CarteirinhaMemberPage({
         qrDataUrl={qrDataUrl}
         validationUrl={url}
       />
+
+      <div className="mt-4">
+        <WalletButtons
+          memberId={member.id}
+          appleEnabled={appleWalletEnabled()}
+          googleEnabled={googleWalletEnabled()}
+        />
+      </div>
 
       <div className="mt-4 flex justify-center">
         <ServerPermissionGate module="carteirinha" action="edit">
