@@ -52,6 +52,7 @@ import {
 import { DeleteMemberDialog } from "@/components/modules/associados/delete-member-dialog";
 import { FamilyPlanCard } from "@/components/modules/associados/family-plan-card";
 import { MemberSinceDialog } from "@/components/modules/associados/member-since-dialog";
+import { ChangePasswordDialog } from "@/components/modules/associados/change-password-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -125,6 +126,9 @@ export default async function AssociadoPerfilPage({
           >
             <Pencil className="size-4" /> Editar
           </Link>
+        )}
+        {isAdminUser && (
+          <ChangePasswordDialog memberId={member.id} memberName={member.fullName} />
         )}
         {canDelete && (
           <DeleteMemberDialog

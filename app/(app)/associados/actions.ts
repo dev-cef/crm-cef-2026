@@ -1,5 +1,6 @@
 "use server";
 
+import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
@@ -244,4 +245,39 @@ export async function softDeleteMember(
     console.error("[softDeleteMember]", e);
     return { ok: false, error: dbError(e) };
   }
+}
+
+export async function changeMemberPassword(
+  memberId: string,
+  newPassword: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const session = await auth();
+  if (!isAdmin(session?.user)) return { ok: false, error: "Sem permissão." };
+
+  if (newPassword.length < 6)
+    return { ok: false, error: "A senha deve ter pelo menos 6 caracteres." };
+
+  const member = await prisma.member.findFirst({
+    where: { id: memberId, deletedAt: null },
+    select: { userId: true, fullName: true },
+  });
+  if (!member) return { ok: false, error: "Associado não encontrado." };
+  if (!member.userId)
+    return { ok: false, error: "Este associado não possui conta de acesso cadastrada." };
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await prisma.user.update({
+    where: { id: member.userId },
+    data: { passwordHash },
+  });
+
+  await recordAudit({
+    userId: session?.user?.id,
+    action: "UPDATE",
+    entity: "User",
+    entityId: member.userId,
+    metadata: { action: "password_changed_by_admin", memberId },
+  });
+
+  return { ok: true };
 }
