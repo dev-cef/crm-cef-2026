@@ -52,6 +52,7 @@ import {
 import { DeleteMemberDialog } from "@/components/modules/associados/delete-member-dialog";
 import { FamilyPlanCard } from "@/components/modules/associados/family-plan-card";
 import { MemberSinceDialog } from "@/components/modules/associados/member-since-dialog";
+import { PaymentReciboButton } from "@/components/modules/associados/payment-recibo-button";
 import { ChangePasswordDialog } from "@/components/modules/associados/change-password-dialog";
 
 export const dynamic = "force-dynamic";
@@ -377,6 +378,7 @@ export default async function AssociadoPerfilPage({
                     <TableHead>Vencimento</TableHead>
                     <TableHead>Pago em</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -400,6 +402,19 @@ export default async function AssociadoPerfilPage({
                         <Badge variant={PAYMENT_BADGE[p.status] ?? "secondary"}>
                           {p.status}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <PaymentReciboButton
+                          paymentId={p.id}
+                          memberName={member.fullName}
+                          memberCpf={member.cpf}
+                          planName={member.plan?.name ?? "—"}
+                          amount={p.amount}
+                          dueDate={p.dueDate.toISOString()}
+                          paidAt={p.paidAt?.toISOString() ?? null}
+                          receiptNumber={p.receiptNumber ?? null}
+                          notes={p.notes ?? null}
+                        />
                       </TableCell>
                     </TableRow>
                   ))}
