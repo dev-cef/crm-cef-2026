@@ -6,7 +6,6 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/authz";
 import { recordAudit } from "@/lib/audit";
 import {
-  isRequestWindowOpen,
   isIssuanceWindowOpen,
   checkEligibility,
   currentQuarter,
@@ -45,14 +44,6 @@ async function addHistory(
 // ---------------------------------------------------------------------------
 export async function createRequest(memberId: string) {
   const user = await requireAdmin();
-
-  if (!isRequestWindowOpen()) {
-    const { nextRequestWindowDate, currentMonth, currentYear } = await import("@/lib/physical-card");
-    const next = nextRequestWindowDate(currentMonth(), currentYear());
-    return {
-      error: `Janela de solicitação fechada. Próxima abertura: ${next.toLocaleDateString("pt-BR")}.`,
-    };
-  }
 
   const member = await prisma.member.findUnique({
     where: { id: memberId, deletedAt: null },
