@@ -6,6 +6,8 @@ import { Loader2, Plus, Search, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { createRequest } from "@/app/(app)/carteirinha/fisica/actions";
 import { membershipNumber } from "@/lib/membership";
+import { STAGE_LABELS, type PhysicalCardStage } from "@/lib/physical-card";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -18,12 +20,29 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+type CardRequest = {
+  currentStage: string;
+  quarter: number;
+  year: number;
+};
+
 type Member = {
   id: string;
   fullName: string;
   registration: number;
   photoUrl: string | null;
+  status: string;
   plan: { name: string } | null;
+  cardRequest: CardRequest | null;
+};
+
+const STAGE_BADGE: Record<PhysicalCardStage, string> = {
+  minimum_requirements: "border-yellow-500/40 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
+  issuance_pending: "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+  in_production: "border-blue-600/60 bg-blue-600/20 text-blue-800 dark:text-blue-300",
+  awaiting_pickup: "border-purple-500/40 bg-purple-500/10 text-purple-700 dark:text-purple-400",
+  delivered: "border-border bg-muted text-muted-foreground",
+  rejected: "border-destructive/40 bg-destructive/10 text-destructive",
 };
 
 type EligibilityResult = {
@@ -52,7 +71,7 @@ export function NewRequestDialog({ trigger }: { trigger: React.ReactElement }) {
     debounce.current = setTimeout(async () => {
       setSearching(true);
       try {
-        const res = await fetch(`/api/members/search?q=${encodeURIComponent(query)}`);
+        const res = await fetch(`/api/members/search?q=${encodeURIComponent(query)}&mode=physical`);
         const data = (await res.json()) as Member[];
         setResults(data);
       } finally {
@@ -154,12 +173,25 @@ export function NewRequestDialog({ trigger }: { trigger: React.ReactElement }) {
                         {m.photoUrl && <img src={m.photoUrl} alt={m.fullName} />}
                         <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                       </Avatar>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{m.fullName}</p>
                         <p className="text-xs text-muted-foreground">
                           {membershipNumber(m.registration)} · {m.plan?.name ?? "Sem plano"}
+                          {m.status === "INACTIVE" && (
+                            <span className="ml-1 text-destructive">(Inativo)</span>
+                          )}
                         </p>
                       </div>
+                      {m.cardRequest && (
+                        <span
+                          className={cn(
+                            "shrink-0 inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
+                            STAGE_BADGE[m.cardRequest.currentStage as PhysicalCardStage],
+                          )}
+                        >
+                          {STAGE_LABELS[m.cardRequest.currentStage as PhysicalCardStage]}
+                        </span>
+                      )}
                     </button>
                   </li>
                 );
@@ -184,6 +216,16 @@ export function NewRequestDialog({ trigger }: { trigger: React.ReactElement }) {
                   <p className="text-xs text-muted-foreground">
                     {membershipNumber(selected.registration)} · {selected.plan?.name ?? "Sem plano"}
                   </p>
+                  {selected.cardRequest && (
+                    <span
+                      className={cn(
+                        "mt-1 inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
+                        STAGE_BADGE[selected.cardRequest.currentStage as PhysicalCardStage],
+                      )}
+                    >
+                      {selected.cardRequest.quarter}º tri/{selected.cardRequest.year} · {STAGE_LABELS[selected.cardRequest.currentStage as PhysicalCardStage]}
+                    </span>
+                  )}
                 </div>
                 <button
                   type="button"
