@@ -259,15 +259,46 @@ export async function changeMemberPassword(
 
   const member = await prisma.member.findFirst({
     where: { id: memberId, deletedAt: null },
-    select: { userId: true, fullName: true },
+    select: { userId: true, fullName: true, email: true },
   });
   if (!member) return { ok: false, error: "Associado não encontrado." };
-  if (!member.userId)
-    return { ok: false, error: "Este associado não possui conta de acesso cadastrada." };
 
   const passwordHash = await bcrypt.hash(newPassword, 12);
+
+  let userId = member.userId;
+
+  if (!userId) {
+    if (!member.email)
+      return { ok: false, error: "O associado não possui e-mail cadastrado para criar a conta." };
+
+    const existing = await prisma.user.findUnique({ where: { email: member.email } });
+    if (existing) {
+      await prisma.member.update({ where: { id: memberId }, data: { userId: existing.id } });
+      userId = existing.id;
+    } else {
+      const newUser = await prisma.user.create({
+        data: {
+          name: member.fullName,
+          email: member.email,
+          passwordHash,
+          role: "ASSOCIADO",
+          approved: true,
+        },
+      });
+      await prisma.member.update({ where: { id: memberId }, data: { userId: newUser.id } });
+      await recordAudit({
+        userId: session?.user?.id,
+        action: "CREATE",
+        entity: "User",
+        entityId: newUser.id,
+        metadata: { action: "account_created_by_admin", memberId },
+      });
+      return { ok: true };
+    }
+  }
+
   await prisma.user.update({
-    where: { id: member.userId },
+    where: { id: userId },
     data: { passwordHash },
   });
 
@@ -275,7 +306,7 @@ export async function changeMemberPassword(
     userId: session?.user?.id,
     action: "UPDATE",
     entity: "User",
-    entityId: member.userId,
+    entityId: userId,
     metadata: { action: "password_changed_by_admin", memberId },
   });
 
