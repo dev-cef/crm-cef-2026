@@ -187,9 +187,10 @@ model Member {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime? // soft delete
 
-  payments           Payment[]
-  eventRegistrations EventRegistration[]
-  birthdayLogs       BirthdayMessageLog[]
+  payments             Payment[]
+  eventRegistrations   EventRegistration[]
+  birthdayLogs         BirthdayMessageLog[]
+  physicalCardRequests PhysicalCardRequest[]
 
   @@index([status])
   @@index([deletedAt])
@@ -246,8 +247,9 @@ model Event {
   description String
   dateTime    DateTime
   location    String
-  difficulty  String // FACIL | MODERADO | DIFICIL | TECNICO
-  slots       Int      @default(0)
+  difficulty    String // FACIL | MODERADO | DIFICIL | TECNICO
+  eventCategory String @default("ATIVIDADE") // REUNIAO | ATIVIDADE
+  slots         Int    @default(0)
   status      String   @default("PLANEJADO") // PLANEJADO | CONFIRMADO | REALIZADO | CANCELADO
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -320,6 +322,54 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([userId])
   @@index([createdAt])
+}
+
+model PhysicalCardRequest {
+  id       String @id @default(cuid())
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  // minimum_requirements | issuance_pending | in_production | awaiting_pickup | delivered | rejected
+  currentStage        String
+  eligibilitySnapshot String // JSON dos critérios no momento da criação
+
+  approvedBy    String?
+  approvedAt    DateTime?
+  approvedNotes String?
+  rejectedReason String?
+
+  issuedAt      DateTime?
+  readyAt       DateTime?
+  deliveredAt   DateTime?
+  receivedBy    String?
+  deliveryNotes String?
+  deliveredBy   String?
+
+  quarter Int // 1 | 2 | 3 | 4
+  year    Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  statusHistory PhysicalCardStatusHistory[]
+
+  @@unique([memberId, quarter, year])
+  @@index([currentStage])
+  @@index([memberId])
+  @@index([year, quarter])
+}
+
+model PhysicalCardStatusHistory {
+  id        String              @id @default(cuid())
+  requestId String
+  request   PhysicalCardRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  fromStage String?
+  toStage   String
+  changedBy String // nome/email do admin
+  changedAt DateTime @default(now())
+  payload   String? // JSON com dados extras (reason, notes, etc.)
+
+  @@index([requestId])
 }
 
 model Snapshot {

@@ -93,6 +93,7 @@ export default async function AssociadoPerfilPage({
     include: {
       plan: true,
       payments: { orderBy: [{ referenceYear: "desc" }, { referenceMonth: "desc" }] },
+      physicalCardRequests: { orderBy: { createdAt: "desc" } },
       titular: { select: { id: true, fullName: true, registration: true, photoUrl: true, phone: true, plan: { select: { name: true } } } },
       dependente: { select: { id: true, fullName: true, registration: true, photoUrl: true, phone: true, plan: { select: { name: true } } } },
     },
@@ -423,6 +424,48 @@ export default async function AssociadoPerfilPage({
             )}
           </CardContent>
         </Card>
+        {/* Histórico de carteirinhas físicas */}
+        {isAdminUser && member.physicalCardRequests.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                Carteirinhas Físicas
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Trimestre</TableHead>
+                    <TableHead>Etapa</TableHead>
+                    <TableHead>Entregue em</TableHead>
+                    <TableHead className="w-16" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {member.physicalCardRequests.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell>{r.quarter}º tri/{r.year}</TableCell>
+                      <TableCell className="capitalize text-muted-foreground">
+                        {r.currentStage.replace(/_/g, " ")}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {r.deliveredAt
+                          ? new Date(r.deliveredAt).toLocaleDateString("pt-BR")
+                          : "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Link href={`/carteirinha/fisica/${r.id}`}>
+                          <Button variant="ghost" size="sm">Ver</Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

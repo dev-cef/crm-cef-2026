@@ -6,6 +6,9 @@ import {
   CircleCheck,
   ShieldCheck,
   Download,
+  Pencil,
+  Lock,
+  ImagePlus,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/authz";
@@ -13,7 +16,7 @@ import { formatCpf } from "@/lib/cpf";
 import { formatBRL, monthName, toBrDate } from "@/lib/format";
 import { membershipNumber, membershipValidity } from "@/lib/membership";
 import { PageHeader } from "@/components/layout/page-header";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -31,6 +34,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { EditarDadosDialog } from "./editar-dados-dialog";
+import { TrocarSenhaDialog } from "./trocar-senha-dialog";
+import { FotoDialog } from "./foto-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -121,14 +127,45 @@ export default async function MeuEspacoPage() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2">
-            <Info label="Plano" value={member.plan?.name ?? "—"} />
-            <Info
-              label="Validade da carteirinha"
-              value={toBrDate(validity)}
-            />
-            <Info label="E-mail" value={member.email} />
-            <Info label="Telefone" value={member.phone} />
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Info label="Plano" value={member.plan?.name ?? "—"} />
+              <Info
+                label="Validade da carteirinha"
+                value={toBrDate(validity)}
+              />
+              <Info label="E-mail" value={member.email} />
+              <Info label="Telefone" value={member.phone} />
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <FotoDialog
+                currentPhotoUrl={member.photoUrl}
+                initials={initials}
+                trigger={
+                  <Button variant="outline" size="sm">
+                    <ImagePlus className="size-4" />
+                    {member.photoUrl ? "Trocar foto" : "Adicionar foto"}
+                  </Button>
+                }
+              />
+              <EditarDadosDialog
+                member={member}
+                trigger={
+                  <Button variant="outline" size="sm">
+                    <Pencil className="size-4" />
+                    Editar dados
+                  </Button>
+                }
+              />
+              <TrocarSenhaDialog
+                trigger={
+                  <Button variant="outline" size="sm">
+                    <Lock className="size-4" />
+                    Trocar senha
+                  </Button>
+                }
+              />
+            </div>
           </CardContent>
         </Card>
 

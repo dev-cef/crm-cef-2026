@@ -166,7 +166,7 @@ function NavLinks({
             </Link>
             {children && active && (
               <div className="ml-3 mt-0.5 flex flex-col gap-0.5 border-l border-sidebar-border pl-3">
-                {children.map((child) => {
+                {children.filter((child) => !child.visibleTo || child.visibleTo.includes(role)).map((child) => {
                   const childActive = pathname === child.href || pathname.startsWith(`${child.href}/`);
                   return (
                     <Link

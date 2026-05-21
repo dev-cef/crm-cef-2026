@@ -1,9 +1,14 @@
 import NextAuth from "next-auth";
 import { authConfig } from "@/lib/auth.config";
+import type { NextRequest } from "next/server";
 
-// Next.js 16: `middleware` foi renomeado para `proxy` (runtime nodejs).
-// Proteção de rotas via callback `authorized` da authConfig.
-export default NextAuth(authConfig).auth;
+const { auth } = NextAuth(authConfig);
+
+export async function proxy(request: NextRequest) {
+  return auth(request as unknown as Parameters<typeof auth>[0]);
+}
+
+export default proxy;
 
 export const config = {
   matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)"],
