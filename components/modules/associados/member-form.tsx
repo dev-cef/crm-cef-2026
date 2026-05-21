@@ -38,6 +38,7 @@ import {
 } from "@/lib/format";
 import { calculateAge } from "@/lib/format";
 import { createMember, updateMember } from "@/app/(app)/associados/actions";
+import { DeleteMemberDialog } from "@/components/modules/associados/delete-member-dialog";
 import { registrarAssociado } from "@/app/criar-conta/actions";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -113,6 +114,7 @@ export function MemberForm({ mode, plans, member }: MemberFormProps) {
   const [pending, startTransition] = useTransition();
   const [signupPw, setSignupPw] = useState("");
   const [signupPw2, setSignupPw2] = useState("");
+  const [deactivateOpen, setDeactivateOpen] = useState(false);
 
   const form = useForm<MemberFormValues>({
     resolver: zodResolver(memberSchema),
@@ -265,6 +267,7 @@ export function MemberForm({ mode, plans, member }: MemberFormProps) {
   }
 
   return (
+    <>
     <form
       onSubmit={(e) => e.preventDefault()}
       onKeyDown={(e) => {
@@ -745,6 +748,16 @@ export function MemberForm({ mode, plans, member }: MemberFormProps) {
                     id="status"
                     className={selectCls}
                     {...register("status")}
+                    onChange={(e) => {
+                      if (e.target.value === "INACTIVE" && mode === "edit") {
+                        // Revert immediately — the deactivation dialog handles it
+                        e.target.value = "ACTIVE";
+                        setValue("status", "ACTIVE");
+                        setDeactivateOpen(true);
+                      } else {
+                        setValue("status", e.target.value as "ACTIVE" | "INACTIVE");
+                      }
+                    }}
                   >
                     <option value="ACTIVE">Ativo</option>
                     <option value="INACTIVE">Inativo</option>
@@ -809,5 +822,17 @@ export function MemberForm({ mode, plans, member }: MemberFormProps) {
         )}
       </div>
     </form>
+
+    {/* Dialog de desativação — acionado pelo select de status */}
+    {mode === "edit" && member?.id && (
+      <DeleteMemberDialog
+        id={member.id}
+        name={member.fullName}
+        open={deactivateOpen}
+        onOpenChange={setDeactivateOpen}
+        redirectTo={`/associados/${member.id}`}
+      />
+    )}
+    </>
   );
 }

@@ -32,13 +32,19 @@ export function DeleteMemberDialog({
   name,
   trigger,
   redirectTo,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: {
   id: string;
   name: string;
-  trigger: React.ReactElement;
+  trigger?: React.ReactElement;
   redirectTo?: string;
+  open?: boolean;
+  onOpenChange?: (v: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = controlledOnOpenChange ?? setInternalOpen;
   const [reason, setReason] = useState("");
   const [exitDate, setExitDate] = useState(todayBr);
   const [pending, startTransition] = useTransition();
@@ -73,7 +79,7 @@ export function DeleteMemberDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogTrigger render={trigger} />
+      {trigger && <DialogTrigger render={trigger} />}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Desativar associado</DialogTitle>
