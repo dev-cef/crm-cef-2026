@@ -372,7 +372,6 @@ export default async function AssociadoPerfilPage({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Descrição</TableHead>
                     <TableHead>Referência</TableHead>
                     <TableHead>Valor</TableHead>
                     <TableHead>Vencimento</TableHead>
@@ -389,13 +388,8 @@ export default async function AssociadoPerfilPage({
                             Inscrição
                           </Badge>
                         ) : (
-                          <span className="text-sm text-muted-foreground">Mensalidade</span>
+                          <span className="text-sm">{monthName(p.referenceMonth)}/{p.referenceYear}</span>
                         )}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {p.notes === "Taxa de inscrição"
-                          ? "—"
-                          : `${monthName(p.referenceMonth)}/${p.referenceYear}`}
                       </TableCell>
                       <TableCell>{formatBRL(p.amount)}</TableCell>
                       <TableCell>{formatDate(p.dueDate)}</TableCell>
