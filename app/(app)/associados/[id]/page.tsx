@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/table";
 import { DeleteMemberDialog } from "@/components/modules/associados/delete-member-dialog";
 import { FamilyPlanCard } from "@/components/modules/associados/family-plan-card";
+import { MemberSinceDialog } from "@/components/modules/associados/member-since-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -83,6 +84,7 @@ export default async function AssociadoPerfilPage({
     can(sessionUser, "associados", "edit"),
     can(sessionUser, "associados", "delete"),
   ]);
+  const isAdminUser = sessionUser.role === "ADMIN";
 
   const member = await prisma.member.findFirst({
     where: { id, deletedAt: null, ...scopedMemberWhere(user) },
@@ -180,14 +182,24 @@ export default async function AssociadoPerfilPage({
               label="Nascimento"
               value={`${toBrDate(member.birthDate)}`}
             />
-            <Info
-              label="Associado desde"
-              value={(() => {
-                const years = calculateAge(member.createdAt);
-                const suffix = years === 0 ? "menos de 1 ano" : years === 1 ? "1 ano" : `${years} anos`;
-                return `${toBrDate(member.createdAt)} (${suffix})`;
-              })()}
-            />
+            <div>
+              <p className="text-xs text-muted-foreground">Associado desde</p>
+              <div className="flex items-center gap-1">
+                <p className="text-sm font-medium">
+                  {(() => {
+                    const years = calculateAge(member.createdAt);
+                    const suffix = years === 0 ? "menos de 1 ano" : years === 1 ? "1 ano" : `${years} anos`;
+                    return `${toBrDate(member.createdAt)} (${suffix})`;
+                  })()}
+                </p>
+                {isAdminUser && (
+                  <MemberSinceDialog
+                    memberId={member.id}
+                    current={toBrDate(member.createdAt)}
+                  />
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
 

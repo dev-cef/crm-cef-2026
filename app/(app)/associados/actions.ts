@@ -101,6 +101,32 @@ export async function updateMember(
   }
 }
 
+export async function updateMemberSince(
+  id: string,
+  dateBr: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const session = await auth();
+  if (!isAdmin(session?.user)) return { ok: false, error: "Sem permissão." };
+
+  const date = parseBrDate(dateBr);
+  if (!date) return { ok: false, error: "Data inválida (DD/MM/AAAA)." };
+
+  try {
+    await prisma.member.update({ where: { id }, data: { createdAt: date } });
+    await recordAudit({
+      userId: session?.user?.id,
+      action: "UPDATE",
+      entity: "Member",
+      entityId: id,
+      metadata: { field: "createdAt", value: dateBr },
+    });
+    revalidatePath(`/associados/${id}`);
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Erro ao atualizar a data." };
+  }
+}
+
 export async function assignDependent(
   titularId: string,
   dependenteId: string,
