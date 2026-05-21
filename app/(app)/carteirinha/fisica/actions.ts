@@ -6,7 +6,6 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/authz";
 import { recordAudit } from "@/lib/audit";
 import {
-  isIssuanceWindowOpen,
   checkEligibility,
   currentQuarter,
   type PhysicalCardStage,
@@ -203,14 +202,6 @@ export async function markAsIssued(ids: string[], issuedAt?: string) {
 
   const parsed = issueSchema.safeParse({ ids, issuedAt });
   if (!parsed.success) return { error: "Dados inválidos." };
-
-  if (!isIssuanceWindowOpen()) {
-    const { nextIssuanceWindowDate, currentMonth, currentYear } = await import("@/lib/physical-card");
-    const next = nextIssuanceWindowDate(currentMonth(), currentYear());
-    return {
-      error: `Janela de emissão fechada. Próxima abertura: ${next.toLocaleDateString("pt-BR")}.`,
-    };
-  }
 
   const issuedDate = issuedAt ? new Date(issuedAt) : new Date();
 
