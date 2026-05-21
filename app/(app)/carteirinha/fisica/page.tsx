@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search, Plus, Printer } from "lucide-react";
+import { Search, Plus, Printer, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/authz";
 import { membershipNumber } from "@/lib/membership";
@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/table";
 import { BatchIssueDialog } from "@/components/modules/carteirinha/batch-issue-dialog";
 import { NewRequestDialog } from "@/components/modules/carteirinha/new-request-dialog";
+import { BatchRequestDialog } from "@/components/modules/carteirinha/batch-request-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -127,6 +128,14 @@ export default async function FisicaDashboardPage({
         >
           {windowLabel}
         </Badge>
+        <BatchRequestDialog
+          trigger={
+            <Button size="sm" variant="outline">
+              <Users className="size-4" />
+              Solicitar em lote
+            </Button>
+          }
+        />
         <NewRequestDialog
           trigger={
             <Button size="sm" disabled={!windowOpen}>

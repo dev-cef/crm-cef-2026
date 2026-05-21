@@ -103,6 +103,71 @@ export async function createRequest(memberId: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Etapa 01 — Abrir solicitações em lote
+// ---------------------------------------------------------------------------
+export async function createRequestBatch(memberIds: string[]) {
+  const user = await requireAdmin();
+  const label = await adminLabel();
+  const { quarter, year } = currentQuarter();
+
+  const members = await prisma.member.findMany({
+    where: { id: { in: memberIds }, deletedAt: null },
+    include: {
+      eventRegistrations: {
+        include: {
+          event: { select: { name: true, dateTime: true, status: true, eventCategory: true } },
+        },
+      },
+    },
+  });
+
+  let created = 0;
+  const errors: { name: string; reason: string }[] = [];
+
+  for (const member of members) {
+    const existing = await prisma.physicalCardRequest.findUnique({
+      where: { memberId_quarter_year: { memberId: member.id, quarter, year } },
+    });
+    if (existing) {
+      errors.push({ name: member.fullName, reason: "Já possui solicitação no trimestre." });
+      continue;
+    }
+
+    const eligibility = checkEligibility(member.createdAt, member.eventRegistrations);
+    if (!eligibility.isEligible) {
+      errors.push({ name: member.fullName, reason: "Não atende aos critérios de elegibilidade." });
+      continue;
+    }
+
+    try {
+      const request = await prisma.physicalCardRequest.create({
+        data: {
+          memberId: member.id,
+          currentStage: "minimum_requirements" as PhysicalCardStage,
+          eligibilitySnapshot: JSON.stringify(eligibility),
+          quarter,
+          year,
+        },
+      });
+      await addHistory(request.id, null, "minimum_requirements", label);
+      await recordAudit({
+        userId: user.id,
+        action: "CREATE",
+        entity: "PhysicalCardRequest",
+        entityId: request.id,
+        metadata: { memberId: member.id, quarter, year, batch: true },
+      });
+      created++;
+    } catch {
+      errors.push({ name: member.fullName, reason: "Erro interno ao criar." });
+    }
+  }
+
+  revalidatePath("/carteirinha/fisica");
+  return { ok: true, created, skipped: errors.length, errors };
+}
+
+// ---------------------------------------------------------------------------
 // Etapa 02 — Aprovar
 // ---------------------------------------------------------------------------
 export async function approveRequest(id: string, notes?: string) {
