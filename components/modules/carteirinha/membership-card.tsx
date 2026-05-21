@@ -54,7 +54,7 @@ export function MembershipCard(props: Props) {
               <p className="font-display text-sm font-semibold">
                 Centro Excursionista Friburguense
               </p>
-              <p className="text-[10px] opacity-80">Carteirinha de Sócio</p>
+              <p className="text-[12px] opacity-90">Carteirinha de Sócio</p>
             </div>
           </div>
 
@@ -75,7 +75,7 @@ export function MembershipCard(props: Props) {
             </div>
 
             <div className="min-w-0 flex-1 space-y-1 text-zinc-900">
-              <div>
+              <div className="mt-[5px]">
                 <p className="truncate text-sm font-semibold">
                   {props.fullName}
                 </p>
@@ -110,7 +110,7 @@ export function MembershipCard(props: Props) {
             </div>
           </div>
 
-          <div className="border-t bg-zinc-50 px-5 py-2 text-center text-[10px] text-zinc-500">
+          <div className="border-t bg-zinc-50 px-5 py-2 text-center text-[10px] text-zinc-600">
             Aponte a câmera para o QR Code para validar este associado.
           </div>
         </div>
