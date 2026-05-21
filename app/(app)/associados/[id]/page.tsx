@@ -55,6 +55,7 @@ import { FamilyPlanCard } from "@/components/modules/associados/family-plan-card
 import { MemberSinceDialog } from "@/components/modules/associados/member-since-dialog";
 import { PaymentReciboButton } from "@/components/modules/associados/payment-recibo-button";
 import { ChangePasswordDialog } from "@/components/modules/associados/change-password-dialog";
+import { PhysicalCardRequestButton } from "@/components/modules/carteirinha/physical-card-request-button";
 
 export const dynamic = "force-dynamic";
 
@@ -445,53 +446,60 @@ export default async function AssociadoPerfilPage({
           </CardContent>
         </Card>
         {/* Histórico de carteirinhas físicas */}
-        {isAdminUser && member.physicalCardRequests.length > 0 && (
+        {isAdminUser && (
           <Card className="md:col-span-3">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-base">
                 Carteirinhas Físicas
               </CardTitle>
+              <PhysicalCardRequestButton memberId={member.id} />
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Trimestre</TableHead>
-                    <TableHead>Etapa</TableHead>
-                    <TableHead>Entregue em</TableHead>
-                    <TableHead className="w-16" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {member.physicalCardRequests.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="text-muted-foreground">
-                        {r.quarter}º tri/{r.year}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={cn(
-                            "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium",
-                            STAGE_BADGE[r.currentStage as PhysicalCardStage],
-                          )}
-                        >
-                          {STAGE_LABELS[r.currentStage as PhysicalCardStage]}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {r.deliveredAt
-                          ? new Date(r.deliveredAt).toLocaleDateString("pt-BR")
-                          : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Link href={`/carteirinha/fisica/${r.id}`}>
-                          <Button variant="ghost" size="sm">Ver</Button>
-                        </Link>
-                      </TableCell>
+              {member.physicalCardRequests.length === 0 ? (
+                <p className="py-4 text-sm text-muted-foreground">
+                  Nenhuma solicitação registrada.
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Trimestre</TableHead>
+                      <TableHead>Etapa</TableHead>
+                      <TableHead>Entregue em</TableHead>
+                      <TableHead className="w-16" />
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {member.physicalCardRequests.map((r) => (
+                      <TableRow key={r.id}>
+                        <TableCell className="text-muted-foreground">
+                          {r.quarter}º tri/{r.year}
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={cn(
+                              "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium",
+                              STAGE_BADGE[r.currentStage as PhysicalCardStage],
+                            )}
+                          >
+                            {STAGE_LABELS[r.currentStage as PhysicalCardStage]}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {r.deliveredAt
+                            ? new Date(r.deliveredAt).toLocaleDateString("pt-BR")
+                            : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Link href={`/carteirinha/fisica/${r.id}`}>
+                            <Button variant="ghost" size="sm">Ver</Button>
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         )}
