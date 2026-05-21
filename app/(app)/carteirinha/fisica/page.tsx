@@ -40,6 +40,8 @@ import { BatchRequestDialog } from "@/components/modules/carteirinha/batch-reque
 export const dynamic = "force-dynamic";
 
 const STAGE_BADGE: Record<PhysicalCardStage, string> = {
+  payment_pending:
+    "border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-400",
   minimum_requirements:
     "border-yellow-500/40 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
   issuance_pending:
@@ -55,6 +57,7 @@ const STAGE_BADGE: Record<PhysicalCardStage, string> = {
 };
 
 const STATS: { stage: PhysicalCardStage; label: string }[] = [
+  { stage: "payment_pending", label: "Ag. pagamento" },
   { stage: "minimum_requirements", label: "Pendentes" },
   { stage: "issuance_pending", label: "Aprovadas" },
   { stage: "in_production", label: "Em produção" },
@@ -147,7 +150,7 @@ export default async function FisicaDashboardPage({
       </PageHeader>
 
       {/* Totalizadores */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {STATS.map(({ stage, label }) => (
           <Link key={stage} href={`/carteirinha/fisica?stage=${stage}`}>
             <Card className={cn("transition-colors hover:bg-accent/40", stageFilter === stage && "ring-1 ring-primary")}>

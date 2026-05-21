@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Check, X } from "lucide-react";
 import {
   STAGE_LABELS,
-  STAGE_ORDER,
+  getStageOrder,
   stageIndex,
   type PhysicalCardStage,
 } from "@/lib/physical-card";
@@ -18,12 +18,15 @@ type HistoryEntry = {
 export function PhysicalCardStepper({
   currentStage,
   history,
+  requestType = "PRIMEIRA_VIA",
 }: {
   currentStage: PhysicalCardStage;
   history: HistoryEntry[];
+  requestType?: string;
 }) {
+  const stageOrder = getStageOrder(requestType);
   const isRejected = currentStage === "rejected";
-  const activeIdx = isRejected ? -1 : stageIndex(currentStage);
+  const activeIdx = isRejected ? -1 : stageIndex(currentStage, requestType);
 
   function dateFor(stage: PhysicalCardStage): string | null {
     const entry = history.find((h) => h.toStage === stage);
@@ -35,7 +38,7 @@ export function PhysicalCardStepper({
     <div className="w-full">
       {/* Desktop — horizontal */}
       <ol className="hidden items-start md:flex" aria-label="Etapas da solicitação">
-        {STAGE_ORDER.map((stage, idx) => {
+        {stageOrder.map((stage, idx) => {
           const done = !isRejected && activeIdx > idx;
           const active = !isRejected && activeIdx === idx;
           const date = dateFor(stage);
@@ -55,7 +58,7 @@ export function PhysicalCardStepper({
                   )}
                 />
               )}
-              {idx < STAGE_ORDER.length - 1 && (
+              {idx < stageOrder.length - 1 && (
                 <span
                   className={cn(
                     "absolute left-1/2 right-0 top-4 h-0.5 -translate-y-1/2",
@@ -105,7 +108,7 @@ export function PhysicalCardStepper({
       {/* Mobile — vertical */}
       {!isRejected && (
         <ol className="flex flex-col gap-3 md:hidden">
-          {STAGE_ORDER.map((stage, idx) => {
+          {stageOrder.map((stage, idx) => {
             const done = activeIdx > idx;
             const active = activeIdx === idx;
             const date = dateFor(stage);

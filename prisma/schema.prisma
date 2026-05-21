@@ -329,7 +329,10 @@ model PhysicalCardRequest {
   memberId String
   member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
-  // minimum_requirements | issuance_pending | in_production | awaiting_pickup | delivered | rejected
+  // PRIMEIRA_VIA | SEGUNDA_VIA
+  requestType String @default("PRIMEIRA_VIA")
+
+  // payment_pending | minimum_requirements | issuance_pending | in_production | awaiting_pickup | delivered | rejected
   currentStage        String
   eligibilitySnapshot String // JSON dos critérios no momento da criação
 
@@ -337,6 +340,10 @@ model PhysicalCardRequest {
   approvedAt    DateTime?
   approvedNotes String?
   rejectedReason String?
+
+  // Segunda via — cobrança de R$ 30
+  paymentAmount Float?
+  paymentPaidAt DateTime?
 
   issuedAt      DateTime?
   readyAt       DateTime?
@@ -353,7 +360,8 @@ model PhysicalCardRequest {
 
   statusHistory PhysicalCardStatusHistory[]
 
-  @@unique([memberId, quarter, year])
+  // Um sócio pode ter uma 1ª via e uma 2ª via por trimestre
+  @@unique([memberId, quarter, year, requestType])
   @@index([currentStage])
   @@index([memberId])
   @@index([year, quarter])

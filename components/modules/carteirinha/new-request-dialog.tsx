@@ -37,6 +37,7 @@ type Member = {
 };
 
 const STAGE_BADGE: Record<PhysicalCardStage, string> = {
+  payment_pending: "border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-400",
   minimum_requirements: "border-yellow-500/40 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
   issuance_pending: "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-400",
   in_production: "border-blue-600/60 bg-blue-600/20 text-blue-800 dark:text-blue-300",

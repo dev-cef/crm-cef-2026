@@ -288,6 +288,7 @@ export default async function MeuEspacoPage() {
               ) : (
                 <PhysicalCardStepper
                   currentStage={cardReq.currentStage as PhysicalCardStage}
+                  requestType={cardReq.requestType ?? "PRIMEIRA_VIA"}
                   history={cardReq.statusHistory}
                 />
               )}

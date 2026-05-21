@@ -17,7 +17,7 @@ export async function GET() {
       deletedAt: null,
       status: "ACTIVE",
       physicalCardRequests: {
-        none: { quarter, year },
+        none: { quarter, year, requestType: "PRIMEIRA_VIA" },
       },
     },
     select: {

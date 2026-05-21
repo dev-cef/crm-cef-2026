@@ -56,6 +56,7 @@ import { MemberSinceDialog } from "@/components/modules/associados/member-since-
 import { PaymentReciboButton } from "@/components/modules/associados/payment-recibo-button";
 import { ChangePasswordDialog } from "@/components/modules/associados/change-password-dialog";
 import { PhysicalCardRequestButton } from "@/components/modules/carteirinha/physical-card-request-button";
+import { PhysicalCardSecondCopyButton } from "@/components/modules/carteirinha/physical-card-second-copy-button";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +76,7 @@ const PAYMENT_BADGE: Record<string, "default" | "secondary" | "destructive"> = {
 };
 
 const STAGE_BADGE: Record<PhysicalCardStage, string> = {
+  payment_pending: "border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-400",
   minimum_requirements: "border-yellow-500/40 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
   issuance_pending: "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-400",
   in_production: "border-blue-600/60 bg-blue-600/20 text-blue-800 dark:text-blue-300",
@@ -452,7 +454,10 @@ export default async function AssociadoPerfilPage({
               <CardTitle className="flex items-center gap-2 text-base">
                 Carteirinhas Físicas
               </CardTitle>
-              <PhysicalCardRequestButton memberId={member.id} />
+              <div className="flex items-center gap-2">
+                <PhysicalCardRequestButton memberId={member.id} />
+                <PhysicalCardSecondCopyButton memberId={member.id} />
+              </div>
             </CardHeader>
             <CardContent>
               {member.physicalCardRequests.length === 0 ? (
@@ -464,6 +469,7 @@ export default async function AssociadoPerfilPage({
                   <TableHeader>
                     <TableRow>
                       <TableHead>Trimestre</TableHead>
+                      <TableHead>Tipo</TableHead>
                       <TableHead>Etapa</TableHead>
                       <TableHead>Entregue em</TableHead>
                       <TableHead className="w-16" />
@@ -474,6 +480,9 @@ export default async function AssociadoPerfilPage({
                       <TableRow key={r.id}>
                         <TableCell className="text-muted-foreground">
                           {r.quarter}º tri/{r.year}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {r.requestType === "SEGUNDA_VIA" ? "2ª via" : "1ª via"}
                         </TableCell>
                         <TableCell>
                           <span

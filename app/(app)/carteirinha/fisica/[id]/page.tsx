@@ -8,6 +8,7 @@ import {
   MessageCircle,
   PackageCheck,
   Printer,
+  CreditCard,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/authz";
@@ -18,7 +19,7 @@ import {
   type PhysicalCardStage,
   type EligibilitySnapshot,
 } from "@/lib/physical-card";
-import { approveRequest, markAsReadyForPickup } from "../actions";
+import { approveRequest, markAsReadyForPickup, confirmPayment } from "../actions";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -68,7 +69,9 @@ export default async function FisicaDetailPage({
 
   const member = request.member;
   const stage = request.currentStage as PhysicalCardStage;
-  const eligibility = JSON.parse(request.eligibilitySnapshot) as EligibilitySnapshot;
+  const requestType = request.requestType ?? "PRIMEIRA_VIA";
+  const isSecondCopy = requestType === "SEGUNDA_VIA";
+  const eligibility = JSON.parse(request.eligibilitySnapshot) as EligibilitySnapshot & { secondCopy?: boolean };
 
   const initials = member.fullName
     .split(" ")
@@ -97,7 +100,7 @@ export default async function FisicaDetailPage({
         </Link>
         <PageHeader
           title={`Carteirinha de ${member.fullName}`}
-          description={`${membershipNumber(member.registration)} · ${request.quarter}º tri/${request.year}`}
+          description={`${membershipNumber(member.registration)} · ${request.quarter}º tri/${request.year}${isSecondCopy ? " · 2ª via" : ""}`}
         />
       </div>
 
@@ -106,6 +109,7 @@ export default async function FisicaDetailPage({
         <CardContent className="pt-6">
           <PhysicalCardStepper
             currentStage={stage}
+            requestType={requestType}
             history={request.statusHistory.map((h) => ({
               toStage: h.toStage,
               changedAt: h.changedAt,
@@ -146,74 +150,93 @@ export default async function FisicaDetailPage({
           </CardContent>
         </Card>
 
-        {/* Checklist de elegibilidade */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Checklist de elegibilidade</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            {/* Critério 1 */}
-            <div className="flex items-start gap-2">
-              {eligibility.criterion1.met ? (
-                <CheckCircle className="mt-0.5 size-4 shrink-0 text-primary" />
-              ) : (
-                <XCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
-              )}
-              <div>
-                <p className="font-medium">Sócio há mais de 3 meses</p>
-                <p className="text-muted-foreground">
-                  {eligibility.criterion1.monthsAsOf} meses de associação
-                  {!eligibility.criterion1.met && (
-                    <span className="ml-1 text-destructive">
-                      (faltam {3 - eligibility.criterion1.monthsAsOf} meses)
-                    </span>
-                  )}
-                </p>
+        {/* Checklist de elegibilidade — apenas 1ª via */}
+        {isSecondCopy ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">2ª via</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1 text-sm">
+              <div className="flex items-center gap-2">
+                <CreditCard className="size-4 text-muted-foreground" />
+                <span>Taxa de emissão: <strong>R$ 30,00</strong></span>
               </div>
-            </div>
-
-            {/* Critério 2 */}
-            <div className="flex items-start gap-2">
-              {eligibility.criterion2.met ? (
-                <CheckCircle className="mt-0.5 size-4 shrink-0 text-primary" />
-              ) : (
-                <XCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
-              )}
-              <div>
-                <p className="font-medium">2 reuniões + 2 atividades realizadas</p>
-                <p className="text-muted-foreground">
-                  {eligibility.criterion2.meetings} reunião(ões)
-                  {eligibility.criterion2.meetings < 2 && (
-                    <span className="ml-1 text-destructive">
-                      (falta {2 - eligibility.criterion2.meetings})
-                    </span>
-                  )}
-                  {" · "}
-                  {eligibility.criterion2.activities} atividade(s)
-                  {eligibility.criterion2.activities < 2 && (
-                    <span className="ml-1 text-destructive">
-                      (falta {2 - eligibility.criterion2.activities})
-                    </span>
-                  )}
+              {request.paymentPaidAt && (
+                <p className="text-xs text-muted-foreground">
+                  Pago em {new Date(request.paymentPaidAt).toLocaleDateString("pt-BR")}
                 </p>
-                {eligibility.criterion2.meetingDetails.length > 0 && (
-                  <ul className="mt-1 list-disc pl-4 text-xs text-muted-foreground">
-                    {eligibility.criterion2.meetingDetails.map((m, i) => (
-                      <li key={i}>
-                        {m.name} — {new Date(m.date).toLocaleDateString("pt-BR")}
-                      </li>
-                    ))}
-                    {eligibility.criterion2.activityDetails.map((a, i) => (
-                      <li key={`a${i}`}>
-                        {a.name} — {new Date(a.date).toLocaleDateString("pt-BR")}
-                      </li>
-                    ))}
-                  </ul>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Checklist de elegibilidade</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {/* Critério 1 */}
+              <div className="flex items-start gap-2">
+                {eligibility.criterion1?.met ? (
+                  <CheckCircle className="mt-0.5 size-4 shrink-0 text-primary" />
+                ) : (
+                  <XCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
                 )}
+                <div>
+                  <p className="font-medium">Sócio há mais de 3 meses</p>
+                  <p className="text-muted-foreground">
+                    {eligibility.criterion1?.monthsAsOf ?? 0} meses de associação
+                    {!eligibility.criterion1?.met && (
+                      <span className="ml-1 text-destructive">
+                        (faltam {3 - (eligibility.criterion1?.monthsAsOf ?? 0)} meses)
+                      </span>
+                    )}
+                  </p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+
+              {/* Critério 2 */}
+              <div className="flex items-start gap-2">
+                {eligibility.criterion2?.met ? (
+                  <CheckCircle className="mt-0.5 size-4 shrink-0 text-primary" />
+                ) : (
+                  <XCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
+                )}
+                <div>
+                  <p className="font-medium">2 reuniões + 2 atividades realizadas</p>
+                  <p className="text-muted-foreground">
+                    {eligibility.criterion2?.meetings ?? 0} reunião(ões)
+                    {(eligibility.criterion2?.meetings ?? 0) < 2 && (
+                      <span className="ml-1 text-destructive">
+                        (falta {2 - (eligibility.criterion2?.meetings ?? 0)})
+                      </span>
+                    )}
+                    {" · "}
+                    {eligibility.criterion2?.activities ?? 0} atividade(s)
+                    {(eligibility.criterion2?.activities ?? 0) < 2 && (
+                      <span className="ml-1 text-destructive">
+                        (falta {2 - (eligibility.criterion2?.activities ?? 0)})
+                      </span>
+                    )}
+                  </p>
+                  {(eligibility.criterion2?.meetingDetails?.length ?? 0) > 0 && (
+                    <ul className="mt-1 list-disc pl-4 text-xs text-muted-foreground">
+                      {eligibility.criterion2.meetingDetails.map((m, i) => (
+                        <li key={i}>
+                          {m.name} — {new Date(m.date).toLocaleDateString("pt-BR")}
+                        </li>
+                      ))}
+                      {eligibility.criterion2.activityDetails.map((a, i) => (
+                        <li key={`a${i}`}>
+                          {a.name} — {new Date(a.date).toLocaleDateString("pt-BR")}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Ações contextuais */}
@@ -222,6 +245,20 @@ export default async function FisicaDetailPage({
           <CardTitle className="text-base">Ações</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
+          {stage === "payment_pending" && (
+            <form
+              action={async () => {
+                "use server";
+                await confirmPayment(id);
+              }}
+            >
+              <Button type="submit">
+                <CreditCard className="size-4" />
+                Confirmar pagamento R$ 30,00
+              </Button>
+            </form>
+          )}
+
           {stage === "minimum_requirements" && (
             <>
               <form

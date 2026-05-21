@@ -59,7 +59,7 @@ export async function createRequest(memberId: string) {
   const { quarter, year } = currentQuarter();
 
   const existing = await prisma.physicalCardRequest.findUnique({
-    where: { memberId_quarter_year: { memberId, quarter, year } },
+    where: { memberId_quarter_year_requestType: { memberId, quarter, year, requestType: "PRIMEIRA_VIA" } },
   });
   if (existing) {
     return { error: "Já existe uma solicitação para este associado no trimestre atual." };
@@ -126,7 +126,7 @@ export async function createRequestBatch(memberIds: string[]) {
 
   for (const member of members) {
     const existing = await prisma.physicalCardRequest.findUnique({
-      where: { memberId_quarter_year: { memberId: member.id, quarter, year } },
+      where: { memberId_quarter_year_requestType: { memberId: member.id, quarter, year, requestType: "PRIMEIRA_VIA" } },
     });
     if (existing) {
       errors.push({ name: member.fullName, reason: "Já possui solicitação no trimestre." });
@@ -413,5 +413,100 @@ export async function deliverCard(id: string, data: unknown) {
     return { ok: true };
   } catch {
     return { error: "Erro ao registrar entrega." };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Segunda via — Abrir solicitação (pula elegibilidade, cobra R$30)
+// ---------------------------------------------------------------------------
+export async function createSecondCopyRequest(memberId: string) {
+  const user = await requireAdmin();
+
+  const member = await prisma.member.findUnique({
+    where: { id: memberId, deletedAt: null },
+    select: { id: true, fullName: true },
+  });
+  if (!member) return { error: "Associado não encontrado." };
+
+  const { quarter, year } = currentQuarter();
+
+  const existing = await prisma.physicalCardRequest.findUnique({
+    where: { memberId_quarter_year_requestType: { memberId, quarter, year, requestType: "SEGUNDA_VIA" } },
+  });
+  if (existing) {
+    return { error: "Já existe uma solicitação de 2ª via para este associado no trimestre atual." };
+  }
+
+  try {
+    const request = await prisma.physicalCardRequest.create({
+      data: {
+        memberId,
+        requestType: "SEGUNDA_VIA",
+        currentStage: "payment_pending" as PhysicalCardStage,
+        eligibilitySnapshot: JSON.stringify({ secondCopy: true }),
+        paymentAmount: 30,
+        quarter,
+        year,
+      },
+    });
+
+    const label = await adminLabel();
+    await addHistory(request.id, null, "payment_pending", label, { secondCopy: true, paymentAmount: 30 });
+
+    await recordAudit({
+      userId: user.id,
+      action: "CREATE",
+      entity: "PhysicalCardRequest",
+      entityId: request.id,
+      metadata: { memberId, quarter, year, requestType: "SEGUNDA_VIA" },
+    });
+
+    revalidatePath("/carteirinha/fisica");
+    return { ok: true, requestId: request.id };
+  } catch {
+    return { error: "Erro ao criar solicitação de 2ª via." };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Segunda via — Confirmar pagamento (payment_pending → issuance_pending)
+// ---------------------------------------------------------------------------
+export async function confirmPayment(id: string) {
+  const user = await requireAdmin();
+  const label = await adminLabel();
+
+  const req = await prisma.physicalCardRequest.findUnique({ where: { id } });
+  if (!req) return { error: "Solicitação não encontrada." };
+  if (req.currentStage !== "payment_pending") {
+    return { error: "Solicitação não está aguardando pagamento." };
+  }
+
+  try {
+    await prisma.physicalCardRequest.update({
+      where: { id },
+      data: {
+        currentStage: "issuance_pending",
+        paymentPaidAt: new Date(),
+      },
+    });
+
+    await addHistory(id, "payment_pending", "issuance_pending", label, {
+      paymentConfirmed: true,
+      paymentAmount: req.paymentAmount,
+    });
+
+    await recordAudit({
+      userId: user.id,
+      action: "UPDATE",
+      entity: "PhysicalCardRequest",
+      entityId: id,
+      metadata: { action: "confirm_payment", paymentAmount: req.paymentAmount },
+    });
+
+    revalidatePath("/carteirinha/fisica");
+    revalidatePath(`/carteirinha/fisica/${id}`);
+    return { ok: true };
+  } catch {
+    return { error: "Erro ao confirmar pagamento." };
   }
 }

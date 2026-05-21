@@ -155,6 +155,7 @@ export function checkEligibility(
 // Etapas --------------------------------------------------------------------
 
 export type PhysicalCardStage =
+  | "payment_pending"
   | "minimum_requirements"
   | "issuance_pending"
   | "in_production"
@@ -163,6 +164,7 @@ export type PhysicalCardStage =
   | "rejected";
 
 export const STAGE_LABELS: Record<PhysicalCardStage, string> = {
+  payment_pending: "Pagamento Pendente",
   minimum_requirements: "Exigências Mínimas",
   issuance_pending: "Aguardando Emissão",
   in_production: "Em Produção",
@@ -171,7 +173,8 @@ export const STAGE_LABELS: Record<PhysicalCardStage, string> = {
   rejected: "Reprovada",
 };
 
-export const STAGE_ORDER: PhysicalCardStage[] = [
+// Ordem das etapas por tipo de solicitação
+const STAGE_ORDER_PRIMEIRA_VIA: PhysicalCardStage[] = [
   "minimum_requirements",
   "issuance_pending",
   "in_production",
@@ -179,7 +182,23 @@ export const STAGE_ORDER: PhysicalCardStage[] = [
   "delivered",
 ];
 
-export function stageIndex(stage: PhysicalCardStage): number {
-  const idx = STAGE_ORDER.indexOf(stage);
+const STAGE_ORDER_SEGUNDA_VIA: PhysicalCardStage[] = [
+  "payment_pending",
+  "issuance_pending",
+  "in_production",
+  "awaiting_pickup",
+  "delivered",
+];
+
+export function getStageOrder(requestType = "PRIMEIRA_VIA"): PhysicalCardStage[] {
+  return requestType === "SEGUNDA_VIA" ? STAGE_ORDER_SEGUNDA_VIA : STAGE_ORDER_PRIMEIRA_VIA;
+}
+
+// Mantido para compatibilidade (primeira via)
+export const STAGE_ORDER = STAGE_ORDER_PRIMEIRA_VIA;
+
+export function stageIndex(stage: PhysicalCardStage, requestType = "PRIMEIRA_VIA"): number {
+  const order = getStageOrder(requestType);
+  const idx = order.indexOf(stage);
   return idx === -1 ? -1 : idx;
 }
