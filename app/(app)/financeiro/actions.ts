@@ -149,7 +149,7 @@ export async function markAsPaid(
         data: {
           status: "PAGO",
           paidAt: resolvedDate,
-          notes: notes?.trim() || null,
+          ...(notes?.trim() ? { notes: notes.trim() } : {}),
           receiptNumber,
         },
       });
