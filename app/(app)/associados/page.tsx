@@ -24,6 +24,7 @@ import { can } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { stripCpf } from "@/lib/cpf";
 import { calculateAge, toBrDate } from "@/lib/format";
+import { STAGE_LABELS, type PhysicalCardStage } from "@/lib/physical-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,6 +57,15 @@ function membershipLabel(createdAt: Date): string {
 }
 type Role = "titular" | "dependente" | "individual";
 type Since = "lt1" | "1to5" | "5to10" | "10to20" | "gt30";
+
+const STAGE_BADGE: Record<PhysicalCardStage, string> = {
+  minimum_requirements: "border-yellow-500/40 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
+  issuance_pending: "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+  in_production: "border-blue-600/60 bg-blue-600/20 text-blue-800 dark:text-blue-300",
+  awaiting_pickup: "border-purple-500/40 bg-purple-500/10 text-purple-700 dark:text-purple-400",
+  delivered: "border-border bg-muted text-muted-foreground",
+  rejected: "border-destructive/40 bg-destructive/10 text-destructive",
+};
 
 const SINCE_OPTIONS: { key: Since; label: string; description: string }[] = [
   { key: "lt1",   label: "< 1 ano",    description: "Menos de 1 ano" },
@@ -169,6 +179,11 @@ export default async function AssociadosPage({
           },
         },
         user: { select: { approved: true } },
+        physicalCardRequests: {
+          select: { currentStage: true, quarter: true, year: true },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
       },
       orderBy: { fullName: "asc" },
       skip: (page - 1) * PAGE_SIZE,
@@ -432,6 +447,7 @@ export default async function AssociadosPage({
               const isTitular = isFamilyPlan && !isDependent;
               const hasDependente = !!m.dependente;
               const isPending = m.user?.approved === false;
+              const cardRequest = m.physicalCardRequests[0] ?? null;
 
               const prev = i > 0 ? grouped[i - 1] : null;
               const isAdjacentDependent = isDependent && prev?.id === m.titularId;
@@ -509,6 +525,16 @@ export default async function AssociadosPage({
                         {isPending && (
                           <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
                             <Clock className="size-2.5" /> Aguardando aprovação
+                          </span>
+                        )}
+                        {cardRequest && (
+                          <span
+                            className={cn(
+                              "inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold",
+                              STAGE_BADGE[cardRequest.currentStage as PhysicalCardStage],
+                            )}
+                          >
+                            Carteirinha: {STAGE_LABELS[cardRequest.currentStage as PhysicalCardStage]}
                           </span>
                         )}
                       </div>
