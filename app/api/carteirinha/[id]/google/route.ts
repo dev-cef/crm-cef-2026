@@ -34,10 +34,10 @@ export async function GET(
   const classId = `${issuerId}.${classSuffix}`;
   const objectId = `${issuerId}.${member.id.replace(/-/g, "_")}`;
 
-  const serviceAccountKey = Buffer.from(
-    process.env.GOOGLE_SERVICE_ACCOUNT_KEY!,
-    "base64",
-  ).toString("utf-8");
+  const serviceAccountJson = JSON.parse(
+    Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_KEY!, "base64").toString("utf-8"),
+  ) as { private_key: string };
+  const serviceAccountKey = serviceAccountJson.private_key;
 
   const genericObject = {
     id: objectId,

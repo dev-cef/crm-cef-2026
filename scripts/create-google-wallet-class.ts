@@ -21,7 +21,10 @@ if (!issuerId || !serviceAccountEmail || !serviceAccountKeyB64) {
   process.exit(1);
 }
 
-const serviceAccountKey = Buffer.from(serviceAccountKeyB64, "base64").toString("utf-8");
+const serviceAccountJson = JSON.parse(
+  Buffer.from(serviceAccountKeyB64, "base64").toString("utf-8"),
+) as { private_key: string; client_email: string };
+const privateKey = serviceAccountJson.private_key;
 const classId = `${issuerId}.${classSuffix}`;
 
 async function getAccessToken(): Promise<string> {
@@ -35,7 +38,7 @@ async function getAccessToken(): Promise<string> {
     scope: "https://www.googleapis.com/auth/wallet_object.issuer",
   };
 
-  const signedJwt = jwt.sign(jwtPayload, serviceAccountKey, { algorithm: "RS256" });
+  const signedJwt = jwt.sign(jwtPayload, privateKey, { algorithm: "RS256" });
 
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
