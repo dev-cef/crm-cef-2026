@@ -40,7 +40,7 @@ import { EditarDadosDialog } from "./editar-dados-dialog";
 import { TrocarSenhaDialog } from "./trocar-senha-dialog";
 import { FotoDialog } from "./foto-dialog";
 import { PhysicalCardStepper } from "@/components/modules/carteirinha/physical-card-stepper";
-import { type PhysicalCardStage } from "@/lib/physical-card";
+import { type PhysicalCardStage, currentQuarter } from "@/lib/physical-card";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +63,6 @@ export default async function MeuEspacoPage() {
           },
           physicalCardRequests: {
             orderBy: { createdAt: "desc" },
-            take: 1,
             include: {
               statusHistory: { orderBy: { changedAt: "asc" } },
             },
@@ -259,41 +258,99 @@ export default async function MeuEspacoPage() {
 
       {/* Carteirinha Física */}
       {(() => {
-        const cardReq = member.physicalCardRequests[0] ?? null;
-        const isPickup = cardReq?.currentStage === "awaiting_pickup";
-        return (
-          <Card className={isPickup ? "border-purple-500/50 bg-purple-500/5" : undefined}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <IdCard className={isPickup ? "size-5 text-purple-600 dark:text-purple-400" : "size-5"} />
-                Carteirinha Física
-                {isPickup && (
-                  <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-purple-500/15 px-2.5 py-0.5 text-xs font-semibold text-purple-700 dark:text-purple-300">
-                    <Bell className="size-3" /> Pronta para retirada!
-                  </span>
-                )}
-              </CardTitle>
-              {cardReq && (
-                <CardDescription>
-                  {cardReq.quarter}º trimestre de {cardReq.year}
-                </CardDescription>
-              )}
-            </CardHeader>
-            <CardContent>
-              {!cardReq ? (
+        const { quarter, year } = currentQuarter();
+        const requests = member.physicalCardRequests.filter(
+          (r) => r.quarter === quarter && r.year === year,
+        );
+        const hasPickup = requests.some((r) => r.currentStage === "awaiting_pickup");
+
+        if (requests.length === 0) {
+          return (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <IdCard className="size-5" />
+                  Carteirinha Física
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
                 <p className="text-sm text-muted-foreground">
                   Você ainda não possui uma solicitação de carteirinha física neste trimestre.
                   Caso seja elegível, entre em contato com a administração do clube.
                 </p>
-              ) : (
-                <PhysicalCardStepper
-                  currentStage={cardReq.currentStage as PhysicalCardStage}
-                  requestType={cardReq.requestType ?? "PRIMEIRA_VIA"}
-                  history={cardReq.statusHistory}
-                />
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          );
+        }
+
+        return (
+          <div className="space-y-4">
+            {requests.map((cardReq) => {
+              const requestType = cardReq.requestType ?? "PRIMEIRA_VIA";
+              const isSecondCopy = requestType === "SEGUNDA_VIA";
+              const isPickup = cardReq.currentStage === "awaiting_pickup";
+              const isPaymentPending = cardReq.currentStage === "payment_pending";
+
+              return (
+                <Card
+                  key={cardReq.id}
+                  className={
+                    isPickup
+                      ? "border-purple-500/50 bg-purple-500/5"
+                      : isPaymentPending
+                        ? "border-orange-500/40 bg-orange-500/5"
+                        : undefined
+                  }
+                >
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <IdCard
+                        className={
+                          isPickup
+                            ? "size-5 text-purple-600 dark:text-purple-400"
+                            : isPaymentPending
+                              ? "size-5 text-orange-600 dark:text-orange-400"
+                              : "size-5"
+                        }
+                      />
+                      Carteirinha Física
+                      <span className="text-xs font-normal text-muted-foreground">
+                        {isSecondCopy ? "· 2ª via" : "· 1ª via"}
+                      </span>
+                      {isPickup && (
+                        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-purple-500/15 px-2.5 py-0.5 text-xs font-semibold text-purple-700 dark:text-purple-300">
+                          <Bell className="size-3" /> Pronta para retirada!
+                        </span>
+                      )}
+                      {isPaymentPending && (
+                        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-orange-500/15 px-2.5 py-0.5 text-xs font-semibold text-orange-700 dark:text-orange-300">
+                          <CreditCard className="size-3" /> Pagamento pendente
+                        </span>
+                      )}
+                    </CardTitle>
+                    <CardDescription>
+                      {cardReq.quarter}º trimestre de {cardReq.year}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {isPaymentPending && (
+                      <div className="rounded-md border border-orange-500/30 bg-orange-500/10 px-4 py-3 text-sm text-orange-700 dark:text-orange-300">
+                        <p className="font-medium">Taxa de 2ª via: R$ 30,00</p>
+                        <p className="text-xs opacity-80 mt-0.5">
+                          Aguardando confirmação do pagamento pela administração.
+                        </p>
+                      </div>
+                    )}
+                    <PhysicalCardStepper
+                      currentStage={cardReq.currentStage as PhysicalCardStage}
+                      requestType={requestType}
+                      history={cardReq.statusHistory}
+                    />
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         );
       })()}
 
