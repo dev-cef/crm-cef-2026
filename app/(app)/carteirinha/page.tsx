@@ -1,6 +1,9 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Search, IdCard } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { scopedMemberWhere } from "@/lib/rbac";
 import { stripCpf } from "@/lib/cpf";
 import { membershipNumber } from "@/lib/membership";
 import { cn } from "@/lib/utils";
@@ -18,12 +21,24 @@ export default async function CarteirinhaPage({
 }: {
   searchParams: Promise<{ q?: string; status?: string }>;
 }) {
+  const session = await auth();
+  const user = session?.user;
+
+  if (user?.role === "ASSOCIADO") {
+    const own = await prisma.member.findFirst({
+      where: { userId: user.id, deletedAt: null },
+      select: { id: true },
+    });
+    if (own) redirect(`/carteirinha/${own.id}`);
+  }
+
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();
   const status =
     sp.status === "ACTIVE" || sp.status === "INACTIVE" ? sp.status : "ALL";
 
-  const where: Record<string, unknown> = { deletedAt: null };
+  const scope = scopedMemberWhere({ id: user!.id, role: user!.role as "ADMIN" | "DEPARTAMENTO" | "ASSOCIADO", memberId: user!.memberId ?? null, departmentIds: user!.departmentIds ?? [] });
+  const where: Record<string, unknown> = { deletedAt: null, ...scope };
   if (status !== "ALL") where.status = status;
   if (q) {
     const digits = stripCpf(q);
