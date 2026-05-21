@@ -59,7 +59,6 @@ export default async function CarteirinhaMemberPage({
         fullName={member.fullName}
         maskedCpf={maskCpf(member.cpf)}
         membershipNo={membershipNumber(member.registration)}
-        planName={member.plan?.name ?? "Sem plano"}
         validity={formatDate(member.cardValidUntil ?? membershipValidity())}
         photoUrl={member.photoUrl}
         qrDataUrl={qrDataUrl}

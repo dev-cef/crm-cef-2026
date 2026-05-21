@@ -10,7 +10,6 @@ type Props = {
   fullName: string;
   maskedCpf: string;
   membershipNo: string;
-  planName: string;
   validity: string;
   photoUrl: string | null;
   qrDataUrl: string;
@@ -89,19 +88,15 @@ export function MembershipCard(props: Props) {
                 </div>
                 <div>
                   <p className="text-[10px] uppercase text-zinc-500">
-                    Matrícula
-                  </p>
-                  <p className="font-mono text-xs">{props.membershipNo}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase text-zinc-500">Plano</p>
-                  <p className="text-xs">{props.planName}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase text-zinc-500">
                     Validade
                   </p>
                   <p className="text-xs">{props.validity}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-[10px] uppercase text-zinc-500">
+                    Matrícula
+                  </p>
+                  <p className="font-mono text-xs">{props.membershipNo}</p>
                 </div>
               </div>
             </div>
