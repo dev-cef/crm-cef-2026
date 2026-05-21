@@ -9,6 +9,8 @@ import {
   Pencil,
   Lock,
   ImagePlus,
+  IdCard,
+  Bell,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/authz";
@@ -37,6 +39,8 @@ import {
 import { EditarDadosDialog } from "./editar-dados-dialog";
 import { TrocarSenhaDialog } from "./trocar-senha-dialog";
 import { FotoDialog } from "./foto-dialog";
+import { PhysicalCardStepper } from "@/components/modules/carteirinha/physical-card-stepper";
+import { type PhysicalCardStage } from "@/lib/physical-card";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +60,13 @@ export default async function MeuEspacoPage() {
           plan: true,
           payments: {
             orderBy: [{ referenceYear: "desc" }, { referenceMonth: "desc" }],
+          },
+          physicalCardRequests: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            include: {
+              statusHistory: { orderBy: { changedAt: "asc" } },
+            },
           },
         },
       })
@@ -245,6 +256,45 @@ export default async function MeuEspacoPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Carteirinha Física */}
+      {(() => {
+        const cardReq = member.physicalCardRequests[0] ?? null;
+        const isPickup = cardReq?.currentStage === "awaiting_pickup";
+        return (
+          <Card className={isPickup ? "border-purple-500/50 bg-purple-500/5" : undefined}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <IdCard className={isPickup ? "size-5 text-purple-600 dark:text-purple-400" : "size-5"} />
+                Carteirinha Física
+                {isPickup && (
+                  <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-purple-500/15 px-2.5 py-0.5 text-xs font-semibold text-purple-700 dark:text-purple-300">
+                    <Bell className="size-3" /> Pronta para retirada!
+                  </span>
+                )}
+              </CardTitle>
+              {cardReq && (
+                <CardDescription>
+                  {cardReq.quarter}º trimestre de {cardReq.year}
+                </CardDescription>
+              )}
+            </CardHeader>
+            <CardContent>
+              {!cardReq ? (
+                <p className="text-sm text-muted-foreground">
+                  Você ainda não possui uma solicitação de carteirinha física neste trimestre.
+                  Caso seja elegível, entre em contato com a administração do clube.
+                </p>
+              ) : (
+                <PhysicalCardStepper
+                  currentStage={cardReq.currentStage as PhysicalCardStage}
+                  history={cardReq.statusHistory}
+                />
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* LGPD — direito de acesso aos próprios dados */}
       <Card>
