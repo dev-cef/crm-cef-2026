@@ -24,7 +24,7 @@ import { can } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { stripCpf } from "@/lib/cpf";
 import { calculateAge, toBrDate } from "@/lib/format";
-import { STAGE_LABELS, type PhysicalCardStage } from "@/lib/physical-card";
+import { STAGE_LABELS, currentQuarter, type PhysicalCardStage } from "@/lib/physical-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -162,6 +162,7 @@ export default async function AssociadosPage({
   }
 
   const where = { AND: and };
+  const { quarter: cq, year: cy } = currentQuarter();
 
   const [total, raw, pendingCount] = await Promise.all([
     prisma.member.count({ where }),
@@ -181,9 +182,9 @@ export default async function AssociadosPage({
         },
         user: { select: { approved: true } },
         physicalCardRequests: {
-          select: { currentStage: true, quarter: true, year: true },
-          orderBy: { createdAt: "desc" },
-          take: 1,
+          select: { currentStage: true, requestType: true, quarter: true, year: true },
+          where: { quarter: cq, year: cy },
+          orderBy: { createdAt: "asc" },
         },
       },
       orderBy: { fullName: "asc" },
@@ -426,6 +427,7 @@ export default async function AssociadosPage({
                 <TableHead className="hidden md:table-cell">Telefone</TableHead>
               )}
               <TableHead className="hidden sm:table-cell">Plano</TableHead>
+              <TableHead className="hidden lg:table-cell">Carteirinha</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -433,7 +435,7 @@ export default async function AssociadosPage({
             {grouped.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={since !== "ALL" ? 7 : 5}
+                  colSpan={since !== "ALL" ? 8 : 6}
                   className="py-12 text-center text-sm text-muted-foreground"
                 >
                   {role !== "ALL"
@@ -448,7 +450,7 @@ export default async function AssociadosPage({
               const isTitular = isFamilyPlan && !isDependent;
               const hasDependente = !!m.dependente;
               const isPending = m.user?.approved === false;
-              const cardRequest = m.physicalCardRequests[0] ?? null;
+              const cardRequests = m.physicalCardRequests;
 
               const prev = i > 0 ? grouped[i - 1] : null;
               const isAdjacentDependent = isDependent && prev?.id === m.titularId;
@@ -528,16 +530,6 @@ export default async function AssociadosPage({
                             <Clock className="size-2.5" /> Aguardando aprovação
                           </span>
                         )}
-                        {cardRequest && (
-                          <span
-                            className={cn(
-                              "inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold",
-                              STAGE_BADGE[cardRequest.currentStage as PhysicalCardStage],
-                            )}
-                          >
-                            Carteirinha: {STAGE_LABELS[cardRequest.currentStage as PhysicalCardStage]}
-                          </span>
-                        )}
                       </div>
 
                       {since === "ALL" && (
@@ -613,6 +605,28 @@ export default async function AssociadosPage({
                       </Badge>
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+
+                  {/* Carteirinha Física */}
+                  <TableCell className="hidden lg:table-cell">
+                    {cardRequests.length === 0 ? (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    ) : (
+                      <div className="flex flex-col gap-1">
+                        {cardRequests.map((cr, idx) => (
+                          <span
+                            key={idx}
+                            className={cn(
+                              "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                              STAGE_BADGE[cr.currentStage as PhysicalCardStage],
+                            )}
+                          >
+                            {cr.requestType === "SEGUNDA_VIA" ? "2ª via · " : ""}
+                            {STAGE_LABELS[cr.currentStage as PhysicalCardStage]}
+                          </span>
+                        ))}
+                      </div>
                     )}
                   </TableCell>
 
