@@ -108,7 +108,7 @@ export default async function AniversariantesPage({
 
   const [members, cfg, logs] = await Promise.all([
     prisma.member.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, status: "ACTIVE" },
       select: {
         id: true,
         fullName: true,
