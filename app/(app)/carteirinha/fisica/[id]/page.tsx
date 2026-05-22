@@ -184,7 +184,11 @@ export default async function FisicaDetailPage({
                 <div>
                   <p className="font-medium">Sócio há mais de 3 meses</p>
                   <p className="text-muted-foreground">
-                    {eligibility.criterion1?.monthsAsOf ?? 0} meses de associação
+                    {(() => {
+                      const months = eligibility.criterion1?.monthsAsOf ?? 0;
+                      const years = Math.floor(months / 12);
+                      return years < 1 ? "menos de 1 ano" : `${years} ${years === 1 ? "ano" : "anos"}`;
+                    })()} de associação
                     {!eligibility.criterion1?.met && (
                       <span className="ml-1 text-destructive">
                         (faltam {3 - (eligibility.criterion1?.monthsAsOf ?? 0)} meses)
