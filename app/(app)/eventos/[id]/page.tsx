@@ -49,6 +49,7 @@ export default async function EventoDetalhePage({
     include: {
       photos: { orderBy: { createdAt: "desc" } },
       registrations: {
+        where: { member: { deletedAt: null, status: "ACTIVE" } },
         include: { member: { select: { id: true, fullName: true } } },
         orderBy: { member: { fullName: "asc" } },
       },
