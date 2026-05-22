@@ -51,7 +51,7 @@ export default async function EventoDetalhePage({
       registrations: {
         where: { member: { deletedAt: null, status: "ACTIVE" } },
         include: { member: { select: { id: true, fullName: true } } },
-        orderBy: { member: { fullName: "asc" } },
+        orderBy: { createdAt: "asc" },
       },
     },
   });
@@ -147,10 +147,11 @@ export default async function EventoDetalhePage({
           <CardContent>
             <EventRegistrations
               eventId={ev.id}
-              registered={ev.registrations.map((r) => ({
+              registered={ev.registrations.map((r, idx) => ({
                 id: r.id,
                 memberId: r.memberId,
                 fullName: r.member.fullName,
+                order: idx + 1,
               }))}
               available={available}
               selfMemberId={sessionUser.memberId ?? null}

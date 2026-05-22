@@ -44,7 +44,14 @@ export default async function EventosPage({
   const events = await prisma.event.findMany({
     where,
     orderBy: { dateTime: "desc" },
-    include: { _count: { select: { registrations: true } } },
+    include: {
+      _count: { select: { registrations: true } },
+      registrations: {
+        where: { member: { deletedAt: null, status: "ACTIVE" } },
+        include: { member: { select: { fullName: true } } },
+        orderBy: { createdAt: "asc" },
+      },
+    },
   });
 
   return (
@@ -118,6 +125,23 @@ export default async function EventosPage({
                       {e.slots > 0 ? `/${e.slots}` : ""} inscritos
                     </span>
                   </div>
+                  {e.registrations.length > 0 && (
+                    <ol className="mt-2 space-y-0.5 border-t pt-2">
+                      {e.registrations.slice(0, 5).map((r, idx) => (
+                        <li key={idx} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <span className="w-4 shrink-0 text-right font-medium tabular-nums text-foreground/60">
+                            {idx + 1}º
+                          </span>
+                          <span className="truncate">{r.member.fullName}</span>
+                        </li>
+                      ))}
+                      {e.registrations.length > 5 && (
+                        <li className="pl-6 text-xs text-muted-foreground">
+                          +{e.registrations.length - 5} mais…
+                        </li>
+                      )}
+                    </ol>
+                  )}
                 </CardContent>
               </Card>
             </Link>

@@ -19,7 +19,7 @@ export function EventRegistrations({
   eventStatus,
 }: {
   eventId: string;
-  registered: { id: string; memberId: string; fullName: string }[];
+  registered: { id: string; memberId: string; fullName: string; order?: number }[];
   available: { id: string; fullName: string }[];
   selfMemberId?: string | null;
   eventStatus?: string;
@@ -146,10 +146,17 @@ export function EventRegistrations({
           Nenhum associado inscrito.
         </p>
       ) : (
-        <ul className="divide-y rounded-md border">
+        <ol className="divide-y rounded-md border">
           {registered.map((r) => (
             <li key={r.id} className="flex items-center justify-between px-3 py-2 text-sm">
-              <span>{r.fullName}</span>
+              <div className="flex items-center gap-2">
+                {r.order != null && (
+                  <span className="w-6 shrink-0 text-right text-xs font-semibold tabular-nums text-muted-foreground">
+                    {r.order}º
+                  </span>
+                )}
+                <span>{r.fullName}</span>
+              </div>
               {canEdit && (
                 <Button
                   variant="ghost"
@@ -163,7 +170,7 @@ export function EventRegistrations({
               )}
             </li>
           ))}
-        </ul>
+        </ol>
       )}
     </div>
   );
