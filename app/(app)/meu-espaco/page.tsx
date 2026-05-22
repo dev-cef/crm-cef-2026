@@ -14,6 +14,9 @@ import {
   Activity,
   CheckCircle2,
   XCircle,
+  Calendar,
+  MapPin,
+  ChevronRight,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/authz";
@@ -73,9 +76,10 @@ export default async function MeuEspacoPage() {
           eventRegistrations: {
             include: {
               event: {
-                select: { name: true, dateTime: true, status: true, eventCategory: true },
+                select: { id: true, name: true, dateTime: true, status: true, eventCategory: true, location: true, difficulty: true },
               },
             },
+            orderBy: { event: { dateTime: "desc" } },
           },
         },
       })
@@ -349,6 +353,121 @@ export default async function MeuEspacoPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Meus Eventos */}
+      {(() => {
+        const now = new Date();
+        const upcoming = member.eventRegistrations
+          .filter((r) => r.event.status !== "CANCELADO" && new Date(r.event.dateTime) >= now)
+          .sort((a, b) => new Date(a.event.dateTime).getTime() - new Date(b.event.dateTime).getTime());
+        const past = member.eventRegistrations
+          .filter((r) => r.event.status === "REALIZADO")
+          .slice(0, 5);
+
+        const DIFFICULTY_LABEL: Record<string, string> = {
+          FACIL: "Fácil", MODERADO: "Moderado", DIFICIL: "Difícil", TECNICO: "Técnico",
+        };
+        const DIFFICULTY_COLOR: Record<string, string> = {
+          FACIL: "text-green-600 dark:text-green-400",
+          MODERADO: "text-yellow-600 dark:text-yellow-400",
+          DIFICIL: "text-orange-600 dark:text-orange-400",
+          TECNICO: "text-red-600 dark:text-red-400",
+        };
+        const STATUS_LABEL: Record<string, string> = {
+          PLANEJADO: "Planejado", CONFIRMADO: "Confirmado", REALIZADO: "Realizado", CANCELADO: "Cancelado",
+        };
+
+        return (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Calendar className="size-5" />
+                  Meus Eventos
+                </CardTitle>
+                <Link href="/eventos" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                  Ver todos <ChevronRight className="size-3.5" />
+                </Link>
+              </div>
+              <CardDescription>
+                Eventos em que você está inscrito
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {upcoming.length === 0 && past.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Você ainda não está inscrito em nenhum evento.
+                </p>
+              )}
+
+              {upcoming.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Próximos</p>
+                  <div className="divide-y rounded-lg border">
+                    {upcoming.map((r) => (
+                      <Link
+                        key={r.event.id}
+                        href={`/eventos/${r.event.id}`}
+                        className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{r.event.name}</p>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <CalendarClock className="size-3" />
+                              {toBrDate(r.event.dateTime)}
+                            </span>
+                            {r.event.location && (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="size-3" />
+                                {r.event.location}
+                              </span>
+                            )}
+                            {r.event.difficulty && (
+                              <span className={DIFFICULTY_COLOR[r.event.difficulty] ?? ""}>
+                                {DIFFICULTY_LABEL[r.event.difficulty] ?? r.event.difficulty}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <Badge variant="secondary" className="shrink-0 text-[10px]">
+                          {STATUS_LABEL[r.event.status] ?? r.event.status}
+                        </Badge>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {past.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Realizados recentemente</p>
+                  <div className="divide-y rounded-lg border">
+                    {past.map((r) => (
+                      <Link
+                        key={r.event.id}
+                        href={`/eventos/${r.event.id}`}
+                        className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-muted-foreground">{r.event.name}</p>
+                          <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                            <CalendarClock className="size-3" />
+                            {toBrDate(r.event.dateTime)}
+                          </div>
+                        </div>
+                        <Badge variant="secondary" className="shrink-0 bg-muted text-[10px] text-muted-foreground">
+                          Realizado
+                        </Badge>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Carteirinha Física */}
       {(() => {
