@@ -120,15 +120,9 @@ export const NAV_ITEMS: {
   children?: { href: string; label: string; visibleTo?: Role[] }[];
 }[] = [
   { href: "/dashboard",       label: "Dashboard",       visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "dashboard" },
-  {
-    href: "/meu-espaco",
-    label: "Meu Espaço",
-    visibleTo: ["ASSOCIADO"],
-    children: [
-      { href: "/eventos", label: "Meus Eventos", visibleTo: ["ASSOCIADO"] },
-    ],
-  },
-  { href: "/associados",      label: "Associados",      visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "associados" },
+  { href: "/meu-espaco",       label: "Meu Espaço",       visibleTo: ["ASSOCIADO"] },
+  { href: "/eventos",          label: "Meus Eventos",     visibleTo: ["ASSOCIADO"] },
+  { href: "/associados",       label: "Associados",       visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "associados" },
   {
     href: "/carteirinha",
     label: "Carteirinha",
