@@ -153,6 +153,8 @@ export default async function EventoDetalhePage({
                 fullName: r.member.fullName,
               }))}
               available={available}
+              selfMemberId={sessionUser.memberId ?? null}
+              eventStatus={ev.status}
             />
           </CardContent>
         </Card>
