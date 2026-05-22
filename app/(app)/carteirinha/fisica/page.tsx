@@ -247,9 +247,7 @@ export default async function FisicaDashboardPage({
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Avatar className="size-8">
-                          {r.member.photoUrl && (
-                            <img src={r.member.photoUrl} alt={r.member.fullName} />
-                          )}
+                          <AvatarImage src={r.member.photoUrl ?? undefined} alt={r.member.fullName} />
                           <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                         </Avatar>
                         <span className="font-medium">{r.member.fullName}</span>
