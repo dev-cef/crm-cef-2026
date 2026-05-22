@@ -90,7 +90,7 @@ export const ROUTE_ACCESS: { prefix: string; roles: Role[] }[] = [
   { prefix: "/configuracoes", roles: ["ADMIN"] },
   { prefix: "/associados", roles: ["ADMIN", "DEPARTAMENTO"] },
   { prefix: "/aniversariantes", roles: ["ADMIN", "DEPARTAMENTO"] },
-  { prefix: "/eventos", roles: ["ADMIN", "DEPARTAMENTO"] },
+  { prefix: "/eventos", roles: ["ADMIN", "DEPARTAMENTO", "ASSOCIADO"] },
   { prefix: "/meu-espaco", roles: ["ADMIN", "ASSOCIADO"] },
   { prefix: "/carteirinha", roles: ["ADMIN", "DEPARTAMENTO", "ASSOCIADO"] },
   { prefix: "/dashboard", roles: ["ADMIN", "DEPARTAMENTO"] },
@@ -120,7 +120,14 @@ export const NAV_ITEMS: {
   children?: { href: string; label: string; visibleTo?: Role[] }[];
 }[] = [
   { href: "/dashboard",       label: "Dashboard",       visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "dashboard" },
-  { href: "/meu-espaco",      label: "Meu Espaço",      visibleTo: ["ASSOCIADO"] },
+  {
+    href: "/meu-espaco",
+    label: "Meu Espaço",
+    visibleTo: ["ASSOCIADO"],
+    children: [
+      { href: "/eventos", label: "Meus Eventos", visibleTo: ["ASSOCIADO"] },
+    ],
+  },
   { href: "/associados",      label: "Associados",      visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "associados" },
   {
     href: "/carteirinha",
