@@ -28,6 +28,7 @@ export async function GET(request: Request) {
   const where: Record<string, unknown> = {
     referenceMonth: month,
     referenceYear: year,
+    member: { deletedAt: null, status: "ACTIVE" },
   };
   if (planId !== "ALL") where.planId = planId;
   if (["PAGO", "PENDENTE", "ATRASADO"].includes(status))

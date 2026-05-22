@@ -81,7 +81,7 @@ export default async function PagamentosPage({
 
   const baseWhere = {
     ...(monthFilter ?? {}),
-    member: { ...memberWhere, deletedAt: null },
+    member: { ...memberWhere, deletedAt: null, status: "ACTIVE" },
   };
 
   // Fetch totals per status (for cards, always without status filter)
