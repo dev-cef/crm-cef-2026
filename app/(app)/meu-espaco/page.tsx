@@ -11,6 +11,9 @@ import {
   ImagePlus,
   IdCard,
   Bell,
+  Activity,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/authz";
@@ -40,7 +43,7 @@ import { EditarDadosDialog } from "./editar-dados-dialog";
 import { TrocarSenhaDialog } from "./trocar-senha-dialog";
 import { FotoDialog } from "./foto-dialog";
 import { PhysicalCardStepper } from "@/components/modules/carteirinha/physical-card-stepper";
-import { type PhysicalCardStage, currentQuarter } from "@/lib/physical-card";
+import { type PhysicalCardStage, currentQuarter, checkEligibility } from "@/lib/physical-card";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +68,13 @@ export default async function MeuEspacoPage() {
             orderBy: { createdAt: "desc" },
             include: {
               statusHistory: { orderBy: { changedAt: "asc" } },
+            },
+          },
+          eventRegistrations: {
+            include: {
+              event: {
+                select: { name: true, dateTime: true, status: true, eventCategory: true },
+              },
             },
           },
         },
@@ -101,6 +111,7 @@ export default async function MeuEspacoPage() {
   );
   const emDia = pending.length === 0;
   const pendingTotal = pending.reduce((s, p) => s + p.amount, 0);
+  const eligibility = checkEligibility(member.createdAt, member.eventRegistrations);
 
   return (
     <div className="space-y-6">
@@ -252,6 +263,89 @@ export default async function MeuEspacoPage() {
                 ))}
               </TableBody>
             </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Minhas Atividades */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Activity className="size-5" />
+              Minhas Atividades
+            </CardTitle>
+            <Link
+              href="/eventos"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              Ver todos os eventos
+            </Link>
+          </div>
+          <CardDescription>
+            Exigências mínimas para emissão da carteirinha física
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* Critério 1 — tempo de associação */}
+          <div className="flex items-start gap-3 rounded-lg border p-3">
+            {eligibility.criterion1.met ? (
+              <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-primary" />
+            ) : (
+              <XCircle className="mt-0.5 size-5 shrink-0 text-destructive" />
+            )}
+            <div className="min-w-0">
+              <p className="text-sm font-medium">Sócio há mais de 3 meses</p>
+              <p className="text-xs text-muted-foreground">
+                {(() => {
+                  const months = eligibility.criterion1.monthsAsOf;
+                  const years = Math.floor(months / 12);
+                  return years < 1 ? "menos de 1 ano" : `${years} ${years === 1 ? "ano" : "anos"}`;
+                })()} de associação
+                {!eligibility.criterion1.met && (
+                  <span className="ml-1 text-destructive">
+                    · faltam {3 - eligibility.criterion1.monthsAsOf} mês(es)
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* Critério 2 — participações */}
+          <div className="flex items-start gap-3 rounded-lg border p-3">
+            {eligibility.criterion2.met ? (
+              <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-primary" />
+            ) : (
+              <XCircle className="mt-0.5 size-5 shrink-0 text-destructive" />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">2 reuniões sociais + 2 atividades</p>
+              <p className="text-xs text-muted-foreground mb-2">
+                Trilha, escalada e/ou ciclismo em eventos realizados
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-md bg-muted px-3 py-2 text-center">
+                  <p className="text-lg font-bold tabular-nums">
+                    {eligibility.criterion2.meetings}
+                    <span className="text-sm font-normal text-muted-foreground">/2</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">Reuniões</p>
+                </div>
+                <div className="rounded-md bg-muted px-3 py-2 text-center">
+                  <p className="text-lg font-bold tabular-nums">
+                    {eligibility.criterion2.activities}
+                    <span className="text-sm font-normal text-muted-foreground">/2</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">Atividades</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {eligibility.isEligible && (
+            <p className="text-xs font-medium text-primary">
+              ✓ Você atende às exigências mínimas para solicitação da carteirinha física.
+            </p>
           )}
         </CardContent>
       </Card>
