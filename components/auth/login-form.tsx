@@ -6,6 +6,7 @@ import { authenticate, type LoginState } from "@/app/login/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 
 const initialState: LoginState = { stage: "password" };
 
@@ -83,6 +84,17 @@ export function LoginForm() {
         )}
         {totp ? "Verificar" : "Entrar"}
       </Button>
+
+      {!totp && (
+        <>
+          <div className="relative flex items-center gap-3 py-1">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">ou</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+          <GoogleSignInButton />
+        </>
+      )}
     </form>
   );
 }

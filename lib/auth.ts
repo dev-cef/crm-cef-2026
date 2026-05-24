@@ -1,11 +1,13 @@
 import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { authConfig } from "@/lib/auth.config";
 import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validations/auth";
 import { normalizeRecoveryCode, verifyTotp } from "@/lib/totp";
 import { isOffHours, recordSecurityEvent } from "@/lib/audit";
+import { normalizeRole, SESSION_MAX_AGE_SECONDS } from "@/lib/rbac";
 
 const MAX_FAILED_ATTEMPTS = 5;
 const BASE_LOCKOUT_MINUTES = 15;
@@ -36,12 +38,17 @@ export class AccountPendingError extends CredentialsSignin {
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   providers: [
+    Google({
+      clientId: process.env.AUTH_GOOGLE_ID!,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+    }),
     Credentials({
       credentials: {
         email: { label: "E-mail", type: "email" },
         password: { label: "Senha", type: "password" },
         token: { label: "Código 2FA", type: "text" },
       },
+
       async authorize(credentials) {
         const parsed = loginSchema.safeParse(credentials);
         if (!parsed.success) return null;
@@ -170,4 +177,59 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
+  callbacks: {
+    authorized: authConfig.callbacks!.authorized!,
+    session: authConfig.callbacks!.session!,
+    async signIn({ user, account }) {
+      if (account?.provider === "google") {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: user.email! },
+          select: { id: true, approved: true },
+        });
+        return !!(dbUser?.approved);
+      }
+      return true;
+    },
+    async jwt({ token, user, account }) {
+      const nowS = Math.floor(Date.now() / 1000);
+
+      if (user) {
+        if (account?.provider === "google") {
+          const dbUser = await prisma.user.findUnique({
+            where: { email: user.email! },
+            include: {
+              member: { select: { id: true } },
+              departments: { select: { departmentId: true } },
+            },
+          });
+          if (!dbUser) return token;
+          const role = normalizeRole(dbUser.role);
+          token.id = dbUser.id;
+          token.role = role;
+          token.memberId = dbUser.member?.id ?? null;
+          token.departmentIds = dbUser.departments.map((d) => d.departmentId);
+          token.totpEnabled = false;
+          token.expiresAt = nowS + SESSION_MAX_AGE_SECONDS[role];
+          return token;
+        }
+
+        // Credentials — campos já populados pelo authorize()
+        token.id = user.id as string;
+        const role = normalizeRole((user as { role?: string }).role);
+        token.role = role;
+        token.memberId = (user as { memberId?: string | null }).memberId ?? null;
+        token.departmentIds = (user as { departmentIds?: string[] }).departmentIds ?? [];
+        token.totpEnabled = (user as { totpEnabled?: boolean }).totpEnabled ?? false;
+        token.expiresAt = nowS + SESSION_MAX_AGE_SECONDS[role];
+        return token;
+      }
+
+      // Requisições subsequentes — desliza expiração (idle timeout)
+      const role = normalizeRole(token.role);
+      if (typeof token.expiresAt === "number" && nowS <= token.expiresAt) {
+        token.expiresAt = nowS + SESSION_MAX_AGE_SECONDS[role];
+      }
+      return token;
+    },
+  },
 });
