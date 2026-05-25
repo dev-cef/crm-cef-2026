@@ -33,7 +33,9 @@ import { AgeBars } from "@/components/modules/dashboard/age-bars";
 import { RevenueBars } from "@/components/modules/dashboard/revenue-bars";
 import { PaymentStatusDonut } from "@/components/modules/dashboard/payment-status-donut";
 import { MemberGrowthBars } from "@/components/modules/dashboard/member-growth-bars";
+import { ArpMetaGauge } from "@/components/modules/dashboard/arp-meta-gauge";
 import { CardBeam } from "@/components/ui/card-beam";
+import { getMetaArpAno } from "@/lib/events/arp";
 
 export const dynamic = "force-dynamic";
 
@@ -57,7 +59,7 @@ async function getData() {
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
   sixMonthsAgo.setHours(0, 0, 0, 0);
 
-  const [activeCount, sexGroups, members, monthPayments, upcomingEvents, revenuePayments, newMembersRaw] =
+  const [activeCount, sexGroups, members, monthPayments, upcomingEvents, revenuePayments, newMembersRaw, arpMeta] =
     await Promise.all([
       prisma.member.count({
         where: { status: "ACTIVE", deletedAt: null },
@@ -97,6 +99,7 @@ async function getData() {
         where: { createdAt: { gte: sixMonthsAgo }, deletedAt: null },
         select: { createdAt: true },
       }),
+      getMetaArpAno(year),
     ]);
 
   const femaleCount =
@@ -185,6 +188,7 @@ async function getData() {
     pagoCount,
     pendenteCount,
     atrasadoCount,
+    arpMeta,
   };
 }
 
@@ -409,6 +413,21 @@ export default async function DashboardPage() {
       <Card
         className="cef-rise mt-4 border-border/70"
         style={{ "--i": 10 } as React.CSSProperties}
+      >
+        <CardHeader>
+          <CardTitle>Contrapartida ARP {data.arpMeta.ano}</CardTitle>
+          <CardDescription>
+            Meta anual de 6 eventos abertos ao público
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ArpMetaGauge {...data.arpMeta} />
+        </CardContent>
+      </Card>
+
+      <Card
+        className="cef-rise mt-4 border-border/70"
+        style={{ "--i": 11 } as React.CSSProperties}
       >
         <CardHeader>
           <CardTitle>Próximos eventos</CardTitle>

@@ -11,11 +11,11 @@ datasource db {
 }
 
 model User {
-  id           String     @id @default(cuid())
+  id           String @id @default(cuid())
   name         String
-  email        String     @unique
+  email        String @unique
   passwordHash String
-  role         String     @default("ADMIN") // ADMIN | DEPARTAMENTO | ASSOCIADO
+  role         String @default("ADMIN") // ADMIN | DEPARTAMENTO | ASSOCIADO
 
   // Endurecimento — bloqueio de conta (lockout com backoff)
   failedLoginAttempts Int       @default(0)
@@ -30,9 +30,9 @@ model User {
   // Auto-cadastro: false = aguardando aprovação do admin (login bloqueado).
   approved Boolean @default(true)
 
-  image       String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  image           String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
   auditLogs       AuditLog[]
   member          Member?
   departments     UserDepartment[]
@@ -60,7 +60,7 @@ model DeptModulePermission {
   id           String     @id @default(cuid())
   departmentId String
   department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  moduleSlug   String     // "associados" | "financeiro" | "eventos" | "aniversariantes" | "carteirinha"
+  moduleSlug   String // "associados" | "financeiro" | "eventos" | "aniversariantes" | "carteirinha"
   canView      Boolean    @default(true)
   canEdit      Boolean    @default(false)
   canCreate    Boolean    @default(false)
@@ -84,7 +84,7 @@ model UserModuleOverride {
   canCreate    Boolean?
   canDelete    Boolean?
   canExport    Boolean?
-  overriddenBy String?  // userId do admin que configurou
+  overriddenBy String? // userId do admin que configurou
   overriddenAt DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -94,7 +94,7 @@ model UserModuleOverride {
 
 // Vínculo M:N usuário↔departamento. Permissão é aditiva (nunca subtrativa).
 model UserDepartment {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   userId       String
   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   departmentId String
@@ -121,7 +121,7 @@ model Plan {
 model Member {
   id             String    @id @default(cuid())
   registration   Int       @unique // matrícula (atribuída pela aplicação)
-  cardValidUntil DateTime?          // null = usa 31/12 do ano corrente
+  cardValidUntil DateTime? // null = usa 31/12 do ano corrente
 
   // Seção 01 — Informações Pessoais
   fullName  String
@@ -165,10 +165,14 @@ model Member {
   suggestions        String?
 
   status         String    @default("ACTIVE") // ACTIVE | INACTIVE
-  inactiveReason String?   // motivo de desligamento (preenchido pelo admin ao desativar)
+  inactiveReason String? // motivo de desligamento (preenchido pelo admin ao desativar)
   inactiveAt     DateTime? // data de saída informada pelo admin (pode diferir de deletedAt)
-  planId    String?
-  plan      Plan?     @relation(fields: [planId], references: [id])
+
+  // Pode atuar como guia em atividades outdoor (Escalada, Caminhada, Bike, Acampamento).
+  isGuide Boolean @default(false)
+
+  planId String?
+  plan   Plan?   @relation(fields: [planId], references: [id])
 
   // Conta de login do associado (nível ASSOCIADO). null = sem acesso ao sistema.
   userId String? @unique
@@ -179,9 +183,9 @@ model Member {
   department   Department? @relation(fields: [departmentId], references: [id])
 
   // Plano Família: dependente aponta para o titular
-  titularId  String?  @unique
-  titular    Member?  @relation("TitularDependente", fields: [titularId], references: [id])
-  dependente Member?  @relation("TitularDependente")
+  titularId  String? @unique
+  titular    Member? @relation("TitularDependente", fields: [titularId], references: [id])
+  dependente Member? @relation("TitularDependente")
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -189,11 +193,13 @@ model Member {
 
   payments             Payment[]
   eventRegistrations   EventRegistration[]
+  guidedEvents         Event[]               @relation("EventGuide")
   birthdayLogs         BirthdayMessageLog[]
   physicalCardRequests PhysicalCardRequest[]
 
   @@index([status])
   @@index([deletedAt])
+  @@index([isGuide])
 }
 
 model Payment {
@@ -208,9 +214,9 @@ model Payment {
   status         String    @default("PENDENTE") // PAGO | PENDENTE | ATRASADO
   dueDate        DateTime
   paidAt         DateTime?
-  notes          String?   // Observação da baixa
-  receiptPath    String?   // Caminho do comprovante (arquivo local)
-  receiptNumber  String?   // Número do recibo gerado (YYYY-NNNN)
+  notes          String? // Observação da baixa
+  receiptPath    String? // Caminho do comprovante (arquivo local)
+  receiptNumber  String? // Número do recibo gerado (YYYY-NNNN)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -220,39 +226,47 @@ model Payment {
 }
 
 model Transaction {
-  id          String   @id @default(cuid())
-  type        String   // ENTRADA | SAIDA
-  category    String
-  subcategory String?
-  description String
-  amount      Float
-  date        DateTime
+  id              String   @id @default(cuid())
+  type            String // ENTRADA | SAIDA
+  category        String
+  subcategory     String?
+  description     String
+  amount          Float
+  date            DateTime
   competenceMonth Int?
   competenceYear  Int?
   clubAccount     String?
   payerName       String?
   linkedActivity  String?
   paymentMethod   String?
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([type])
   @@index([date])
 }
 
 model Event {
-  id          String   @id @default(cuid())
-  name        String
-  description String
-  dateTime    DateTime
-  location    String
+  id            String   @id @default(cuid())
+  name          String
+  description   String
+  dateTime      DateTime
+  location      String
   difficulty    String // FACIL | MODERADO | DIFICIL | TECNICO
-  eventCategory String @default("ATIVIDADE") // REUNIAO | ATIVIDADE
-  slots         Int    @default(0)
-  status      String   @default("PLANEJADO") // PLANEJADO | CONFIRMADO | REALIZADO | CANCELADO
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  eventCategory String   @default("ATIVIDADE") // REUNIAO | ATIVIDADE
+  slots         Int      @default(0)
+  status        String   @default("PLANEJADO") // PLANEJADO | CONFIRMADO | REALIZADO | CANCELADO
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Categoria detalhada (EVENT_CATEGORIES em lib/constants.ts).
+  // Define se conta como contrapartida ARP (R1) e se exige guia (R3).
+  categoryCode String?
+
+  // Guia da atividade — Member com is_guia. Obrigatório quando categoria.requiresGuide.
+  guideId String?
+  guide   Member? @relation("EventGuide", fields: [guideId], references: [id])
 
   // Departamento responsável pelo evento (escopo do nível DEPARTAMENTO)
   departmentId String?
@@ -264,6 +278,8 @@ model Event {
   @@index([status])
   @@index([dateTime])
   @@index([departmentId])
+  @@index([categoryCode])
+  @@index([guideId])
 }
 
 model EventRegistration {
@@ -336,9 +352,9 @@ model PhysicalCardRequest {
   currentStage        String
   eligibilitySnapshot String // JSON dos critérios no momento da criação
 
-  approvedBy    String?
-  approvedAt    DateTime?
-  approvedNotes String?
+  approvedBy     String?
+  approvedAt     DateTime?
+  approvedNotes  String?
   rejectedReason String?
 
   // Segunda via — cobrança de R$ 30
@@ -374,7 +390,7 @@ model PhysicalCardStatusHistory {
   fromStage String?
   toStage   String
   changedBy String // nome/email do admin
-  changedAt DateTime @default(now())
+  changedAt DateTime            @default(now())
   payload   String? // JSON com dados extras (reason, notes, etc.)
 
   @@index([requestId])
@@ -383,7 +399,7 @@ model PhysicalCardStatusHistory {
 model Snapshot {
   id          String   @id @default(cuid())
   label       String
-  data        String   // JSON completo de todos os dados
+  data        String // JSON completo de todos os dados
   sizeBytes   Int      @default(0)
   createdById String?
   createdAt   DateTime @default(now())

@@ -26,6 +26,8 @@ export async function saveEvent(
     difficulty: d.difficulty,
     slots: d.slots,
     status: d.status,
+    categoryCode: d.categoryCode ? d.categoryCode : null,
+    guideId: d.guideId ? d.guideId : null,
   };
 
   try {
