@@ -16,6 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ProjetarMuroButton } from "@/components/modules/eventos/projetar-muro-button";
 
 export const dynamic = "force-dynamic";
 
@@ -61,12 +62,15 @@ export default async function EventosPage({
         description={`${events.length} evento(s)`}
       >
         {canCreate && (
-          <Link
-            href="/eventos/novo"
-            className={cn(buttonVariants({ size: "sm" }))}
-          >
-            <CalendarPlus className="size-4" /> Novo evento
-          </Link>
+          <>
+            <ProjetarMuroButton />
+            <Link
+              href="/eventos/novo"
+              className={cn(buttonVariants({ size: "sm" }))}
+            >
+              <CalendarPlus className="size-4" /> Novo evento
+            </Link>
+          </>
         )}
       </PageHeader>
 
