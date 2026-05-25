@@ -104,6 +104,7 @@ export type MemberFormProps = {
     suggestions: string | null;
     planId: string | null;
     status: string;
+    isGuide?: boolean;
     createdAt?: string;
   };
 };
@@ -155,6 +156,7 @@ export function MemberForm({ mode, plans, member }: MemberFormProps) {
       suggestions: member?.suggestions ?? "",
       planId: member?.planId ?? "",
       status: (member?.status as "ACTIVE" | "INACTIVE") ?? "ACTIVE",
+      isGuide: member?.isGuide ?? false,
       createdAt: member?.createdAt ?? "",
     },
   });
@@ -764,6 +766,28 @@ export function MemberForm({ mode, plans, member }: MemberFormProps) {
                   </select>
                 </div>
               </div>
+
+              <label
+                htmlFor="isGuide"
+                className="flex cursor-pointer items-start gap-3 rounded-lg border bg-card/40 p-3 transition-colors hover:bg-accent/40"
+              >
+                <input
+                  id="isGuide"
+                  type="checkbox"
+                  className="mt-0.5 size-4 shrink-0 rounded border-input"
+                  {...register("isGuide")}
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium">
+                    É guia de atividade?
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    Marca este associado como guia em escaladas, caminhadas,
+                    bike ou acampamentos. Aparece na lista de guias no
+                    cadastro de eventos outdoor.
+                  </span>
+                </span>
+              </label>
 
               {mode === "edit" && (
                 <div className="rounded-lg border border-dashed border-amber-400/50 bg-amber-500/5 p-4">

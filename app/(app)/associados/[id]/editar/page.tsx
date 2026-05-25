@@ -82,6 +82,7 @@ export default async function EditarAssociadoPage({
           suggestions: member.suggestions,
           planId: member.planId,
           status: member.status,
+          isGuide: member.isGuide,
           createdAt: toBrDate(member.createdAt),
         }}
       />

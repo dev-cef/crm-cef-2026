@@ -79,6 +79,9 @@ export const memberSchema = z
     planId: z.string().optional().or(z.literal("")),
     status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
 
+    // Atuação como guia em atividades outdoor (R3 do módulo Eventos)
+    isGuide: z.boolean().default(false),
+
     // Administração (só edição)
     createdAt: z
       .string()
