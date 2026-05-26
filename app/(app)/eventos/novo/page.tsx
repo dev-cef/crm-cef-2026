@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { toSessionUser } from "@/lib/rbac";
 import { can } from "@/lib/permissions";
+import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
 import { buttonVariants } from "@/components/ui/button";
@@ -15,6 +16,12 @@ export default async function NovoEventoPage() {
   const user = toSessionUser(session.user);
   if (!(await can(user, "eventos", "create"))) redirect("/eventos");
 
+  const guides = await prisma.member.findMany({
+    where: { isGuide: true, deletedAt: null, status: "ACTIVE" },
+    orderBy: { fullName: "asc" },
+    select: { id: true, fullName: true },
+  });
+
   return (
     <div className="mx-auto max-w-3xl">
       <Link
@@ -24,7 +31,10 @@ export default async function NovoEventoPage() {
         <ArrowLeft className="size-4" /> Eventos
       </Link>
       <PageHeader title="Novo evento" description="Cadastre uma atividade" />
-      <EventForm mode="create" />
+      <EventForm
+        mode="create"
+        guides={guides.map((g) => ({ id: g.id, name: g.fullName }))}
+      />
     </div>
   );
 }

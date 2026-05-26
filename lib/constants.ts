@@ -74,6 +74,89 @@ export const EVENT_STATUS = [
   { value: "CANCELADO", label: "Cancelado" },
 ] as const;
 
+// Categorias detalhadas de evento.
+// isArpCounterpart=true → conta para a meta de 6 contrapartidas ARP do ano (R1).
+// requiresGuide=true → exige Member com isGuide ao cadastrar (R3).
+export const EVENT_CATEGORIES = [
+  {
+    value: "altos_papos",
+    label: "Altos Papos",
+    department: "social",
+    isArpCounterpart: true,
+    requiresGuide: false,
+  },
+  {
+    value: "cef_cine_montanha",
+    label: "CEF Cine Montanha",
+    department: "social",
+    isArpCounterpart: true,
+    requiresGuide: false,
+  },
+  {
+    value: "aniversario_cef",
+    label: "Aniversário CEF",
+    department: "social",
+    isArpCounterpart: false,
+    requiresGuide: false,
+  },
+  {
+    value: "confraternizacao",
+    label: "Confraternização",
+    department: "social",
+    isArpCounterpart: false,
+    requiresGuide: false,
+  },
+  {
+    value: "escalada",
+    label: "Escalada",
+    department: "outdoor",
+    isArpCounterpart: false,
+    requiresGuide: true,
+  },
+  {
+    value: "caminhada",
+    label: "Caminhada",
+    department: "outdoor",
+    isArpCounterpart: false,
+    requiresGuide: true,
+  },
+  {
+    value: "bike",
+    label: "Bike",
+    department: "outdoor",
+    isArpCounterpart: false,
+    requiresGuide: true,
+  },
+  {
+    value: "acampamento",
+    label: "Acampamento",
+    department: "outdoor",
+    isArpCounterpart: false,
+    requiresGuide: true,
+  },
+  {
+    value: "muro_escalada",
+    label: "Muro de Escalada",
+    department: "outdoor",
+    isArpCounterpart: false,
+    requiresGuide: false,
+  },
+] as const;
+
+export type EventCategoryValue = (typeof EVENT_CATEGORIES)[number]["value"];
+
+export const ARP_COUNTERPART_CODES = [
+  "altos_papos",
+  "cef_cine_montanha",
+] as const satisfies readonly EventCategoryValue[];
+
+export const ARP_META_DEFAULT = 6;
+
+export function getEventCategory(code: string | null | undefined) {
+  if (!code) return undefined;
+  return EVENT_CATEGORIES.find((c) => c.value === code);
+}
+
 export const UF_OPTIONS = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
   "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",

@@ -24,7 +24,14 @@ export default async function EditarEventoPage({
   const user = toSessionUser(session.user);
   if (!(await can(user, "eventos", "edit"))) redirect(`/eventos/${id}`);
 
-  const ev = await prisma.event.findUnique({ where: { id } });
+  const [ev, guides] = await Promise.all([
+    prisma.event.findUnique({ where: { id } }),
+    prisma.member.findMany({
+      where: { isGuide: true, deletedAt: null, status: "ACTIVE" },
+      orderBy: { fullName: "asc" },
+      select: { id: true, fullName: true },
+    }),
+  ]);
   if (!ev) notFound();
 
   return (
@@ -47,7 +54,10 @@ export default async function EditarEventoPage({
           difficulty: ev.difficulty,
           slots: ev.slots,
           status: ev.status,
+          categoryCode: ev.categoryCode,
+          guideId: ev.guideId,
         }}
+        guides={guides.map((g) => ({ id: g.id, name: g.fullName }))}
       />
     </div>
   );

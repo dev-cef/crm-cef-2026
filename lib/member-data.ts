@@ -49,6 +49,7 @@ export function normalizeMember(values: MemberFormValues) {
       suggestions: d.suggestions || null,
       planId: d.planId || null,
       status: d.status,
+      isGuide: d.isGuide,
       ...(d.createdAt ? { createdAt: parseBrDate(d.createdAt)! } : {}),
     },
   } as const;
