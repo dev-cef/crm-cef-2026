@@ -1,15 +1,19 @@
 import { z } from "zod";
 import {
+  ATIVIDADE_CATEGORY_CODES,
   EVENT_CATEGORIES,
-  EVENT_DIFFICULTY,
   EVENT_STATUS,
   getEventCategory,
 } from "@/lib/constants";
 
+// Categorias que não exigem nome/descrição preenchidos pelo usuário (auto-gerados no server)
+const AUTO_FILLED_CATEGORIES = ["reuniao_social", "aniversario_cef"] as const;
+
 export const eventSchema = z
   .object({
-    name: z.string().trim().min(3, "Informe o nome do evento"),
-    description: z.string().trim().min(5, "Descreva o evento"),
+    categoryCode: z.string().min(1, "Selecione o tipo de evento/atividade"),
+    name: z.string().trim().default(""),
+    description: z.string().trim().default(""),
     dateTime: z
       .string()
       .min(1, "Informe data e hora")
@@ -17,32 +21,94 @@ export const eventSchema = z
         (v) => !Number.isNaN(new Date(v).getTime()),
         "Data/hora inválida",
       ),
-    location: z.string().trim().min(2, "Informe o local/trilha"),
-    difficulty: z.enum(
-      EVENT_DIFFICULTY.map((o) => o.value) as [string, ...string[]],
-      { message: "Selecione a dificuldade" },
-    ),
-    slots: z.coerce.number().int().min(0, "Vagas inválidas"),
+    location: z.string().trim().default(""),
+    difficulty: z.string().default(""),
+    slots: z.coerce.number().int().min(0, "Vagas inválidas").default(0),
     status: z.enum(
       EVENT_STATUS.map((o) => o.value) as [string, ...string[]],
       { message: "Selecione o status" },
     ),
-    categoryCode: z
-      .enum(EVENT_CATEGORIES.map((c) => c.value) as [string, ...string[]], {
-        message: "Selecione a categoria",
-      })
-      .optional()
-      .or(z.literal("")),
-    guideId: z.string().optional().or(z.literal("")),
+    guideId: z.string().default(""),
+    speakerName: z.string().trim().default(""),
+    filmDuration: z.string().trim().default(""),
+    attendeeIds: z.array(z.string()).default([]),
   })
-  // R3 — categoria outdoor exige guia associado.
   .superRefine((data, ctx) => {
-    const cat = getEventCategory(data.categoryCode || undefined);
+    const code = data.categoryCode;
+    const cat = getEventCategory(code);
+    const isAtividade = (ATIVIDADE_CATEGORY_CODES as readonly string[]).includes(code);
+    const isAutoFilled = (AUTO_FILLED_CATEGORIES as readonly string[]).includes(code);
+
+    // Nome obrigatório exceto para categorias auto-preenchidas
+    if (!isAutoFilled && data.name.trim().length < 3) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["name"],
+        message: "Informe o nome (mín. 3 caracteres)",
+      });
+    }
+
+    // Descrição obrigatória exceto para categorias auto-preenchidas
+    if (!isAutoFilled && data.description.trim().length < 5) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["description"],
+        message: "Descreva o evento (mín. 5 caracteres)",
+      });
+    }
+
+    // Local obrigatório para atividades e confraternizacao
+    const needsLocation = isAtividade || code === "confraternizacao";
+    if (needsLocation && data.location.trim().length < 2) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["location"],
+        message: "Informe o local",
+      });
+    }
+
+    // Dificuldade obrigatória apenas para atividades
+    if (isAtividade && !data.difficulty) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["difficulty"],
+        message: "Selecione a dificuldade",
+      });
+    }
+
+    // R3 — categoria outdoor com requiresGuide exige guia
     if (cat?.requiresGuide && !data.guideId) {
       ctx.addIssue({
-        code: "custom",
+        code: z.ZodIssueCode.custom,
         path: ["guideId"],
         message: `Categoria "${cat.label}" exige um guia associado.`,
+      });
+    }
+
+    // Palestrante obrigatório para Altos Papos
+    if (code === "altos_papos" && data.speakerName.trim().length < 2) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["speakerName"],
+        message: "Informe o nome do palestrante",
+      });
+    }
+
+    // Duração obrigatória para CEF Cine Montanha
+    if (code === "cef_cine_montanha" && data.filmDuration.trim().length < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["filmDuration"],
+        message: "Informe a duração do filme",
+      });
+    }
+
+    // categoryCode deve ser um dos valores válidos
+    if (!EVENT_CATEGORIES.find((c) => c.value === code)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["categoryCode"],
+        message: "Categoria inválida",
       });
     }
   });

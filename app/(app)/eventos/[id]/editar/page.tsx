@@ -24,10 +24,18 @@ export default async function EditarEventoPage({
   const user = toSessionUser(session.user);
   if (!(await can(user, "eventos", "edit"))) redirect(`/eventos/${id}`);
 
-  const [ev, guides] = await Promise.all([
-    prisma.event.findUnique({ where: { id } }),
+  const [ev, guides, members] = await Promise.all([
+    prisma.event.findUnique({
+      where: { id },
+      include: { attendees: { select: { memberId: true } } },
+    }),
     prisma.member.findMany({
       where: { isGuide: true, deletedAt: null, status: "ACTIVE" },
+      orderBy: { fullName: "asc" },
+      select: { id: true, fullName: true },
+    }),
+    prisma.member.findMany({
+      where: { deletedAt: null, status: "ACTIVE" },
       orderBy: { fullName: "asc" },
       select: { id: true, fullName: true },
     }),
@@ -42,7 +50,7 @@ export default async function EditarEventoPage({
       >
         <ArrowLeft className="size-4" /> Voltar
       </Link>
-      <PageHeader title="Editar evento" description={ev.name} />
+      <PageHeader title="Editar" description={ev.name} />
       <EventForm
         mode="edit"
         event={{
@@ -56,8 +64,12 @@ export default async function EditarEventoPage({
           status: ev.status,
           categoryCode: ev.categoryCode,
           guideId: ev.guideId,
+          speakerName: ev.speakerName,
+          filmDuration: ev.filmDuration,
+          attendeeIds: ev.attendees.map((a) => a.memberId),
         }}
         guides={guides.map((g) => ({ id: g.id, name: g.fullName }))}
+        members={members}
       />
     </div>
   );

@@ -16,11 +16,18 @@ export default async function NovoEventoPage() {
   const user = toSessionUser(session.user);
   if (!(await can(user, "eventos", "create"))) redirect("/eventos");
 
-  const guides = await prisma.member.findMany({
-    where: { isGuide: true, deletedAt: null, status: "ACTIVE" },
-    orderBy: { fullName: "asc" },
-    select: { id: true, fullName: true },
-  });
+  const [guides, members] = await Promise.all([
+    prisma.member.findMany({
+      where: { isGuide: true, deletedAt: null, status: "ACTIVE" },
+      orderBy: { fullName: "asc" },
+      select: { id: true, fullName: true },
+    }),
+    prisma.member.findMany({
+      where: { deletedAt: null, status: "ACTIVE" },
+      orderBy: { fullName: "asc" },
+      select: { id: true, fullName: true },
+    }),
+  ]);
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -28,12 +35,13 @@ export default async function NovoEventoPage() {
         href="/eventos"
         className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "mb-3")}
       >
-        <ArrowLeft className="size-4" /> Eventos
+        <ArrowLeft className="size-4" /> Eventos e Atividades
       </Link>
-      <PageHeader title="Novo evento" description="Cadastre uma atividade" />
+      <PageHeader title="Novo evento / atividade" description="Selecione o tipo e preencha os dados" />
       <EventForm
         mode="create"
         guides={guides.map((g) => ({ id: g.id, name: g.fullName }))}
+        members={members}
       />
     </div>
   );

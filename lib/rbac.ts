@@ -143,7 +143,7 @@ export const NAV_ITEMS: {
       { href: "/financeiro/planos",      label: "Planos" },
     ],
   },
-  { href: "/eventos",         label: "Eventos",         visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "eventos" },
+  { href: "/eventos",         label: "Eventos e Atividades", visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "eventos" },
 ];
 
 export const CONFIG_NAV_ITEMS: { href: string; label: string }[] = [

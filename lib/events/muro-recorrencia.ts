@@ -81,3 +81,18 @@ export function intervaloMes(ano: number, mes1a12: number): {
   const end = new Date(ano, mes1a12, 1, 0, 0, 0, 0);
   return { start, end };
 }
+
+/**
+ * Retorna a última quinta-feira do mês especificado às 19h.
+ * Usado para auto-preencher a data do evento "Aniversário CEF".
+ */
+export function ultimaQuintaDoMes(ano: number, mes1a12: number): Date {
+  // new Date(ano, mes1a12, 0) = último dia do mês (mes1a12 indexado em 1)
+  const lastDay = new Date(ano, mes1a12, 0);
+  const dow = lastDay.getDay(); // 0=Dom, 4=Qui
+  const daysBack = (dow - 4 + 7) % 7;
+  const result = new Date(lastDay);
+  result.setDate(lastDay.getDate() - daysBack);
+  result.setHours(19, 0, 0, 0);
+  return result;
+}

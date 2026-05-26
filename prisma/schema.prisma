@@ -193,6 +193,7 @@ model Member {
 
   payments             Payment[]
   eventRegistrations   EventRegistration[]
+  attendedEvents       EventAttendee[]
   guidedEvents         Event[]               @relation("EventGuide")
   birthdayLogs         BirthdayMessageLog[]
   physicalCardRequests PhysicalCardRequest[]
@@ -261,10 +262,13 @@ model Event {
   updatedAt     DateTime @updatedAt
 
   // Categoria detalhada (EVENT_CATEGORIES em lib/constants.ts).
-  // Define se conta como contrapartida ARP (R1) e se exige guia (R3).
   categoryCode String?
 
-  // Guia da atividade — Member com is_guia. Obrigatório quando categoria.requiresGuide.
+  // Campos específicos por tipo de evento
+  speakerName  String? // Altos Papos: nome do palestrante
+  filmDuration String? // CEF Cine Montanha: duração (ex: "1h 45min")
+
+  // Guia da atividade — Member com isGuide. Obrigatório quando categoria.requiresGuide.
   guideId String?
   guide   Member? @relation("EventGuide", fields: [guideId], references: [id])
 
@@ -273,6 +277,7 @@ model Event {
   department   Department? @relation(fields: [departmentId], references: [id])
 
   registrations EventRegistration[]
+  attendees     EventAttendee[]
   photos        EventPhoto[]
 
   @@index([status])
@@ -299,6 +304,19 @@ model EventPhoto {
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   url       String
   createdAt DateTime @default(now())
+}
+
+model EventAttendee {
+  id        String   @id @default(cuid())
+  eventId   String
+  memberId  String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, memberId])
+  @@index([eventId])
+  @@index([memberId])
 }
 
 model BirthdayMessageConfig {

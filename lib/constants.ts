@@ -141,6 +141,13 @@ export const EVENT_CATEGORIES = [
     isArpCounterpart: false,
     requiresGuide: false,
   },
+  {
+    value: "reuniao_social",
+    label: "Reunião Social",
+    department: "social",
+    isArpCounterpart: false,
+    requiresGuide: false,
+  },
 ] as const;
 
 export type EventCategoryValue = (typeof EVENT_CATEGORIES)[number]["value"];
@@ -151,6 +158,32 @@ export const ARP_COUNTERPART_CODES = [
 ] as const satisfies readonly EventCategoryValue[];
 
 export const ARP_META_DEFAULT = 6;
+
+// Super-categorias: "Eventos" (sociais) e "Atividades" (outdoor)
+export const EVENTO_CATEGORY_CODES = [
+  "altos_papos",
+  "cef_cine_montanha",
+  "aniversario_cef",
+  "confraternizacao",
+  "reuniao_social",
+] as const satisfies readonly EventCategoryValue[];
+
+export const ATIVIDADE_CATEGORY_CODES = [
+  "muro_escalada",
+  "caminhada",
+  "escalada",
+  "acampamento",
+  "bike",
+] as const satisfies readonly EventCategoryValue[];
+
+export type SuperCategory = "evento" | "atividade";
+
+export function getSuperCategory(code: string | null | undefined): SuperCategory | null {
+  if (!code) return null;
+  if ((EVENTO_CATEGORY_CODES as readonly string[]).includes(code)) return "evento";
+  if ((ATIVIDADE_CATEGORY_CODES as readonly string[]).includes(code)) return "atividade";
+  return null;
+}
 
 export function getEventCategory(code: string | null | undefined) {
   if (!code) return undefined;

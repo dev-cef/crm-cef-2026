@@ -9,10 +9,39 @@ import {
   intervaloMes,
   listarDatasMuro,
   MURO_THURSDAY_BLOCKERS,
+  ultimaQuintaDoMes,
   ymd,
 } from "@/lib/events/muro-recorrencia";
 
 type Result = { ok: boolean; id?: string; error?: string };
+
+// Dados auto-preenchidos por tipo (servidor é a fonte de verdade)
+function autoData(code: string) {
+  const now = new Date();
+  switch (code) {
+    case "reuniao_social":
+      return {
+        name: "Reunião Social",
+        description: "Reunião social do CEF.",
+        location: "Sede CEF",
+        difficulty: "FACIL",
+        slots: 0,
+      };
+    case "aniversario_cef": {
+      const dt = ultimaQuintaDoMes(now.getFullYear(), now.getMonth() + 1);
+      return {
+        name: "Aniversário CEF",
+        description: "Comemoração do aniversário do CEF com os associados e aniversariantes do mês.",
+        location: "Sede CEF",
+        difficulty: "FACIL",
+        slots: 60,
+        dateTime: dt,
+      };
+    }
+    default:
+      return {};
+  }
+}
 
 export async function saveEvent(
   values: EventFormValues,
@@ -24,22 +53,52 @@ export async function saveEvent(
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Inválido" };
   }
   const d = parsed.data;
+  const auto = autoData(d.categoryCode);
+
   const data = {
-    name: d.name,
-    description: d.description,
-    dateTime: new Date(d.dateTime),
-    location: d.location,
-    difficulty: d.difficulty,
-    slots: d.slots,
+    name: (auto as { name?: string }).name ?? d.name,
+    description: (auto as { description?: string }).description ?? d.description,
+    dateTime: (auto as { dateTime?: Date }).dateTime ?? new Date(d.dateTime),
+    location: (auto as { location?: string }).location ?? d.location,
+    difficulty: ((auto as { difficulty?: string }).difficulty ?? d.difficulty) || "FACIL",
+    slots: (auto as { slots?: number }).slots ?? d.slots,
     status: d.status,
-    categoryCode: d.categoryCode ? d.categoryCode : null,
-    guideId: d.guideId ? d.guideId : null,
+    categoryCode: d.categoryCode,
+    guideId: d.guideId || null,
+    speakerName: d.speakerName || null,
+    filmDuration: d.filmDuration || null,
   };
 
   try {
     const ev = id
       ? await prisma.event.update({ where: { id }, data })
       : await prisma.event.create({ data });
+
+    // Sincronizar "Público que foi" (EventAttendee)
+    const existingAttendees = await prisma.eventAttendee.findMany({
+      where: { eventId: ev.id },
+      select: { id: true, memberId: true },
+    });
+    const existingMemberIds = new Set(existingAttendees.map((a) => a.memberId));
+    const newMemberIds = new Set(d.attendeeIds);
+
+    // Remover os que saíram
+    const toDelete = existingAttendees
+      .filter((a) => !newMemberIds.has(a.memberId))
+      .map((a) => a.id);
+    if (toDelete.length > 0) {
+      await prisma.eventAttendee.deleteMany({ where: { id: { in: toDelete } } });
+    }
+
+    // Adicionar os novos
+    const toAdd = d.attendeeIds.filter((mid) => !existingMemberIds.has(mid));
+    if (toAdd.length > 0) {
+      await prisma.eventAttendee.createMany({
+        data: toAdd.map((memberId) => ({ eventId: ev.id, memberId })),
+        skipDuplicates: true,
+      });
+    }
+
     await recordAudit({
       userId: session?.user?.id,
       action: id ? "UPDATE" : "CREATE",
@@ -151,17 +210,9 @@ type ProjetarMuroResult = {
   error?: string;
 };
 
-/**
- * Projeta ocorrências do Muro de Escalada (categoryCode = "muro_escalada") em
- * um mês alvo. Aplica R4: Seg/Qua sempre; Qui só se não houver evento
- * concorrente das categorias bloqueadoras (Altos Papos, CEF Cine Montanha,
- * Aniversário CEF, Confraternização).
- *
- * Idempotente: não duplica se já existir um muro no mesmo dia.
- */
 export async function projetarMuroDoMes(
   ano: number,
-  mes: number, // 1..12
+  mes: number,
 ): Promise<ProjetarMuroResult> {
   const session = await auth();
   if (!session?.user)
@@ -177,7 +228,6 @@ export async function projetarMuroDoMes(
   try {
     const { start, end } = intervaloMes(ano, mes);
 
-    // (1) Quintas bloqueadas — busca eventos do mês em categorias bloqueadoras.
     const bloqueadores = await prisma.event.findMany({
       where: {
         dateTime: { gte: start, lt: end },
@@ -188,11 +238,10 @@ export async function projetarMuroDoMes(
     });
     const quintasBloqueadas = new Set(
       bloqueadores
-        .filter((b) => b.dateTime.getDay() === 4) // 4 = quinta no JS
+        .filter((b) => b.dateTime.getDay() === 4)
         .map((b) => ymd(b.dateTime)),
     );
 
-    // (2) Eventos muro já existentes no intervalo (pra idempotência).
     const existentes = await prisma.event.findMany({
       where: {
         dateTime: { gte: start, lt: end },
@@ -202,7 +251,6 @@ export async function projetarMuroDoMes(
     });
     const diasComMuro = new Set(existentes.map((e) => ymd(e.dateTime)));
 
-    // (3) Datas candidatas a partir da função pura.
     const ocorrencias = listarDatasMuro(start, end, quintasBloqueadas);
 
     const aCriar: Date[] = [];
