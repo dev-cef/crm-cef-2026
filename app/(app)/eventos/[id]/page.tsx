@@ -17,6 +17,7 @@ import { can } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/format";
 import {
+  ATIVIDADE_CATEGORY_CODES,
   EVENT_DIFFICULTY,
   EVENT_STATUS,
   getEventCategory,
@@ -85,6 +86,11 @@ export default async function EventoDetalhePage({
   ).filter((m) => !registeredIds.has(m.id));
 
   const cat = getEventCategory(ev.categoryCode);
+  const isAtividade = (ATIVIDADE_CATEGORY_CODES as readonly string[]).includes(ev.categoryCode ?? "");
+  const generalNames: string[] = (() => {
+    try { return JSON.parse(ev.generalAttendeeNames); } catch { return []; }
+  })();
+  const totalPublico = ev.attendees.length + generalNames.length;
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -156,7 +162,7 @@ export default async function EventoDetalhePage({
               </span>
             </div>
             <div className="flex flex-wrap gap-2 pt-1">
-              {ev.difficulty && (
+              {isAtividade && ev.difficulty && (
                 <Badge variant="secondary">
                   {labelFrom(EVENT_DIFFICULTY, ev.difficulty)}
                 </Badge>
@@ -185,9 +191,7 @@ export default async function EventoDetalhePage({
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Público que foi</span>
-              <span className="font-medium text-primary">
-                {ev.attendees.length}
-              </span>
+              <span className="font-medium text-primary">{totalPublico}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Fotos</span>
@@ -197,32 +201,64 @@ export default async function EventoDetalhePage({
         </Card>
 
         {/* Público que foi */}
-        {ev.attendees.length > 0 && (
+        {totalPublico > 0 && (
           <Card className="md:col-span-3">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <UserCheck className="size-4" />
                 Público que foi
-                <Badge variant="secondary">{ev.attendees.length}</Badge>
+                <Badge variant="secondary">{totalPublico}</Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <ol className="divide-y rounded-md border">
-                {ev.attendees.map((a, idx) => (
-                  <li
-                    key={a.id}
-                    className="flex items-center gap-3 px-3 py-2 text-sm"
-                  >
-                    <span className="w-6 shrink-0 text-right text-xs font-semibold tabular-nums text-muted-foreground">
-                      {idx + 1}
-                    </span>
-                    <span>{a.member.fullName}</span>
-                  </li>
-                ))}
-              </ol>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Para editar, use o botão{" "}
-                <strong>Editar</strong> no cabeçalho.
+            <CardContent className="space-y-4">
+              {/* Associados */}
+              {ev.attendees.length > 0 && (
+                <div>
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Associados ({ev.attendees.length})
+                  </p>
+                  <ol className="divide-y rounded-md border">
+                    {ev.attendees.map((a, idx) => (
+                      <li
+                        key={a.id}
+                        className="flex items-center gap-3 px-3 py-2 text-sm"
+                      >
+                        <span className="w-6 shrink-0 text-right text-xs font-semibold tabular-nums text-muted-foreground">
+                          {idx + 1}
+                        </span>
+                        <UserCheck className="size-3.5 shrink-0 text-primary" />
+                        <span>{a.member.fullName}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              {/* Público em geral */}
+              {generalNames.length > 0 && (
+                <div>
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Público em geral ({generalNames.length})
+                  </p>
+                  <ol className="divide-y rounded-md border">
+                    {generalNames.map((name, idx) => (
+                      <li
+                        key={idx}
+                        className="flex items-center gap-3 px-3 py-2 text-sm"
+                      >
+                        <span className="w-6 shrink-0 text-right text-xs font-semibold tabular-nums text-muted-foreground">
+                          {idx + 1}
+                        </span>
+                        <span className="text-muted-foreground">◦</span>
+                        <span>{name}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                Para editar, use o botão <strong>Editar</strong> no cabeçalho.
               </p>
             </CardContent>
           </Card>

@@ -265,8 +265,9 @@ model Event {
   categoryCode String?
 
   // Campos específicos por tipo de evento
-  speakerName  String? // Altos Papos: nome do palestrante
-  filmDuration String? // CEF Cine Montanha: duração (ex: "1h 45min")
+  speakerName          String? // Altos Papos: nome do palestrante
+  filmDuration         String? // CEF Cine Montanha: duração (ex: "1h 45min")
+  generalAttendeeNames String  @default("[]") // JSON: nomes do público em geral (não associados)
 
   // Guia da atividade — Member com isGuide. Obrigatório quando categoria.requiresGuide.
   guideId String?

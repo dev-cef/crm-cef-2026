@@ -32,6 +32,7 @@ export const eventSchema = z
     speakerName: z.string().trim().default(""),
     filmDuration: z.string().trim().default(""),
     attendeeIds: z.array(z.string()).default([]),
+    generalAttendeeNames: z.array(z.string()).default([]),
   })
   .superRefine((data, ctx) => {
     const code = data.categoryCode;

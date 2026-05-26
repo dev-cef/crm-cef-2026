@@ -67,6 +67,9 @@ export default async function EditarEventoPage({
           speakerName: ev.speakerName,
           filmDuration: ev.filmDuration,
           attendeeIds: ev.attendees.map((a) => a.memberId),
+          generalAttendeeNames: (() => {
+            try { return JSON.parse(ev.generalAttendeeNames); } catch { return []; }
+          })(),
         }}
         guides={guides.map((g) => ({ id: g.id, name: g.fullName }))}
         members={members}

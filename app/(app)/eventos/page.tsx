@@ -172,7 +172,7 @@ export default async function EventosPage({
                       </p>
                     )}
                     <div className="flex items-center justify-between pt-1">
-                      {e.difficulty && (
+                      {superCat === "atividade" && e.difficulty && (
                         <Badge variant="secondary">
                           {labelFrom(EVENT_DIFFICULTY, e.difficulty)}
                         </Badge>

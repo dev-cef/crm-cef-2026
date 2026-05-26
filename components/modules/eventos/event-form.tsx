@@ -27,6 +27,7 @@ import {
   AttendeeSelector,
   type MemberOption,
 } from "@/components/modules/eventos/attendee-selector";
+import { GeneralPublicInput } from "@/components/modules/eventos/general-public-input";
 
 const selectCls =
   "h-9 w-full rounded-md border bg-background px-3 text-sm outline-none";
@@ -59,6 +60,7 @@ export function EventForm({
     speakerName: string | null;
     filmDuration: string | null;
     attendeeIds: string[];
+    generalAttendeeNames: string[];
   };
   guides: GuideOption[];
   members: MemberOption[];
@@ -95,6 +97,7 @@ export function EventForm({
       speakerName: event?.speakerName ?? "",
       filmDuration: event?.filmDuration ?? "",
       attendeeIds: event?.attendeeIds ?? [],
+      generalAttendeeNames: event?.generalAttendeeNames ?? [],
     },
   });
 
@@ -435,18 +438,40 @@ export function EventForm({
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Público que foi</CardTitle>
           </CardHeader>
-          <CardContent>
-            <Controller
-              control={control}
-              name="attendeeIds"
-              render={({ field }) => (
-                <AttendeeSelector
-                  members={members}
-                  value={field.value ?? []}
-                  onChange={field.onChange}
-                />
-              )}
-            />
+          <CardContent className="space-y-6">
+            {/* Associados cadastrados */}
+            <div>
+              <p className="mb-2 text-sm font-medium">Associados</p>
+              <Controller
+                control={control}
+                name="attendeeIds"
+                render={({ field }) => (
+                  <AttendeeSelector
+                    members={members}
+                    value={field.value ?? []}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </div>
+
+            {/* Público em geral (não associados) */}
+            <div className="border-t pt-4">
+              <p className="mb-2 text-sm font-medium">Público em geral</p>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Visitantes e convidados que não são associados do CEF.
+              </p>
+              <Controller
+                control={control}
+                name="generalAttendeeNames"
+                render={({ field }) => (
+                  <GeneralPublicInput
+                    value={field.value ?? []}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </div>
           </CardContent>
         </Card>
       )}

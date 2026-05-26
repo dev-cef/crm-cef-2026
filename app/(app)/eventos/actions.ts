@@ -67,6 +67,7 @@ export async function saveEvent(
     guideId: d.guideId || null,
     speakerName: d.speakerName || null,
     filmDuration: d.filmDuration || null,
+    generalAttendeeNames: JSON.stringify(d.generalAttendeeNames),
   };
 
   try {
