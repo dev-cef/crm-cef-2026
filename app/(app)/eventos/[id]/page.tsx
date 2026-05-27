@@ -162,7 +162,7 @@ export default async function EventoDetalhePage({
               </span>
             </div>
             <div className="flex flex-wrap gap-2 pt-1">
-              {isAtividade && ev.difficulty && (
+              {isAtividade && ev.categoryCode !== "muro_escalada" && ev.difficulty && (
                 <Badge variant="secondary">
                   {labelFrom(EVENT_DIFFICULTY, ev.difficulty)}
                 </Badge>

@@ -116,7 +116,7 @@ export function EventForm({
   const showSpeaker = categoryCode === "altos_papos";
   const showFilmDuration = categoryCode === "cef_cine_montanha";
   const showLocation = isAtividade || categoryCode === "confraternizacao";
-  const showDifficulty = isAtividade;
+  const showDifficulty = isAtividade && categoryCode !== "muro_escalada";
   const showSlots = categoryCode !== "reuniao_social" && categoryCode !== "aniversario_cef";
   const showGuide = !!cat?.requiresGuide;
   const isArpCounterpart = !!cat?.isArpCounterpart;
