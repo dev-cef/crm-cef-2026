@@ -60,7 +60,10 @@ export async function saveEvent(
   const d = parsed.data;
   const auto = autoData(d.categoryCode);
 
-  const resolvedGuideId = d.guideId || null;
+  // Suporte a múltiplos guias: guideIds é a fonte de verdade.
+  // guideId (FK) mantém o primeiro guia para compatibilidade com dados existentes.
+  const resolvedGuideIds = d.guideIds.length > 0 ? d.guideIds : (d.guideId ? [d.guideId] : []);
+  const resolvedGuideId = resolvedGuideIds[0] ?? null;
   const guideConnect = resolvedGuideId
     ? { guide: { connect: { id: resolvedGuideId } } }
     : id
@@ -79,6 +82,7 @@ export async function saveEvent(
     speakerName: d.speakerName || null,
     filmDuration: d.filmDuration || null,
     generalAttendeeNames: JSON.stringify(d.generalAttendeeNames),
+    guideIds: JSON.stringify(resolvedGuideIds),
     fichaDistanciaKm:  d.fichaDistanciaKm  ?? null,
     fichaTempo:        d.fichaTempo        || null,
     fichaEsforco:      d.fichaEsforco      || null,

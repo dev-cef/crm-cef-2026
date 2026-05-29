@@ -29,6 +29,7 @@ export const eventSchema = z
       { message: "Selecione o status" },
     ),
     guideId: z.string().default(""),
+    guideIds: z.array(z.string()).default([]),
     speakerName: z.string().trim().default(""),
     filmDuration: z.string().trim().default(""),
     attendeeIds: z.array(z.string()).default([]),
@@ -82,12 +83,12 @@ export const eventSchema = z
       });
     }
 
-    // R3 — categoria outdoor com requiresGuide exige guia
-    if (cat?.requiresGuide && !data.guideId) {
+    // R3 — categoria outdoor com requiresGuide exige pelo menos um guia
+    if (cat?.requiresGuide && data.guideIds.length === 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["guideId"],
-        message: `Categoria "${cat.label}" exige um guia associado.`,
+        path: ["guideIds"],
+        message: `Categoria "${cat.label}" exige pelo menos um guia.`,
       });
     }
 

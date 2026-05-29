@@ -5,6 +5,7 @@ import {
   CalendarDays,
   MapPin,
   Mic,
+  Mountain,
   Pencil,
   Timer,
   UserCheck,
@@ -93,6 +94,14 @@ export default async function EventoDetalhePage({
   const generalNames: string[] = (() => {
     try { return JSON.parse(ev.generalAttendeeNames); } catch { return []; }
   })();
+
+  // Guias: parse do campo guideIds (multi-guia), com fallback para guideId legado
+  const guideIdsList: string[] = (() => {
+    try { const ids = JSON.parse(ev.guideIds); return ids.length > 0 ? ids : (ev.guideId ? [ev.guideId] : []); } catch { return ev.guideId ? [ev.guideId] : []; }
+  })();
+  const eventGuides = guideIdsList.length > 0
+    ? await prisma.member.findMany({ where: { id: { in: guideIdsList } }, select: { id: true, fullName: true } })
+    : [];
   const fichaOQueLevar: string[] = (() => {
     try { return JSON.parse(ev.fichaOQueLevar); } catch { return []; }
   })();
@@ -142,6 +151,19 @@ export default async function EventoDetalhePage({
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             {ev.description && <p>{ev.description}</p>}
+
+            {/* Guias da atividade */}
+            {eventGuides.length > 0 && (
+              <div className="flex items-start gap-2 text-muted-foreground">
+                <Mountain className="mt-0.5 size-4 shrink-0" />
+                <span>
+                  <strong className="text-foreground">
+                    {eventGuides.length === 1 ? "Guia:" : "Guias:"}
+                  </strong>{" "}
+                  {eventGuides.map((g) => g.fullName).join(" · ")}
+                </span>
+              </div>
+            )}
 
             {/* Campo específico: Palestrante */}
             {ev.speakerName && (

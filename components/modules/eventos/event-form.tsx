@@ -102,6 +102,73 @@ function OQueLevarInput({
 
 export type GuideOption = { id: string; name: string };
 
+function GuideMultiSelect({
+  guides,
+  value,
+  onChange,
+}: {
+  guides: GuideOption[];
+  value: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const selected = guides.filter((g) => value.includes(g.id));
+  const available = guides.filter(
+    (g) => !value.includes(g.id) && g.name.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  function add(id: string) {
+    if (!value.includes(id)) onChange([...value, id]);
+    setSearch("");
+  }
+  function remove(id: string) {
+    onChange(value.filter((v) => v !== id));
+  }
+
+  return (
+    <div className="space-y-2">
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {selected.map((g) => (
+            <span key={g.id} className="inline-flex items-center gap-1 rounded-full border bg-secondary px-2.5 py-1 text-xs font-medium">
+              {g.name}
+              <button type="button" onClick={() => remove(g.id)} className="text-muted-foreground hover:text-destructive">×</button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="relative">
+        <input
+          type="text"
+          placeholder="Buscar guia por nome…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-9 w-full rounded-md border bg-background px-3 text-sm outline-none"
+        />
+        {search.length > 0 && available.length > 0 && (
+          <div className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-md border bg-background shadow-md">
+            {available.map((g) => (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => add(g.id)}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent"
+              >
+                {g.name}
+              </button>
+            ))}
+          </div>
+        )}
+        {search.length > 0 && available.length === 0 && (
+          <div className="absolute z-10 mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm text-muted-foreground shadow-md">
+            Nenhum guia encontrado.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function toDatetimeLocalStr(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
@@ -124,6 +191,7 @@ export function EventForm({
     status: string;
     categoryCode: string | null;
     guideId: string | null;
+    guideIds?: string[];
     speakerName: string | null;
     filmDuration: string | null;
     attendeeIds: string[];
@@ -173,6 +241,7 @@ export function EventForm({
       slots: event?.slots ?? 0,
       status: event?.status ?? "PLANEJADO",
       guideId: event?.guideId ?? "",
+      guideIds: event?.guideIds ?? (event?.guideId ? [event.guideId] : []),
       speakerName: event?.speakerName ?? "",
       filmDuration: event?.filmDuration ?? "",
       attendeeIds: event?.attendeeIds ?? [],
@@ -432,33 +501,32 @@ export function EventForm({
             {/* Guia da atividade */}
             {showGuide && (
               <div className="sm:col-span-2">
-                <Label htmlFor="guideId">
-                  Guia da atividade *{" "}
+                <Label>
+                  Guia(s) da atividade *{" "}
                   <span className="text-xs font-normal text-muted-foreground">
-                    (associado responsável)
+                    (pode ser mais de um)
                   </span>
                 </Label>
-                <select
-                  id="guideId"
-                  className={selectCls}
-                  {...register("guideId")}
-                >
-                  <option value="">— selecione um guia —</option>
-                  {guides.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name}
-                    </option>
-                  ))}
-                </select>
+                <Controller
+                  control={control}
+                  name="guideIds"
+                  render={({ field }) => (
+                    <GuideMultiSelect
+                      guides={guides}
+                      value={field.value ?? []}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
                 {guides.length === 0 && (
                   <p className="mt-1 text-xs text-destructive">
                     Nenhum associado cadastrado como guia. Marque a flag em
                     Associados.
                   </p>
                 )}
-                {errors.guideId && (
+                {errors.guideIds && (
                   <p className="mt-1 text-xs text-destructive">
-                    {errors.guideId.message}
+                    {errors.guideIds.message}
                   </p>
                 )}
               </div>

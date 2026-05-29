@@ -63,6 +63,7 @@ export default async function EditarEventoPage({
           status: ev.status,
           categoryCode: ev.categoryCode,
           guideId: ev.guideId,
+          guideIds: (() => { try { const ids = JSON.parse(ev.guideIds); return ids.length > 0 ? ids : (ev.guideId ? [ev.guideId] : []); } catch { return ev.guideId ? [ev.guideId] : []; } })(),
           speakerName: ev.speakerName,
           filmDuration: ev.filmDuration,
           attendeeIds: ev.attendees.map((a) => a.memberId),
