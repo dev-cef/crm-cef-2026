@@ -68,8 +68,8 @@ export const eventSchema = z
       });
     }
 
-    // Dificuldade obrigatória apenas para atividades
-    if (isAtividade && !data.difficulty) {
+    // Dificuldade obrigatória para atividades (exceto muro_escalada que tem campo oculto)
+    if (isAtividade && code !== "muro_escalada" && !data.difficulty) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["difficulty"],

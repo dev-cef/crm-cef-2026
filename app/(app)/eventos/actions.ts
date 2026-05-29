@@ -50,10 +50,22 @@ export async function saveEvent(
   const session = await auth();
   const parsed = eventSchema.safeParse(values);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Inválido" };
+    const issues = parsed.error.issues;
+    console.error("[saveEvent] Zod errors:", JSON.stringify(issues, null, 2));
+    const first = issues[0];
+    const field = first?.path?.join(".") ?? "";
+    const msg = field ? `${field}: ${first?.message}` : (first?.message ?? "Inválido");
+    return { ok: false, error: msg };
   }
   const d = parsed.data;
   const auto = autoData(d.categoryCode);
+
+  const resolvedGuideId = d.guideId || null;
+  const guideConnect = resolvedGuideId
+    ? { guide: { connect: { id: resolvedGuideId } } }
+    : id
+      ? { guide: { disconnect: true } }
+      : {};
 
   const data = {
     name: (auto as { name?: string }).name ?? d.name,
@@ -64,10 +76,10 @@ export async function saveEvent(
     slots: (auto as { slots?: number }).slots ?? d.slots,
     status: d.status,
     categoryCode: d.categoryCode,
-    guideId: d.guideId || null,
     speakerName: d.speakerName || null,
     filmDuration: d.filmDuration || null,
     generalAttendeeNames: JSON.stringify(d.generalAttendeeNames),
+    ...guideConnect,
   };
 
   try {
@@ -110,8 +122,14 @@ export async function saveEvent(
     revalidatePath(`/eventos/${ev.id}`);
     revalidatePath("/dashboard");
     return { ok: true, id: ev.id };
-  } catch {
-    return { ok: false, error: "Erro ao salvar o evento." };
+  } catch (err) {
+    console.error("[saveEvent] Error:", err);
+    // Prisma P2025 = record not found (e.g. event was deleted before save)
+    if (err && typeof err === "object" && "code" in err && err.code === "P2025") {
+      return { ok: false, error: "Evento não encontrado. Pode ter sido excluído. Volte à lista de eventos." };
+    }
+    const msg = err instanceof Error ? err.message : "Erro ao salvar o evento.";
+    return { ok: false, error: msg };
   }
 }
 
