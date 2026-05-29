@@ -171,6 +171,9 @@ async function getData() {
     birthdayMessage = "Nenhum aniversariante este mês";
   }
 
+  const yearEnd = new Date(year, 11, 31);
+  const daysToYearEnd = Math.max(0, Math.ceil((yearEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+
   return {
     activeCount,
     femaleCount,
@@ -189,6 +192,7 @@ async function getData() {
     pendenteCount,
     atrasadoCount,
     arpMeta,
+    daysToYearEnd,
   };
 }
 
@@ -420,8 +424,29 @@ export default async function DashboardPage() {
             Meta anual de 6 eventos abertos ao público
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <ArpMetaGauge {...data.arpMeta} />
+          {data.arpMeta.status !== "atingida" && data.daysToYearEnd <= 60 && (
+            <div className={cn(
+              "flex items-start gap-2 rounded-lg border px-3 py-2 text-sm",
+              data.arpMeta.status === "abaixo"
+                ? "border-destructive/30 bg-destructive/5 text-destructive"
+                : "border-orange-300/50 bg-orange-50 text-orange-800 dark:border-orange-800/50 dark:bg-orange-950/30 dark:text-orange-300",
+            )}>
+              <span className="mt-0.5 shrink-0">⚠️</span>
+              <div>
+                <p className="font-medium">
+                  {data.arpMeta.status === "abaixo" ? "Meta ARP em risco crítico" : "Meta ARP em risco"}
+                </p>
+                <p className="text-xs opacity-80">
+                  Faltam {Math.max(0, data.arpMeta.meta - data.arpMeta.realizados)} evento{data.arpMeta.realizados === data.arpMeta.meta - 1 ? "" : "s"} para atingir a meta e restam apenas {data.daysToYearEnd} dias no ciclo {data.arpMeta.ano}.{" "}
+                  <Link href="/eventos/novo" className="underline underline-offset-2">
+                    Agendar evento ARP
+                  </Link>
+                </p>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

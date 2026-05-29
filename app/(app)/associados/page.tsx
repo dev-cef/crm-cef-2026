@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   Eye,
+  Mountain,
   Pencil,
   Search,
   Trash2,
@@ -93,6 +94,7 @@ type SearchParams = Promise<{
   page?: string;
   role?: string;
   since?: string;
+  guide?: string;
 }>;
 
 export default async function AssociadosPage({
@@ -122,10 +124,12 @@ export default async function AssociadosPage({
   const since = (["lt1", "1to5", "5to10", "10to20", "gt30"].includes(sp.since ?? "")
     ? sp.since
     : "ALL") as Since | "ALL";
+  const guideOnly = sp.guide === "true";
 
   // ── Where clause ──────────────────────────────────────────────────
   type AndClause = Record<string, unknown>;
   const and: AndClause[] = [{ deletedAt: null }, scopedMemberWhere(user)];
+  if (guideOnly) and.push({ isGuide: true });
 
   if (status === "ACTIVE" || status === "INACTIVE") and.push({ status });
 
@@ -217,12 +221,17 @@ export default async function AssociadosPage({
     p.set("status", status);
     if (role !== "ALL") p.set("role", role);
     if (since !== "ALL") p.set("since", since);
+    if (guideOnly) p.set("guide", "true");
     Object.entries(overrides).forEach(([k, v]) => {
       if (v === undefined || v === "") p.delete(k);
       else p.set(k, v);
     });
     const str = p.toString();
     return `/associados${str ? `?${str}` : ""}`;
+  }
+
+  function guideHref() {
+    return buildHref({ guide: guideOnly ? undefined : "true", page: "1" });
   }
 
   function roleHref(r: Role) {
@@ -346,7 +355,7 @@ export default async function AssociadosPage({
         <Button type="submit" variant="secondary" size="sm">
           Filtrar
         </Button>
-        {(q || status !== "ACTIVE" || role !== "ALL" || since !== "ALL") && (
+        {(q || status !== "ACTIVE" || role !== "ALL" || since !== "ALL" || guideOnly) && (
           <Link
             href="/associados"
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
@@ -375,6 +384,21 @@ export default async function AssociadosPage({
             </Link>
           );
         })}
+
+        {/* Guias */}
+        <Link
+          href={guideHref()}
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all",
+            guideOnly
+              ? "border-emerald-400 bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:border-emerald-600 dark:text-emerald-300"
+              : "border-muted-foreground/20 text-muted-foreground hover:bg-muted/60",
+          )}
+        >
+          <Mountain className={cn("size-3.5", guideOnly ? "" : "text-muted-foreground")} />
+          Guias
+          {guideOnly && <X className="size-3 opacity-60" />}
+        </Link>
 
         {/* separator */}
         <span className="h-4 w-px bg-border" aria-hidden />
@@ -523,6 +547,11 @@ export default async function AssociadosPage({
                         {isDependent && (
                           <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">
                             <UserCheck className="size-2.5" /> Dependente
+                          </span>
+                        )}
+                          {m.isGuide && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full border border-emerald-300 bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                            <Mountain className="size-2.5" /> Guia
                           </span>
                         )}
                         {isPending && (

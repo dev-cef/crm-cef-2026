@@ -13,14 +13,21 @@ import {
   EVENT_DIFFICULTY,
   EVENT_STATUS,
   EVENTO_CATEGORY_CODES,
+  FICHA_ESFORCO,
+  FICHA_EXPOSICAO,
+  FICHA_INSOLACAO,
+  FICHA_O_QUE_LEVAR_DEFAULTS,
+  FICHA_TECNICA_CATEGORIES,
   getEventCategory,
   type SuperCategory,
 } from "@/lib/constants";
 import { ultimaQuintaDoMes } from "@/lib/events/muro-recorrencia";
 import { saveEvent } from "@/app/(app)/eventos/actions";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -31,6 +38,68 @@ import { GeneralPublicInput } from "@/components/modules/eventos/general-public-
 
 const selectCls =
   "h-9 w-full rounded-md border bg-background px-3 text-sm outline-none";
+
+function OQueLevarInput({
+  value,
+  onChange,
+}: {
+  value: string[];
+  onChange: (v: string[]) => void;
+}) {
+  const [customInput, setCustomInput] = useState("");
+  const defaults = FICHA_O_QUE_LEVAR_DEFAULTS as readonly string[];
+  const customs = value.filter((i) => !defaults.includes(i));
+
+  function toggle(item: string) {
+    if (value.includes(item)) {
+      onChange(value.filter((i) => i !== item));
+    } else {
+      onChange([...value, item]);
+    }
+  }
+
+  function addCustom() {
+    const v = customInput.trim();
+    if (v && !value.includes(v)) onChange([...value, v]);
+    setCustomInput("");
+  }
+
+  return (
+    <div className="mt-2 space-y-3">
+      <div className="grid gap-2 sm:grid-cols-2">
+        {FICHA_O_QUE_LEVAR_DEFAULTS.map((item) => (
+          <label key={item} className="flex cursor-pointer items-center gap-2 text-sm">
+            <Checkbox
+              checked={value.includes(item)}
+              onCheckedChange={() => toggle(item)}
+            />
+            {item}
+          </label>
+        ))}
+      </div>
+      {customs.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {customs.map((item) => (
+            <span key={item} className="flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs">
+              {item}
+              <button type="button" onClick={() => toggle(item)} className="text-muted-foreground hover:text-destructive">×</button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <Input
+          value={customInput}
+          onChange={(e) => setCustomInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustom(); } }}
+          placeholder="Adicionar item personalizado…"
+          className="h-8 text-sm"
+        />
+        <Button type="button" variant="outline" size="sm" onClick={addCustom}>Adicionar</Button>
+      </div>
+    </div>
+  );
+}
 
 export type GuideOption = { id: string; name: string };
 
@@ -61,6 +130,19 @@ export function EventForm({
     filmDuration: string | null;
     attendeeIds: string[];
     generalAttendeeNames: string[];
+    fichaDistanciaKm?: number | null;
+    fichaTempo?: string | null;
+    fichaEsforco?: string | null;
+    fichaInsolacao?: string | null;
+    fichaDesnivelPos?: number | null;
+    fichaElevacaoMax?: number | null;
+    fichaExposicao?: string | null;
+    fichaSaidaHorario?: string | null;
+    fichaSaidaLocal?: string | null;
+    fichaCarona?: boolean;
+    fichaOQueLevar?: string[];
+    fichaObs?: string | null;
+    fichaAtencao?: string | null;
   };
   guides: GuideOption[];
   members: MemberOption[];
@@ -98,6 +180,19 @@ export function EventForm({
       filmDuration: event?.filmDuration ?? "",
       attendeeIds: event?.attendeeIds ?? [],
       generalAttendeeNames: event?.generalAttendeeNames ?? [],
+      fichaDistanciaKm:  event?.fichaDistanciaKm  ?? undefined,
+      fichaTempo:        event?.fichaTempo        ?? "",
+      fichaEsforco:      event?.fichaEsforco      ?? "",
+      fichaInsolacao:    event?.fichaInsolacao    ?? "",
+      fichaDesnivelPos:  event?.fichaDesnivelPos  ?? undefined,
+      fichaElevacaoMax:  event?.fichaElevacaoMax  ?? undefined,
+      fichaExposicao:    event?.fichaExposicao    ?? "",
+      fichaSaidaHorario: event?.fichaSaidaHorario ?? "",
+      fichaSaidaLocal:   event?.fichaSaidaLocal   ?? "",
+      fichaCarona:       event?.fichaCarona       ?? false,
+      fichaOQueLevar:    event?.fichaOQueLevar    ?? [],
+      fichaObs:          event?.fichaObs          ?? "",
+      fichaAtencao:      event?.fichaAtencao      ?? "",
     },
   });
 
@@ -120,6 +215,7 @@ export function EventForm({
   const showSlots = categoryCode !== "reuniao_social" && categoryCode !== "aniversario_cef";
   const showGuide = !!cat?.requiresGuide;
   const isArpCounterpart = !!cat?.isArpCounterpart;
+  const showFichaTecnica = (FICHA_TECNICA_CATEGORIES as readonly string[]).includes(categoryCode ?? "");
   const nameLabel = categoryCode === "cef_cine_montanha" ? "Nome do filme" : "Nome do evento";
   const locationLabel = isAtividade ? "Local / Trilha" : "Local";
 
@@ -427,6 +523,167 @@ export function EventForm({
                   </option>
                 ))}
               </select>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Ficha Técnica (Caminhada) ── */}
+      {showFichaTecnica && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">👣 Ficha Técnica</CardTitle>
+            <p className="text-xs text-muted-foreground">Todos os campos são opcionais</p>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            {/* Distância */}
+            <div>
+              <Label htmlFor="fichaDistanciaKm">Distância (km)</Label>
+              <Input
+                id="fichaDistanciaKm"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="ex: 3.99"
+                {...register("fichaDistanciaKm")}
+              />
+            </div>
+
+            {/* Tempo estimado */}
+            <div>
+              <Label htmlFor="fichaTempo">Tempo estimado</Label>
+              <Input
+                id="fichaTempo"
+                placeholder="ex: 6h aprox."
+                {...register("fichaTempo")}
+              />
+            </div>
+
+            {/* Nível de Esforço */}
+            <div>
+              <Label htmlFor="fichaEsforco">Nível de Esforço</Label>
+              <select id="fichaEsforco" className={selectCls} {...register("fichaEsforco")}>
+                <option value="">— selecione —</option>
+                {FICHA_ESFORCO.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Nível de Insolação */}
+            <div>
+              <Label htmlFor="fichaInsolacao">Nível de Insolação</Label>
+              <select id="fichaInsolacao" className={selectCls} {...register("fichaInsolacao")}>
+                <option value="">— selecione —</option>
+                {FICHA_INSOLACAO.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Desnível Positivo */}
+            <div>
+              <Label htmlFor="fichaDesnivelPos">Desnível Positivo (m)</Label>
+              <Input
+                id="fichaDesnivelPos"
+                type="number"
+                min="0"
+                placeholder="ex: 582"
+                {...register("fichaDesnivelPos")}
+              />
+            </div>
+
+            {/* Elevação Máxima */}
+            <div>
+              <Label htmlFor="fichaElevacaoMax">Elevação Máxima (m)</Label>
+              <Input
+                id="fichaElevacaoMax"
+                type="number"
+                min="0"
+                placeholder="ex: 1713"
+                {...register("fichaElevacaoMax")}
+              />
+            </div>
+
+            {/* Grau de Exposição */}
+            <div>
+              <Label htmlFor="fichaExposicao">Grau de Exposição</Label>
+              <select id="fichaExposicao" className={selectCls} {...register("fichaExposicao")}>
+                <option value="">— selecione —</option>
+                {FICHA_EXPOSICAO.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Horário de Saída */}
+            <div>
+              <Label htmlFor="fichaSaidaHorario">Horário de Saída</Label>
+              <Input
+                id="fichaSaidaHorario"
+                placeholder="ex: 8:00 h"
+                {...register("fichaSaidaHorario")}
+              />
+            </div>
+
+            {/* Local de Saída */}
+            <div>
+              <Label htmlFor="fichaSaidaLocal">Local de Saída</Label>
+              <Input
+                id="fichaSaidaLocal"
+                placeholder="ex: Super Pão"
+                {...register("fichaSaidaLocal")}
+              />
+            </div>
+
+            {/* Carona Colaborativa */}
+            <div className="sm:col-span-2 flex items-center gap-3">
+              <Controller
+                control={control}
+                name="fichaCarona"
+                render={({ field }) => (
+                  <Switch
+                    id="fichaCarona"
+                    checked={field.value ?? false}
+                    onCheckedChange={field.onChange}
+                  />
+                )}
+              />
+              <Label htmlFor="fichaCarona" className="cursor-pointer">🚖 Carona Colaborativa</Label>
+            </div>
+
+            {/* O que levar */}
+            <div className="sm:col-span-2">
+              <Label>✅ O que levar</Label>
+              <Controller
+                control={control}
+                name="fichaOQueLevar"
+                render={({ field }) => (
+                  <OQueLevarInput value={field.value ?? []} onChange={field.onChange} />
+                )}
+              />
+            </div>
+
+            {/* Observações */}
+            <div className="sm:col-span-2">
+              <Label htmlFor="fichaObs">Observações (OBS.:)</Label>
+              <Textarea
+                id="fichaObs"
+                rows={2}
+                placeholder="ex: caso o associado apresente algum sintoma gripal, o mesmo poderá ser vetado pelo guia."
+                {...register("fichaObs")}
+              />
+            </div>
+
+            {/* Atenção */}
+            <div className="sm:col-span-2">
+              <Label htmlFor="fichaAtencao">Atenção</Label>
+              <Textarea
+                id="fichaAtencao"
+                rows={2}
+                placeholder="ex: Lance de escalada de 1º Grau"
+                {...register("fichaAtencao")}
+              />
             </div>
           </CardContent>
         </Card>

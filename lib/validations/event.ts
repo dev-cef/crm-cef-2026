@@ -33,6 +33,20 @@ export const eventSchema = z
     filmDuration: z.string().trim().default(""),
     attendeeIds: z.array(z.string()).default([]),
     generalAttendeeNames: z.array(z.string()).default([]),
+    // Ficha Técnica (caminhada)
+    fichaDistanciaKm:  z.coerce.number().positive().optional(),
+    fichaTempo:        z.string().trim().default(""),
+    fichaEsforco:      z.string().default(""),
+    fichaInsolacao:    z.string().default(""),
+    fichaDesnivelPos:  z.coerce.number().int().nonnegative().optional(),
+    fichaElevacaoMax:  z.coerce.number().int().nonnegative().optional(),
+    fichaExposicao:    z.string().default(""),
+    fichaSaidaHorario: z.string().trim().default(""),
+    fichaSaidaLocal:   z.string().trim().default(""),
+    fichaCarona:       z.boolean().default(false),
+    fichaOQueLevar:    z.array(z.string()).default([]),
+    fichaObs:          z.string().trim().default(""),
+    fichaAtencao:      z.string().trim().default(""),
   })
   .superRefine((data, ctx) => {
     const code = data.categoryCode;

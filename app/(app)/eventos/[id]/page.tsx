@@ -20,6 +20,10 @@ import {
   ATIVIDADE_CATEGORY_CODES,
   EVENT_DIFFICULTY,
   EVENT_STATUS,
+  FICHA_ESFORCO,
+  FICHA_EXPOSICAO,
+  FICHA_INSOLACAO,
+  FICHA_TECNICA_CATEGORIES,
   getEventCategory,
   labelFrom,
 } from "@/lib/constants";
@@ -90,7 +94,25 @@ export default async function EventoDetalhePage({
   const generalNames: string[] = (() => {
     try { return JSON.parse(ev.generalAttendeeNames); } catch { return []; }
   })();
+  const fichaOQueLevar: string[] = (() => {
+    try { return JSON.parse(ev.fichaOQueLevar); } catch { return []; }
+  })();
   const totalPublico = ev.attendees.length + generalNames.length;
+  const hasFicha =
+    (FICHA_TECNICA_CATEGORIES as readonly string[]).includes(ev.categoryCode ?? "") &&
+    (ev.fichaDistanciaKm != null ||
+      ev.fichaTempo ||
+      ev.fichaEsforco ||
+      ev.fichaInsolacao ||
+      ev.fichaDesnivelPos != null ||
+      ev.fichaElevacaoMax != null ||
+      ev.fichaExposicao ||
+      ev.fichaSaidaHorario ||
+      ev.fichaSaidaLocal ||
+      ev.fichaCarona ||
+      fichaOQueLevar.length > 0 ||
+      ev.fichaObs ||
+      ev.fichaAtencao);
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -199,6 +221,93 @@ export default async function EventoDetalhePage({
             </div>
           </CardContent>
         </Card>
+
+        {/* Ficha Técnica (Caminhada) */}
+        {hasFicha && (
+          <Card className="md:col-span-3">
+            <CardHeader>
+              <CardTitle className="text-base">👣 Ficha Técnica</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {ev.fichaDistanciaKm != null && (
+                <div className="flex items-center gap-2">
+                  <span>👣</span>
+                  <span><strong>Distância:</strong> {ev.fichaDistanciaKm.toLocaleString("pt-BR")} km</span>
+                </div>
+              )}
+              {ev.fichaTempo && (
+                <div className="flex items-center gap-2">
+                  <span>🕢</span>
+                  <span><strong>Tempo:</strong> {ev.fichaTempo}</span>
+                </div>
+              )}
+              {ev.fichaEsforco && (
+                <div className="flex items-center gap-2">
+                  <span>🥵</span>
+                  <span><strong>Esforço:</strong> {labelFrom(FICHA_ESFORCO, ev.fichaEsforco)}</span>
+                </div>
+              )}
+              {ev.fichaInsolacao && (
+                <div className="flex items-center gap-2">
+                  <span>☀️</span>
+                  <span><strong>Nível de Insolação:</strong> {labelFrom(FICHA_INSOLACAO, ev.fichaInsolacao)}</span>
+                </div>
+              )}
+              {ev.fichaDesnivelPos != null && (
+                <div className="flex items-center gap-2">
+                  <span>⛰</span>
+                  <span><strong>Desnível Positivo:</strong> {ev.fichaDesnivelPos} m</span>
+                </div>
+              )}
+              {ev.fichaElevacaoMax != null && (
+                <div className="flex items-center gap-2">
+                  <span>⛰</span>
+                  <span><strong>Elevação Máxima:</strong> {ev.fichaElevacaoMax} m</span>
+                </div>
+              )}
+              {ev.fichaExposicao && (
+                <div className="flex items-center gap-2">
+                  <span>☠️</span>
+                  <span><strong>Grau de Exposição:</strong> {labelFrom(FICHA_EXPOSICAO, ev.fichaExposicao)}</span>
+                </div>
+              )}
+              {ev.fichaSaidaHorario && (
+                <div className="flex items-center gap-2">
+                  <span>🕢</span>
+                  <span>
+                    <strong>Saída às</strong> {ev.fichaSaidaHorario}
+                    {ev.fichaSaidaLocal ? ` — ${ev.fichaSaidaLocal}` : ""}
+                  </span>
+                </div>
+              )}
+              {ev.fichaCarona && (
+                <div className="flex items-center gap-2">
+                  <span>🚖</span>
+                  <span><strong>Carona Colaborativa</strong></span>
+                </div>
+              )}
+              {fichaOQueLevar.length > 0 && (
+                <div className="flex items-start gap-2">
+                  <span className="shrink-0">✅</span>
+                  <div>
+                    <strong>O que levar:</strong>{" "}
+                    <span className="text-muted-foreground">{fichaOQueLevar.join(", ")}</span>
+                  </div>
+                </div>
+              )}
+              {ev.fichaObs && (
+                <p className="border-t pt-2 text-muted-foreground">
+                  <strong className="text-foreground">OBS.:</strong> {ev.fichaObs}
+                </p>
+              )}
+              {ev.fichaAtencao && (
+                <p className="rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2 text-yellow-900 dark:border-yellow-900 dark:bg-yellow-950 dark:text-yellow-200">
+                  <strong>ATENÇÃO:</strong> {ev.fichaAtencao}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Público que foi */}
         {totalPublico > 0 && (

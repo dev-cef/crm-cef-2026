@@ -8,6 +8,7 @@ import {
   Mountain,
   Pencil,
   Phone,
+  Shield,
   Trash2,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -180,6 +181,11 @@ export default async function AssociadoPerfilPage({
               <Badge variant={member.status === "ACTIVE" ? "default" : "secondary"}>
                 {member.status === "ACTIVE" ? "Ativo" : "Inativo"}
               </Badge>
+              {member.isGuide && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                  <Mountain className="size-3" /> Guia
+                </span>
+              )}
               {member.plan && <Badge variant="secondary">{member.plan.name}</Badge>}
               {member.physicalCardRequests[0] && (
                 <span

@@ -60,6 +60,41 @@ export const PAYMENT_STATUS = [
   { value: "ATRASADO", label: "Atrasado" },
 ] as const;
 
+export const FICHA_ESFORCO = [
+  { value: "LEVE",     label: "Leve" },
+  { value: "MODERADO", label: "Moderado" },
+  { value: "INTENSO",  label: "Intenso" },
+] as const;
+
+export const FICHA_INSOLACAO = [
+  { value: "BAIXO", label: "Baixo" },
+  { value: "MEDIO", label: "Médio" },
+  { value: "ALTO",  label: "Alto" },
+] as const;
+
+export const FICHA_EXPOSICAO = [
+  { value: "BAIXO",    label: "Baixo" },
+  { value: "MODERADO", label: "Moderado" },
+  { value: "ALTO",     label: "Alto" },
+  { value: "EXTREMO",  label: "Extremo" },
+] as const;
+
+export const FICHA_O_QUE_LEVAR_DEFAULTS = [
+  "Água",
+  "Alimentos leves",
+  "Anorak",
+  "Repelente",
+  "Protetor solar",
+  "Blusa de manga longa",
+  "Tênis com boa aderência",
+  "Headlamp (lanterna)",
+  "Kit de primeiros socorros",
+  "Canivete",
+] as const;
+
+// Categorias que exibem a Ficha Técnica — adicionar "escalada" aqui no futuro
+export const FICHA_TECNICA_CATEGORIES = ["caminhada"] as const;
+
 export const EVENT_DIFFICULTY = [
   { value: "FACIL", label: "Fácil" },
   { value: "MODERADO", label: "Moderado" },
