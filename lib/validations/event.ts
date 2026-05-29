@@ -82,15 +82,6 @@ export const eventSchema = z
       });
     }
 
-    // Dificuldade obrigatória para atividades (exceto muro_escalada que tem campo oculto)
-    if (isAtividade && code !== "muro_escalada" && !data.difficulty) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["difficulty"],
-        message: "Selecione a dificuldade",
-      });
-    }
-
     // R3 — categoria outdoor com requiresGuide exige guia
     if (cat?.requiresGuide && !data.guideId) {
       ctx.addIssue({

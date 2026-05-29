@@ -18,7 +18,6 @@ import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/format";
 import {
   ATIVIDADE_CATEGORY_CODES,
-  EVENT_DIFFICULTY,
   EVENT_STATUS,
   FICHA_ESFORCO,
   FICHA_EXPOSICAO,
@@ -184,11 +183,6 @@ export default async function EventoDetalhePage({
               </span>
             </div>
             <div className="flex flex-wrap gap-2 pt-1">
-              {isAtividade && ev.categoryCode !== "muro_escalada" && ev.difficulty && (
-                <Badge variant="secondary">
-                  {labelFrom(EVENT_DIFFICULTY, ev.difficulty)}
-                </Badge>
-              )}
               <Badge variant={STATUS_BADGE[ev.status] ?? "secondary"}>
                 {labelFrom(EVENT_STATUS, ev.status)}
               </Badge>

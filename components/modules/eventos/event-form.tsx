@@ -10,7 +10,6 @@ import { eventSchema, type EventFormValues } from "@/lib/validations/event";
 import {
   ATIVIDADE_CATEGORY_CODES,
   EVENT_CATEGORIES,
-  EVENT_DIFFICULTY,
   EVENT_STATUS,
   EVENTO_CATEGORY_CODES,
   FICHA_ESFORCO,
@@ -121,7 +120,6 @@ export function EventForm({
     description: string;
     dateTime: string;
     location: string;
-    difficulty: string;
     slots: number;
     status: string;
     categoryCode: string | null;
@@ -172,7 +170,6 @@ export function EventForm({
       description: event?.description ?? "",
       dateTime: event?.dateTime ?? "",
       location: event?.location ?? "",
-      difficulty: event?.difficulty ?? "MODERADO",
       slots: event?.slots ?? 0,
       status: event?.status ?? "PLANEJADO",
       guideId: event?.guideId ?? "",
@@ -211,7 +208,6 @@ export function EventForm({
   const showSpeaker = categoryCode === "altos_papos";
   const showFilmDuration = categoryCode === "cef_cine_montanha";
   const showLocation = isAtividade || categoryCode === "confraternizacao";
-  const showDifficulty = isAtividade && categoryCode !== "muro_escalada";
   const showSlots = categoryCode !== "reuniao_social" && categoryCode !== "aniversario_cef";
   const showGuide = !!cat?.requiresGuide;
   const isArpCounterpart = !!cat?.isArpCounterpart;
@@ -428,30 +424,6 @@ export function EventForm({
                 {errors.location && (
                   <p className="mt-1 text-xs text-destructive">
                     {errors.location.message}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Dificuldade (atividades) */}
-            {showDifficulty && (
-              <div>
-                <Label htmlFor="difficulty">Dificuldade *</Label>
-                <select
-                  id="difficulty"
-                  className={selectCls}
-                  {...register("difficulty")}
-                >
-                  <option value="">— selecione —</option>
-                  {EVENT_DIFFICULTY.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-                {errors.difficulty && (
-                  <p className="mt-1 text-xs text-destructive">
-                    {errors.difficulty.message}
                   </p>
                 )}
               </div>

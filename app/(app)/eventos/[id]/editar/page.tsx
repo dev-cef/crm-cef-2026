@@ -59,7 +59,6 @@ export default async function EditarEventoPage({
           description: ev.description,
           dateTime: toDatetimeLocal(ev.dateTime),
           location: ev.location,
-          difficulty: ev.difficulty,
           slots: ev.slots,
           status: ev.status,
           categoryCode: ev.categoryCode,
