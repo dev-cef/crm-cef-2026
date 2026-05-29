@@ -61,9 +61,14 @@ export const PAYMENT_STATUS = [
 ] as const;
 
 export const FICHA_ESFORCO = [
-  { value: "LEVE",     label: "Leve" },
-  { value: "MODERADO", label: "Moderado" },
-  { value: "INTENSO",  label: "Intenso" },
+  { value: "LEVE",              label: "Leve" },
+  { value: "LEVE_SUPERIOR",     label: "Leve Superior" },
+  { value: "MODERADA",          label: "Moderada" },
+  { value: "MODERADA_SUPERIOR", label: "Moderada Superior" },
+  { value: "PESADA",            label: "Pesada" },
+  { value: "PESADA_SUPERIOR",   label: "Pesada Superior" },
+  { value: "EXTRA_PESADA",      label: "Extra Pesada" },
+  { value: "LONGO_CURSO",       label: "Longo Curso" },
 ] as const;
 
 export const FICHA_INSOLACAO = [
@@ -73,10 +78,10 @@ export const FICHA_INSOLACAO = [
 ] as const;
 
 export const FICHA_EXPOSICAO = [
-  { value: "BAIXO",    label: "Baixo" },
+  { value: "PEQUENO",  label: "Pequeno" },
   { value: "MODERADO", label: "Moderado" },
-  { value: "ALTO",     label: "Alto" },
-  { value: "EXTREMO",  label: "Extremo" },
+  { value: "SEVERO",   label: "Severo" },
+  { value: "CRITICO",  label: "Crítico" },
 ] as const;
 
 export const FICHA_O_QUE_LEVAR_DEFAULTS = [
