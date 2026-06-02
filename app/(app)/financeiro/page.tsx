@@ -8,6 +8,7 @@ import {
   CreditCard,
   TrendingDown,
   TrendingUp,
+  Users,
   Wallet,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -28,6 +29,7 @@ import { LaunchMonthly } from "@/components/modules/financeiro/launch-monthly";
 import { ServerPermissionGate } from "@/components/auth/ServerPermissionGate";
 import { InadimplenciaChart, type MonthStat } from "@/components/modules/financeiro/inadimplencia-chart";
 import { ReceitaChart, type ReceitaMensal } from "@/components/modules/financeiro/receita-chart";
+import { MemberGrowthBars } from "@/components/modules/dashboard/member-growth-bars";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +47,9 @@ export default async function FinanceiroPage() {
     return { month: d.getMonth() + 1, year: d.getFullYear() };
   }).reverse();
 
-  const [caixaTx, paymentStatRows, receitaRows] = await Promise.all([
+  const sixMonthsAgo = new Date(year, month - 1 - 5, 1);
+
+  const [caixaTx, paymentStatRows, receitaRows, newMembersRaw] = await Promise.all([
     prisma.transaction.findMany({
       where: { date: { gte: startOfMonth, lte: endOfMonth } },
       select: { type: true, amount: true },
@@ -70,6 +74,10 @@ export default async function FinanceiroPage() {
         })),
       },
     }),
+    prisma.member.findMany({
+      where: { createdAt: { gte: sixMonthsAgo }, deletedAt: null },
+      select: { createdAt: true },
+    }),
   ]);
 
   const chartData: MonthStat[] = last6Months.map(({ month: m, year: y }) => {
@@ -83,6 +91,15 @@ export default async function FinanceiroPage() {
       pago: count("PAGO"),
       pendente: count("PENDENTE"),
       atrasado: count("ATRASADO"),
+    };
+  });
+
+  const memberGrowthBars = last6Months.map(({ month: m, year: y }) => {
+    const start = new Date(y, m - 1, 1);
+    const end = new Date(y, m, 1);
+    return {
+      label: `${monthName(m).slice(0, 3)}/${String(y).slice(2)}`,
+      value: newMembersRaw.filter((r) => r.createdAt >= start && r.createdAt < end).length,
     };
   });
 
@@ -243,6 +260,18 @@ export default async function FinanceiroPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Crescimento de associados */}
+      <Card className="mt-4">
+        <CardHeader className="flex flex-row items-center gap-2 pb-2">
+          <Users className="size-4 text-primary" />
+          <CardTitle className="text-base">Crescimento de Associados</CardTitle>
+          <span className="ml-auto text-xs text-muted-foreground">Últimos 6 meses</span>
+        </CardHeader>
+        <CardContent>
+          <MemberGrowthBars bars={memberGrowthBars} />
+        </CardContent>
+      </Card>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <Link href="/financeiro/caixa">
