@@ -76,18 +76,24 @@ export default async function EventoDetalhePage({
         include: { member: { select: { id: true, fullName: true } } },
         orderBy: { createdAt: "asc" },
       },
+      waitlist: {
+        where: { member: { deletedAt: null, status: "ACTIVE" } },
+        include: { member: { select: { id: true, fullName: true } } },
+        orderBy: { position: "asc" },
+      },
     },
   });
   if (!ev) notFound();
 
   const registeredIds = new Set(ev.registrations.map((r) => r.memberId));
+  const waitlistedIds = new Set(ev.waitlist.map((w) => w.memberId));
   const available = (
     await prisma.member.findMany({
       where: { deletedAt: null, status: "ACTIVE" },
       select: { id: true, fullName: true },
       orderBy: { fullName: "asc" },
     })
-  ).filter((m) => !registeredIds.has(m.id));
+  ).filter((m) => !registeredIds.has(m.id) && !waitlistedIds.has(m.id));
 
   const cat = getEventCategory(ev.categoryCode);
   const isAtividade = (ATIVIDADE_CATEGORY_CODES as readonly string[]).includes(ev.categoryCode ?? "");
@@ -227,6 +233,12 @@ export default async function EventoDetalhePage({
               <span className="text-muted-foreground">Inscritos</span>
               <span>{ev.registrations.length}</span>
             </div>
+            {ev.waitlist.length > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Fila de espera</span>
+                <span className="font-medium text-orange-600">{ev.waitlist.length}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Público que foi</span>
               <span className="font-medium text-primary">{totalPublico}</span>
@@ -397,11 +409,18 @@ export default async function EventoDetalhePage({
           <CardContent>
             <EventRegistrations
               eventId={ev.id}
+              slots={ev.slots}
               registered={ev.registrations.map((r, idx) => ({
                 id: r.id,
                 memberId: r.memberId,
                 fullName: r.member.fullName,
                 order: idx + 1,
+              }))}
+              waitlist={ev.waitlist.map((w, idx) => ({
+                id: w.id,
+                memberId: w.memberId,
+                fullName: w.member.fullName,
+                position: idx + 1,
               }))}
               available={available}
               selfMemberId={sessionUser.memberId ?? null}

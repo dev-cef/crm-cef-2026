@@ -195,6 +195,7 @@ model Member {
   eventRegistrations   EventRegistration[]
   attendedEvents       EventAttendee[]
   guidedEvents         Event[]               @relation("EventGuide")
+  waitlistEntries      EventWaitlist[]
   birthdayLogs         BirthdayMessageLog[]
   physicalCardRequests PhysicalCardRequest[]
 
@@ -296,6 +297,7 @@ model Event {
   registrations EventRegistration[]
   attendees     EventAttendee[]
   photos        EventPhoto[]
+  waitlist      EventWaitlist[]
 
   @@index([status])
   @@index([dateTime])
@@ -334,6 +336,19 @@ model EventAttendee {
   @@unique([eventId, memberId])
   @@index([eventId])
   @@index([memberId])
+}
+
+model EventWaitlist {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  position  Int      // order in queue (lower = first to be promoted)
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, memberId])
+  @@index([eventId, position])
 }
 
 model BirthdayMessageConfig {

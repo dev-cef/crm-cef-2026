@@ -171,21 +171,39 @@ export async function deleteEvent(id: string): Promise<Result> {
 export async function addRegistration(
   eventId: string,
   memberId: string,
-): Promise<Result> {
+): Promise<Result & { waitlisted?: boolean; position?: number }> {
   try {
     const ev = await prisma.event.findUnique({
       where: { id: eventId },
       include: { _count: { select: { registrations: true } } },
     });
     if (!ev) return { ok: false, error: "Evento não encontrado." };
-    if (ev.slots > 0 && ev._count.registrations >= ev.slots) {
-      return { ok: false, error: "Não há vagas disponíveis." };
+
+    const isFull = ev.slots > 0 && ev._count.registrations >= ev.slots;
+
+    if (isFull) {
+      // Check if already in waitlist
+      const existing = await prisma.eventWaitlist.findUnique({
+        where: { eventId_memberId: { eventId, memberId } },
+      });
+      if (existing) {
+        return { ok: false, error: "Você já está na fila de espera." };
+      }
+      // Compute next position
+      const last = await prisma.eventWaitlist.findFirst({
+        where: { eventId },
+        orderBy: { position: "desc" },
+        select: { position: true },
+      });
+      const position = (last?.position ?? 0) + 1;
+      await prisma.eventWaitlist.create({ data: { eventId, memberId, position } });
+      revalidatePath(`/eventos/${eventId}`);
+      return { ok: true, waitlisted: true, position };
     }
-    await prisma.eventRegistration.create({
-      data: { eventId, memberId },
-    });
+
+    await prisma.eventRegistration.create({ data: { eventId, memberId } });
     revalidatePath(`/eventos/${eventId}`);
-    return { ok: true };
+    return { ok: true, waitlisted: false };
   } catch {
     return { ok: false, error: "Associado já inscrito ou erro." };
   }
@@ -197,10 +215,44 @@ export async function removeRegistration(
 ): Promise<Result> {
   try {
     await prisma.eventRegistration.delete({ where: { id: registrationId } });
+
+    // Promote first person from waitlist (if any)
+    const ev = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { slots: true },
+    });
+    if (ev && ev.slots > 0) {
+      const next = await prisma.eventWaitlist.findFirst({
+        where: { eventId },
+        orderBy: { position: "asc" },
+      });
+      if (next) {
+        await prisma.$transaction([
+          prisma.eventRegistration.create({
+            data: { eventId, memberId: next.memberId },
+          }),
+          prisma.eventWaitlist.delete({ where: { id: next.id } }),
+        ]);
+      }
+    }
+
     revalidatePath(`/eventos/${eventId}`);
     return { ok: true };
   } catch {
     return { ok: false, error: "Erro ao remover inscrição." };
+  }
+}
+
+export async function removeWaitlist(
+  waitlistId: string,
+  eventId: string,
+): Promise<Result> {
+  try {
+    await prisma.eventWaitlist.delete({ where: { id: waitlistId } });
+    revalidatePath(`/eventos/${eventId}`);
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Erro ao remover da fila de espera." };
   }
 }
 
