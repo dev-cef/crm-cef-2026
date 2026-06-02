@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ReportDownloadButton } from "@/components/modules/relatorios/report-download-button";
+import { ActivityReportCard } from "@/components/modules/relatorios/activity-report-card";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,7 @@ export default async function RelatoriosPage() {
           format: "CSV",
           href: "/relatorios/participacao",
           stat: `${totalEvents} atividades`,
+          periodFilter: true,
         },
       ],
     },
@@ -90,6 +92,7 @@ export default async function RelatoriosPage() {
           format: "CSV",
           href: "/relatorios/atividades",
           stat: `${totalEvents} atividades`,
+          periodFilter: true,
         },
       ],
     },
@@ -113,30 +116,44 @@ export default async function RelatoriosPage() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {section.items.map((item) => (
-                <Card key={item.title} className="relative overflow-hidden">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="text-sm font-semibold leading-snug">
-                        {item.title}
-                      </CardTitle>
-                      <Badge variant="outline" className="shrink-0 text-[10px]">
-                        <FileText className="mr-1 size-3" />
-                        {item.format}
-                      </Badge>
-                    </div>
-                    <CardDescription className="text-xs">
-                      {item.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex items-center justify-between gap-2 pt-0">
-                    <span className={`text-xs font-medium ${(item as { alert?: boolean }).alert ? "text-destructive" : "text-muted-foreground"}`}>
-                      {item.stat}
-                    </span>
-                    <ReportDownloadButton href={item.href} />
-                  </CardContent>
-                </Card>
-              ))}
+              {section.items.map((item) => {
+                // Cards de atividades têm filtro de período interativo
+                if ((item as { periodFilter?: boolean }).periodFilter) {
+                  return (
+                    <ActivityReportCard
+                      key={item.title}
+                      title={item.title}
+                      description={item.description}
+                      baseHref={item.href}
+                      stat={item.stat}
+                    />
+                  );
+                }
+                return (
+                  <Card key={item.title} className="relative overflow-hidden">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <CardTitle className="text-sm font-semibold leading-snug">
+                          {item.title}
+                        </CardTitle>
+                        <Badge variant="outline" className="shrink-0 text-[10px]">
+                          <FileText className="mr-1 size-3" />
+                          {item.format}
+                        </Badge>
+                      </div>
+                      <CardDescription className="text-xs">
+                        {item.description}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex items-center justify-between gap-2 pt-0">
+                      <span className={`text-xs font-medium ${(item as { alert?: boolean }).alert ? "text-destructive" : "text-muted-foreground"}`}>
+                        {item.stat}
+                      </span>
+                      <ReportDownloadButton href={item.href} />
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </div>
         ))}
