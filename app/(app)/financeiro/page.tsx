@@ -27,6 +27,7 @@ import { CardBeam } from "@/components/ui/card-beam";
 import { LaunchMonthly } from "@/components/modules/financeiro/launch-monthly";
 import { ServerPermissionGate } from "@/components/auth/ServerPermissionGate";
 import { InadimplenciaChart, type MonthStat } from "@/components/modules/financeiro/inadimplencia-chart";
+import { ReceitaChart, type ReceitaMensal } from "@/components/modules/financeiro/receita-chart";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,7 @@ export default async function FinanceiroPage() {
     return { month: d.getMonth() + 1, year: d.getFullYear() };
   }).reverse();
 
-  const [caixaTx, paymentStatRows] = await Promise.all([
+  const [caixaTx, paymentStatRows, receitaRows] = await Promise.all([
     prisma.transaction.findMany({
       where: { date: { gte: startOfMonth, lte: endOfMonth } },
       select: { type: true, amount: true },
@@ -52,6 +53,16 @@ export default async function FinanceiroPage() {
     prisma.payment.groupBy({
       by: ["referenceMonth", "referenceYear", "status"],
       _count: { id: true },
+      where: {
+        OR: last6Months.map((m) => ({
+          referenceMonth: m.month,
+          referenceYear: m.year,
+        })),
+      },
+    }),
+    prisma.payment.groupBy({
+      by: ["referenceMonth", "referenceYear", "status"],
+      _sum: { amount: true },
       where: {
         OR: last6Months.map((m) => ({
           referenceMonth: m.month,
@@ -72,6 +83,19 @@ export default async function FinanceiroPage() {
       pago: count("PAGO"),
       pendente: count("PENDENTE"),
       atrasado: count("ATRASADO"),
+    };
+  });
+
+  const receitaData: ReceitaMensal[] = last6Months.map(({ month: m, year: y }) => {
+    const rows = receitaRows.filter(
+      (r) => r.referenceMonth === m && r.referenceYear === y,
+    );
+    const sum = (status: string) =>
+      rows.find((r) => r.status === status)?._sum?.amount ?? 0;
+    return {
+      label: `${monthName(m).slice(0, 3)}/${String(y).slice(2)}`,
+      arrecadado: sum("PAGO"),
+      aReceber: (sum("PENDENTE") ?? 0) + (sum("ATRASADO") ?? 0),
     };
   });
 
@@ -195,17 +219,30 @@ export default async function FinanceiroPage() {
         ))}
       </div>
 
-      {/* Inadimplência chart */}
-      <Card className="mt-6">
-        <CardHeader className="flex flex-row items-center gap-2 pb-2">
-          <TrendingDown className="size-4 text-red-500" />
-          <CardTitle className="text-base">Inadimplência por Mês</CardTitle>
-          <span className="ml-auto text-xs text-muted-foreground">Últimos 6 meses</span>
-        </CardHeader>
-        <CardContent>
-          <InadimplenciaChart data={chartData} />
-        </CardContent>
-      </Card>
+      {/* Charts */}
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center gap-2 pb-2">
+            <TrendingUp className="size-4 text-primary" />
+            <CardTitle className="text-base">Receita Mensal</CardTitle>
+            <span className="ml-auto text-xs text-muted-foreground">Últimos 6 meses</span>
+          </CardHeader>
+          <CardContent>
+            <ReceitaChart data={receitaData} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center gap-2 pb-2">
+            <TrendingDown className="size-4 text-red-500" />
+            <CardTitle className="text-base">Inadimplência por Mês</CardTitle>
+            <span className="ml-auto text-xs text-muted-foreground">Últimos 6 meses</span>
+          </CardHeader>
+          <CardContent>
+            <InadimplenciaChart data={chartData} />
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <Link href="/financeiro/caixa">
