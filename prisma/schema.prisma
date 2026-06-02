@@ -196,6 +196,8 @@ model Member {
   attendedEvents       EventAttendee[]
   guidedEvents         Event[]               @relation("EventGuide")
   waitlistEntries      EventWaitlist[]
+  caronasOferecidas    EventCarona[]         @relation("CaronaDriver")
+  caronasPassageiro    EventCaronaPassenger[] @relation("CaronaPassenger")
   birthdayLogs         BirthdayMessageLog[]
   physicalCardRequests PhysicalCardRequest[]
 
@@ -298,6 +300,7 @@ model Event {
   attendees     EventAttendee[]
   photos        EventPhoto[]
   waitlist      EventWaitlist[]
+  caronas       EventCarona[]
 
   @@index([status])
   @@index([dateTime])
@@ -349,6 +352,33 @@ model EventWaitlist {
 
   @@unique([eventId, memberId])
   @@index([eventId, position])
+}
+
+model EventCarona {
+  id         String               @id @default(cuid())
+  eventId    String
+  event      Event                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  driverId   String
+  driver     Member               @relation("CaronaDriver", fields: [driverId], references: [id], onDelete: Cascade)
+  seats      Int                  @default(1)
+  note       String?              // ponto de saída, observações
+  createdAt  DateTime             @default(now())
+  passengers EventCaronaPassenger[]
+
+  @@unique([eventId, driverId])
+  @@index([eventId])
+}
+
+model EventCaronaPassenger {
+  id        String      @id @default(cuid())
+  caronaId  String
+  carona    EventCarona @relation(fields: [caronaId], references: [id], onDelete: Cascade)
+  memberId  String
+  member    Member      @relation("CaronaPassenger", fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+
+  @@unique([caronaId, memberId])
+  @@index([caronaId])
 }
 
 model BirthdayMessageConfig {

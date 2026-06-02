@@ -39,6 +39,7 @@ import {
 import { DeleteEventDialog } from "@/components/modules/eventos/delete-event-dialog";
 import { EventRegistrations } from "@/components/modules/eventos/event-registrations";
 import { EventGallery } from "@/components/modules/eventos/event-gallery";
+import { EventCaronaPanel, type CaronaOffer } from "@/components/modules/eventos/event-carona-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -80,6 +81,16 @@ export default async function EventoDetalhePage({
         where: { member: { deletedAt: null, status: "ACTIVE" } },
         include: { member: { select: { id: true, fullName: true } } },
         orderBy: { position: "asc" },
+      },
+      caronas: {
+        include: {
+          driver: { select: { id: true, fullName: true, phone: true, whatsapp: true } },
+          passengers: {
+            include: { member: { select: { id: true, fullName: true } } },
+            orderBy: { createdAt: "asc" },
+          },
+        },
+        orderBy: { createdAt: "asc" },
       },
     },
   });
@@ -428,6 +439,39 @@ export default async function EventoDetalhePage({
             />
           </CardContent>
         </Card>
+
+        {/* Carona colaborativa */}
+        {isAtividade && (
+          <Card className="md:col-span-3">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                🚗 Carona colaborativa
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <EventCaronaPanel
+                eventId={ev.id}
+                offers={ev.caronas.map((c): CaronaOffer => ({
+                  id: c.id,
+                  driverId: c.driverId,
+                  driverName: c.driver.fullName,
+                  driverPhone: c.driver.phone,
+                  driverWhatsapp: c.driver.whatsapp,
+                  seats: c.seats,
+                  note: c.note,
+                  passengers: c.passengers.map((p) => ({
+                    id: p.id,
+                    memberId: p.memberId,
+                    memberName: p.member.fullName,
+                  })),
+                }))}
+                selfMemberId={sessionUser.memberId ?? null}
+                isRegistered={ev.registrations.some((r) => r.memberId === sessionUser.memberId)}
+                eventStatus={ev.status}
+              />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Galeria */}
         <Card className="md:col-span-3">

@@ -256,6 +256,76 @@ export async function removeWaitlist(
   }
 }
 
+// ── Carona colaborativa ──────────────────────────────────────────────────────
+
+export async function offerCarona(
+  eventId: string,
+  driverId: string,
+  seats: number,
+  note?: string,
+): Promise<Result> {
+  try {
+    await prisma.eventCarona.upsert({
+      where: { eventId_driverId: { eventId, driverId } },
+      create: { eventId, driverId, seats, note: note || null },
+      update: { seats, note: note || null },
+    });
+    revalidatePath(`/eventos/${eventId}`);
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Erro ao oferecer carona." };
+  }
+}
+
+export async function cancelCaronaOffer(
+  caronaId: string,
+  eventId: string,
+): Promise<Result> {
+  try {
+    await prisma.eventCarona.delete({ where: { id: caronaId } });
+    revalidatePath(`/eventos/${eventId}`);
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Erro ao cancelar oferta de carona." };
+  }
+}
+
+export async function claimSeat(
+  caronaId: string,
+  memberId: string,
+  eventId: string,
+): Promise<Result> {
+  try {
+    const carona = await prisma.eventCarona.findUnique({
+      where: { id: caronaId },
+      include: { _count: { select: { passengers: true } } },
+    });
+    if (!carona) return { ok: false, error: "Carona não encontrada." };
+    if (carona._count.passengers >= carona.seats)
+      return { ok: false, error: "Não há vagas disponíveis nesta carona." };
+    if (carona.driverId === memberId)
+      return { ok: false, error: "Você não pode reservar vaga no próprio carro." };
+    await prisma.eventCaronaPassenger.create({ data: { caronaId, memberId } });
+    revalidatePath(`/eventos/${eventId}`);
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Você já reservou vaga nesta carona." };
+  }
+}
+
+export async function releaseSeat(
+  passengerId: string,
+  eventId: string,
+): Promise<Result> {
+  try {
+    await prisma.eventCaronaPassenger.delete({ where: { id: passengerId } });
+    revalidatePath(`/eventos/${eventId}`);
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Erro ao liberar vaga." };
+  }
+}
+
 export async function addPhotos(
   eventId: string,
   dataUrls: string[],
