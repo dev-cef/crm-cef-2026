@@ -6,6 +6,7 @@ import {
   ArrowUpCircle,
   CircleDollarSign,
   CreditCard,
+  TrendingDown,
   TrendingUp,
   Wallet,
 } from "lucide-react";
@@ -19,11 +20,13 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import { CountUp } from "@/components/unlumen-ui/count-up";
 import { CardBeam } from "@/components/ui/card-beam";
 import { LaunchMonthly } from "@/components/modules/financeiro/launch-monthly";
 import { ServerPermissionGate } from "@/components/auth/ServerPermissionGate";
+import { InadimplenciaChart, type MonthStat } from "@/components/modules/financeiro/inadimplencia-chart";
 
 export const dynamic = "force-dynamic";
 
@@ -35,12 +38,42 @@ export default async function FinanceiroPage() {
   const startOfMonth = new Date(Date.UTC(year, month - 1, 1));
   const endOfMonth = new Date(Date.UTC(year, month, 0, 23, 59, 59));
 
-  const [caixaTx] = await Promise.all([
+  // Last 6 months for the inadimplência chart
+  const last6Months = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(year, month - 1 - i, 1);
+    return { month: d.getMonth() + 1, year: d.getFullYear() };
+  }).reverse();
+
+  const [caixaTx, paymentStatRows] = await Promise.all([
     prisma.transaction.findMany({
       where: { date: { gte: startOfMonth, lte: endOfMonth } },
       select: { type: true, amount: true },
     }),
+    prisma.payment.groupBy({
+      by: ["referenceMonth", "referenceYear", "status"],
+      _count: { id: true },
+      where: {
+        OR: last6Months.map((m) => ({
+          referenceMonth: m.month,
+          referenceYear: m.year,
+        })),
+      },
+    }),
   ]);
+
+  const chartData: MonthStat[] = last6Months.map(({ month: m, year: y }) => {
+    const rows = paymentStatRows.filter(
+      (r) => r.referenceMonth === m && r.referenceYear === y,
+    );
+    const count = (status: string) =>
+      rows.find((r) => r.status === status)?._count?.id ?? 0;
+    return {
+      label: `${monthName(m).slice(0, 3)}/${String(y).slice(2)}`,
+      pago: count("PAGO"),
+      pendente: count("PENDENTE"),
+      atrasado: count("ATRASADO"),
+    };
+  });
 
   const caixaEntradas = caixaTx.filter((t) => t.type === "ENTRADA").reduce((s, t) => s + t.amount, 0);
   const caixaSaidas = caixaTx.filter((t) => t.type === "SAIDA").reduce((s, t) => s + t.amount, 0);
@@ -161,6 +194,18 @@ export default async function FinanceiroPage() {
           </Link>
         ))}
       </div>
+
+      {/* Inadimplência chart */}
+      <Card className="mt-6">
+        <CardHeader className="flex flex-row items-center gap-2 pb-2">
+          <TrendingDown className="size-4 text-red-500" />
+          <CardTitle className="text-base">Inadimplência por Mês</CardTitle>
+          <span className="ml-auto text-xs text-muted-foreground">Últimos 6 meses</span>
+        </CardHeader>
+        <CardContent>
+          <InadimplenciaChart data={chartData} />
+        </CardContent>
+      </Card>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <Link href="/financeiro/caixa">
