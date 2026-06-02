@@ -86,6 +86,7 @@ export function scopedEventWhere(user: SessionUser) {
 
 // Mapa de acesso por prefixo de rota. ADMIN acessa tudo.
 export const ROUTE_ACCESS: { prefix: string; roles: Role[] }[] = [
+  { prefix: "/relatorios",  roles: ["ADMIN", "DEPARTAMENTO"] },
   { prefix: "/financeiro", roles: ["ADMIN", "DEPARTAMENTO"] },
   { prefix: "/configuracoes", roles: ["ADMIN"] },
   { prefix: "/associados", roles: ["ADMIN", "DEPARTAMENTO"] },
@@ -144,6 +145,7 @@ export const NAV_ITEMS: {
     ],
   },
   { href: "/eventos",         label: "Eventos e Atividades", visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "eventos" },
+  { href: "/relatorios",      label: "Relatórios",           visibleTo: ["ADMIN", "DEPARTAMENTO"] },
 ];
 
 export const CONFIG_NAV_ITEMS: { href: string; label: string }[] = [

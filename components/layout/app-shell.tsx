@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BarChart3,
   Cake,
   CalendarDays,
   CreditCard,
@@ -56,6 +57,7 @@ const ICONS: Record<string, typeof Users> = {
   "/aniversariantes": Cake,
   "/financeiro": Wallet,
   "/eventos": CalendarDays,
+  "/relatorios": BarChart3,
 };
 
 const CONFIG_ICONS: Record<string, typeof Users> = {
