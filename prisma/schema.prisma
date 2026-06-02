@@ -288,6 +288,9 @@ model Event {
   fichaObs          String?  // texto livre — OBS.:
   fichaAtencao      String?  // texto livre — ATENÇÃO:
 
+  // Relatório pós-excursão preenchido pelo guia após a realização
+  relatorioExcursao String?
+
   // Guia da atividade — Member com isGuide. Obrigatório quando categoria.requiresGuide.
   guideId String?
   guide   Member? @relation("EventGuide", fields: [guideId], references: [id])

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import {
   ArrowLeft,
   CalendarDays,
+  FileText,
   MapPin,
   Mic,
   Mountain,
@@ -40,6 +41,7 @@ import { DeleteEventDialog } from "@/components/modules/eventos/delete-event-dia
 import { EventRegistrations } from "@/components/modules/eventos/event-registrations";
 import { EventGallery } from "@/components/modules/eventos/event-gallery";
 import { EventCaronaPanel, type CaronaOffer } from "@/components/modules/eventos/event-carona-panel";
+import { EventRelatorio } from "@/components/modules/eventos/event-relatorio";
 
 export const dynamic = "force-dynamic";
 
@@ -119,6 +121,9 @@ export default async function EventoDetalhePage({
   const eventGuides = guideIdsList.length > 0
     ? await prisma.member.findMany({ where: { id: { in: guideIdsList } }, select: { id: true, fullName: true } })
     : [];
+  const isCurrentUserGuide =
+    sessionUser.memberId != null &&
+    guideIdsList.includes(sessionUser.memberId);
   const fichaOQueLevar: string[] = (() => {
     try { return JSON.parse(ev.fichaOQueLevar); } catch { return []; }
   })();
@@ -485,6 +490,25 @@ export default async function EventoDetalhePage({
             />
           </CardContent>
         </Card>
+
+        {/* Relatório da excursão — visível quando REALIZADO ou já tem conteúdo */}
+        {(ev.status === "REALIZADO" || ev.relatorioExcursao) && (
+          <Card className="md:col-span-3">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <FileText className="size-4" />
+                Relatório da excursão
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <EventRelatorio
+                eventId={ev.id}
+                relatorio={ev.relatorioExcursao ?? null}
+                canEdit={isCurrentUserGuide || canEdit}
+              />
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

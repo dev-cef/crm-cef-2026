@@ -359,6 +359,30 @@ export async function removePhoto(
   }
 }
 
+export async function saveRelatorio(
+  eventId: string,
+  relatorio: string,
+): Promise<Result> {
+  const session = await auth();
+  try {
+    await prisma.event.update({
+      where: { id: eventId },
+      data: { relatorioExcursao: relatorio.trim() || null },
+    });
+    await recordAudit({
+      userId: session?.user?.id,
+      action: "UPDATE",
+      entity: "Event",
+      entityId: eventId,
+      metadata: { field: "relatorioExcursao" },
+    });
+    revalidatePath(`/eventos/${eventId}`);
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Erro ao salvar relatório." };
+  }
+}
+
 type ProjetarMuroResult = {
   ok: boolean;
   criados: number;
