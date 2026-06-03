@@ -78,43 +78,32 @@ export function PaymentRowActions({
           </button>
         )}
 
-        {!isPaid && (
-          <>
-            {canEdit && (
-              <button
-                type="button"
-                onClick={() => setBaixaOpen(true)}
-                className="flex items-center gap-1 text-green-600 hover:text-green-700 dark:text-green-500"
-              >
-                <CheckCircle2 className="size-3.5" /> Dar baixa
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setReciboOpen(true)}
-              className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
-            >
-              <FileText className="size-3.5" /> Baixar e emitir recibo
-            </button>
-            {canEdit && (
-              <button
-                type="button"
-                onClick={handleCancel}
-                disabled={pending}
-                className="flex items-center gap-1 text-destructive hover:text-destructive/80 disabled:opacity-50"
-              >
-                <XCircle className="size-3.5" /> Cancelar
-              </button>
-            )}
-          </>
-        )}
-        {isPaid && (
+        {!isPaid && canEdit && (
           <button
             type="button"
-            onClick={() => setReciboOpen(true)}
-            className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
+            onClick={() => setBaixaOpen(true)}
+            className="flex items-center gap-1 text-green-600 hover:text-green-700 dark:text-green-500"
           >
-            <FileText className="size-3.5" /> Emitir recibo
+            <CheckCircle2 className="size-3.5" /> Dar baixa
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setReciboOpen(true)}
+          className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
+        >
+          <FileText className="size-3.5" /> {isPaid ? "Emitir recibo" : "Baixar e emitir recibo"}
+        </button>
+
+        {canEdit && (
+          <button
+            type="button"
+            onClick={handleCancel}
+            disabled={pending}
+            className="flex items-center gap-1 text-destructive hover:text-destructive/80 disabled:opacity-50"
+          >
+            <XCircle className="size-3.5" /> Cancelar
           </button>
         )}
       </div>
