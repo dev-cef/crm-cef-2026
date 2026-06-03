@@ -121,13 +121,14 @@ export default async function SupplierDetailPage({
               <TableHead>Tipo</TableHead>
               <TableHead>Categoria</TableHead>
               <TableHead>Descrição</TableHead>
+              <TableHead>Comprovante</TableHead>
               <TableHead className="text-right">Valor</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {supplier.transactions.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                   Nenhuma transação vinculada a este fornecedor.
                 </TableCell>
               </TableRow>
@@ -151,16 +152,20 @@ export default async function SupplierDetailPage({
                   {t.category}
                   {t.subcategory && <span className="block text-xs opacity-70">{t.subcategory}</span>}
                 </TableCell>
-                <TableCell className="text-sm">
-                  {t.description}
-                  {t.attachmentUrl && (
+                <TableCell className="text-sm">{t.description}</TableCell>
+                <TableCell>
+                  {t.attachmentUrl ? (
                     <a
                       href={t.attachmentUrl}
                       download={t.attachmentName ?? "comprovante"}
-                      className="mt-0.5 flex items-center gap-1 text-xs text-primary hover:underline"
+                      className="inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium text-primary hover:bg-accent"
+                      title={t.attachmentName ?? "comprovante"}
                     >
-                      <Paperclip className="size-3" /> {t.attachmentName ?? "comprovante"}
+                      <Paperclip className="size-3.5" />
+                      {t.attachmentName ?? "comprovante"}
                     </a>
+                  ) : (
+                    <span className="text-xs text-muted-foreground/50">—</span>
                   )}
                 </TableCell>
                 <TableCell
