@@ -522,10 +522,19 @@ model TransactionSubcategory {
   @@index([categoryId])
 }
 
+model SupplierCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([order])
+}
+
 model Supplier {
   id           String        @id @default(cuid())
   name         String
-  type         String        // TRANSPORTE | EQUIPAMENTO | ALIMENTACAO | SERVICO
+  type         String        // nome da categoria (ex: "Transporte / Van")
   phone        String?
   email        String?
   document     String?       // CNPJ ou CPF

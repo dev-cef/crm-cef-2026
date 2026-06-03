@@ -1,10 +1,12 @@
-import { Truck, Wrench, UtensilsCrossed, Briefcase } from "lucide-react";
+import Link from "next/link";
+import { LayoutList } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { toSessionUser } from "@/lib/rbac";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -18,13 +20,6 @@ import { SupplierDialog } from "@/components/modules/fornecedores/supplier-dialo
 import { SupplierActions } from "@/components/modules/fornecedores/supplier-actions";
 
 export const dynamic = "force-dynamic";
-
-const TYPE_CONFIG: Record<string, { label: string; icon: React.ElementType; cls: string }> = {
-  TRANSPORTE:  { label: "Transporte / Van", icon: Truck,            cls: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400" },
-  EQUIPAMENTO: { label: "Equipamentos",     icon: Wrench,           cls: "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400" },
-  ALIMENTACAO: { label: "Alimentação",      icon: UtensilsCrossed,  cls: "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400" },
-  SERVICO:     { label: "Serviços Gerais",  icon: Briefcase,        cls: "border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-400" },
-};
 
 export default async function FornecedoresPage() {
   const session = await auth();
@@ -46,6 +41,14 @@ export default async function FornecedoresPage() {
         title="Fornecedores"
         description={`${suppliers.length} fornecedor(es) cadastrado(s)${inativos > 0 ? ` · ${inativos} inativo(s)` : ""}`}
       >
+        <ServerPermissionGate module="fornecedores" action="edit">
+          <Link
+            href="/fornecedores/categorias"
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            <LayoutList className="size-4" /> Categorias
+          </Link>
+        </ServerPermissionGate>
         <ServerPermissionGate module="fornecedores" action="create">
           <SupplierDialog />
         </ServerPermissionGate>
@@ -74,16 +77,11 @@ export default async function FornecedoresPage() {
               </TableRow>
             )}
             {suppliers.map((s) => {
-              const cfg = TYPE_CONFIG[s.type] ?? TYPE_CONFIG.SERVICO;
-              const Icon = cfg.icon;
               return (
                 <TableRow key={s.id} className={cn(!s.active && "opacity-50")}>
                   <TableCell className="font-medium">{s.name}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={cn("gap-1", cfg.cls)}>
-                      <Icon className="size-3" />
-                      {cfg.label}
-                    </Badge>
+                    <Badge variant="secondary">{s.type}</Badge>
                   </TableCell>
                   <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
                     {s.phone ?? "—"}

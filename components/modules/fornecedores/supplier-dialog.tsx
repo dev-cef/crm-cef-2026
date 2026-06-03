@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { Loader2, PlusCircle, Pencil } from "lucide-react";
 import { toast } from "sonner";
-import { saveSupplier } from "@/app/(app)/fornecedores/actions";
+import { saveSupplier, getSupplierCategories } from "@/app/(app)/fornecedores/actions";
 import {
   supplierSchema,
-  SUPPLIER_TYPES,
   type SupplierFormValues,
 } from "@/lib/validations/supplier";
 import { Button } from "@/components/ui/button";
@@ -56,6 +55,11 @@ export function SupplierDialog({ trigger, supplier, open: controlledOpen, onOpen
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const isControlled = onOpenChange !== undefined;
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    getSupplierCategories().then(setCategories);
+  }, []);
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } =
     useForm<SupplierFormValues>({
@@ -110,20 +114,21 @@ export function SupplierDialog({ trigger, supplier, open: controlledOpen, onOpen
         {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
       </div>
 
-      {/* Tipo */}
+      {/* Categoria */}
       <div className="space-y-1.5">
-        <Label>Tipo <span className="text-destructive">*</span></Label>
+        <Label>Categoria <span className="text-destructive">*</span></Label>
         <Select
-          value={watch("type")}
-          onValueChange={(v) => setValue("type", v as SupplierFormValues["type"], { shouldValidate: true })}
+          value={watch("type") ?? ""}
+          onValueChange={(v) => setValue("type", v ?? "", { shouldValidate: true })}
         >
-          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="Selecione a categoria…" /></SelectTrigger>
           <SelectContent>
-            {SUPPLIER_TYPES.map((t) => (
-              <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+            {categories.map((c) => (
+              <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
+        {errors.type && <p className="text-xs text-destructive">{errors.type.message}</p>}
       </div>
 
       {/* Telefone + Email */}

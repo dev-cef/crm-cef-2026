@@ -146,7 +146,15 @@ export const NAV_ITEMS: {
       { href: "/financeiro/categorias",   label: "Categorias" },
     ],
   },
-  { href: "/fornecedores",    label: "Fornecedores",         visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "fornecedores" },
+  {
+    href: "/fornecedores",
+    label: "Fornecedores",
+    visibleTo: ["ADMIN", "DEPARTAMENTO"],
+    moduleSlug: "fornecedores",
+    children: [
+      { href: "/fornecedores/categorias", label: "Categorias" },
+    ],
+  },
   { href: "/eventos",         label: "Eventos e Atividades", visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "eventos" },
   { href: "/relatorios",      label: "Relatórios",           visibleTo: ["ADMIN", "DEPARTAMENTO"] },
 ];
