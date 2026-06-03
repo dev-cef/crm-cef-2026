@@ -4,6 +4,7 @@ import {
   ArrowDownCircle,
   ArrowUpCircle,
   LayoutList,
+  Paperclip,
   Wallet,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -281,6 +282,17 @@ export default async function CaixaPage({
                   {t.supplier?.name && (
                     <p className="text-xs text-muted-foreground">Fornecedor: {t.supplier.name}</p>
                   )}
+                  {t.attachmentUrl && (
+                    <a
+                      href={t.attachmentUrl}
+                      download={t.attachmentName ?? "comprovante"}
+                      className="mt-0.5 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                      title={t.attachmentName ?? "Comprovante"}
+                    >
+                      <Paperclip className="size-3" />
+                      {t.attachmentName ?? "comprovante"}
+                    </a>
+                  )}
                 </TableCell>
                 <TableCell
                   className={cn(
@@ -312,6 +324,8 @@ export default async function CaixaPage({
                       paymentMethod: t.paymentMethod ?? "",
                       notes: t.notes ?? "",
                       supplierId: t.supplierId ?? "",
+                      attachmentUrl: t.attachmentUrl ?? "",
+                      attachmentName: t.attachmentName ?? "",
                     }}
                   />
                 </TableCell>

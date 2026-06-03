@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, PlusCircle, Pencil } from "lucide-react";
+import { Loader2, PlusCircle, Pencil, Paperclip, X } from "lucide-react";
 import { toast } from "sonner";
 import { saveTransaction, getTransactionCategories, type CategoryWithSubs } from "@/app/(app)/financeiro/actions";
 import { getActiveSuppliers } from "@/app/(app)/fornecedores/actions";
@@ -67,6 +67,8 @@ const EMPTY: FormState = {
   paymentMethod: "",
   notes: "",
   supplierId: "",
+  attachmentUrl: "",
+  attachmentName: "",
 };
 
 const YEARS = Array.from({ length: 6 }, (_, i) => currentYear() - 2 + i);
@@ -123,6 +125,27 @@ export function TransactionDialog({
 
   function set<K extends keyof FormState>(k: K, v: FormState[K]) {
     setForm((prev) => ({ ...prev, [k]: v }));
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Arquivo muito grande. Limite: 5 MB.");
+      e.target.value = "";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      set("attachmentUrl", reader.result as string);
+      set("attachmentName", file.name);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function clearAttachment() {
+    set("attachmentUrl", "");
+    set("attachmentName", "");
   }
 
   function handleSubmit() {
@@ -397,6 +420,37 @@ export function TransactionDialog({
               </Select>
             </div>
           )}
+
+          {/* Comprovante */}
+          <div className="space-y-1.5">
+            <Label>Comprovante</Label>
+            {form.attachmentUrl ? (
+              <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2">
+                <Paperclip className="size-4 shrink-0 text-muted-foreground" />
+                <a
+                  href={form.attachmentUrl}
+                  download={form.attachmentName ?? "comprovante"}
+                  className="flex-1 truncate text-sm text-primary hover:underline"
+                >
+                  {form.attachmentName ?? "comprovante"}
+                </a>
+                <button type="button" onClick={clearAttachment} className="text-muted-foreground hover:text-destructive">
+                  <X className="size-4" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent">
+                <Paperclip className="size-4 shrink-0" />
+                <span>Anexar PDF, JPG ou PNG (máx. 5 MB)</span>
+                <input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className="sr-only"
+                  onChange={handleFileChange}
+                />
+              </label>
+            )}
+          </div>
 
           {/* Observações */}
           <div className="space-y-1.5">
