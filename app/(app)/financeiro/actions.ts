@@ -461,3 +461,77 @@ export async function deleteTransactionSubcategory(id: string): Promise<Result> 
     return { ok: false, error: "Erro ao excluir a subcategoria." };
   }
 }
+
+export async function renameTransactionCategory(id: string, name: string): Promise<Result> {
+  const session = await auth();
+  const trimmed = name.trim();
+  if (!trimmed) return { ok: false, error: "Informe o nome da categoria." };
+  try {
+    await prisma.transactionCategory.update({ where: { id }, data: { name: trimmed } });
+    await recordAudit({
+      userId: session?.user?.id,
+      action: "UPDATE",
+      entity: "TransactionCategory",
+      entityId: id,
+      metadata: { name: trimmed },
+    });
+    revalidatePath("/financeiro/categorias");
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Já existe uma categoria com este nome." };
+  }
+}
+
+export async function renameTransactionSubcategory(id: string, name: string): Promise<Result> {
+  const session = await auth();
+  const trimmed = name.trim();
+  if (!trimmed) return { ok: false, error: "Informe o nome da subcategoria." };
+  try {
+    await prisma.transactionSubcategory.update({ where: { id }, data: { name: trimmed } });
+    await recordAudit({
+      userId: session?.user?.id,
+      action: "UPDATE",
+      entity: "TransactionSubcategory",
+      entityId: id,
+      metadata: { name: trimmed },
+    });
+    revalidatePath("/financeiro/categorias");
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Já existe uma subcategoria com este nome." };
+  }
+}
+
+export async function reorderTransactionCategories(
+  type: "ENTRADA" | "SAIDA",
+  orderedIds: string[],
+): Promise<Result> {
+  try {
+    await prisma.$transaction(
+      orderedIds.map((id, i) =>
+        prisma.transactionCategory.update({ where: { id }, data: { order: i } }),
+      ),
+    );
+    revalidatePath("/financeiro/categorias");
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Erro ao reordenar categorias." };
+  }
+}
+
+export async function reorderTransactionSubcategories(
+  categoryId: string,
+  orderedIds: string[],
+): Promise<Result> {
+  try {
+    await prisma.$transaction(
+      orderedIds.map((id, i) =>
+        prisma.transactionSubcategory.update({ where: { id }, data: { order: i } }),
+      ),
+    );
+    revalidatePath("/financeiro/categorias");
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Erro ao reordenar subcategorias." };
+  }
+}
