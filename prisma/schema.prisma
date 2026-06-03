@@ -244,11 +244,14 @@ model Transaction {
   linkedActivity  String?
   paymentMethod   String?
   notes           String?
+  supplierId      String?
+  supplier        Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   @@index([type])
   @@index([date])
+  @@index([supplierId])
 }
 
 model Event {
@@ -299,6 +302,10 @@ model Event {
   departmentId String?
   department   Department? @relation(fields: [departmentId], references: [id])
 
+  // Fornecedor contratado para o evento (transporte, alimentação, etc.)
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
   registrations EventRegistration[]
   attendees     EventAttendee[]
   photos        EventPhoto[]
@@ -310,6 +317,7 @@ model Event {
   @@index([departmentId])
   @@index([categoryCode])
   @@index([guideId])
+  @@index([supplierId])
 }
 
 model EventRegistration {
@@ -512,4 +520,23 @@ model TransactionSubcategory {
 
   @@unique([categoryId, name])
   @@index([categoryId])
+}
+
+model Supplier {
+  id           String        @id @default(cuid())
+  name         String
+  type         String        // TRANSPORTE | EQUIPAMENTO | ALIMENTACAO | SERVICO
+  phone        String?
+  email        String?
+  document     String?       // CNPJ ou CPF
+  notes        String?
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  transactions Transaction[]
+  events       Event[]
+
+  @@index([type])
+  @@index([active])
 }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, PlusCircle, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { saveTransaction, getTransactionCategories, type CategoryWithSubs } from "@/app/(app)/financeiro/actions";
+import { getActiveSuppliers } from "@/app/(app)/fornecedores/actions";
 import {
   PAYMENT_METHODS,
   MONTHS,
@@ -65,6 +66,7 @@ const EMPTY: FormState = {
   linkedActivity: "",
   paymentMethod: "",
   notes: "",
+  supplierId: "",
 };
 
 const YEARS = Array.from({ length: 6 }, (_, i) => currentYear() - 2 + i);
@@ -90,9 +92,11 @@ export function TransactionDialog({
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const [dbCategories, setDbCategories] = useState<Record<"ENTRADA" | "SAIDA", CategoryWithSubs[]>>({ ENTRADA: [], SAIDA: [] });
+  const [suppliers, setSuppliers] = useState<{ id: string; name: string; type: string }[]>([]);
 
   useEffect(() => {
     getTransactionCategories().then(setDbCategories);
+    getActiveSuppliers().then(setSuppliers);
   }, []);
 
   useEffect(() => {
@@ -372,6 +376,27 @@ export function TransactionDialog({
               onChange={(e) => set("clubAccount", e.target.value)}
             />
           </div>
+
+          {/* Fornecedor — apenas para SAÍDA */}
+          {!isEntry && suppliers.length > 0 && (
+            <div className="space-y-1.5">
+              <Label htmlFor="tx-supplier">Fornecedor</Label>
+              <Select
+                value={form.supplierId ?? ""}
+                onValueChange={(v) => set("supplierId", v === "_none" ? "" : (v ?? ""))}
+              >
+                <SelectTrigger id="tx-supplier">
+                  <SelectValue placeholder="Selecionar fornecedor (opcional)…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_none">Nenhum</SelectItem>
+                  {suppliers.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Observações */}
           <div className="space-y-1.5">

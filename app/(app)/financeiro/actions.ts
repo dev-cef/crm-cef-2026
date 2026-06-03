@@ -377,6 +377,7 @@ export async function saveTransaction(
     linkedActivity: d.linkedActivity?.trim() || null,
     paymentMethod: d.paymentMethod?.trim() || null,
     notes: d.notes?.trim() || null,
+    supplierId: d.supplierId?.trim() || null,
   };
 
   try {

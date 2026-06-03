@@ -14,6 +14,7 @@ import {
   Menu,
   ScrollText,
   Settings,
+  Truck,
   UserCheck,
   ShieldAlert,
   ShieldCheck,
@@ -56,6 +57,7 @@ const ICONS: Record<string, typeof Users> = {
   "/carteirinha": CreditCard,
   "/aniversariantes": Cake,
   "/financeiro": Wallet,
+  "/fornecedores": Truck,
   "/eventos": CalendarDays,
   "/relatorios": BarChart3,
 };

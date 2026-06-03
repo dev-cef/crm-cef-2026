@@ -179,6 +179,7 @@ export function EventForm({
   event,
   guides,
   members,
+  suppliers = [],
 }: {
   mode: "create" | "edit";
   event?: {
@@ -209,9 +210,11 @@ export function EventForm({
     fichaOQueLevar?: string[];
     fichaObs?: string | null;
     fichaAtencao?: string | null;
+    supplierId?: string | null;
   };
   guides: GuideOption[];
   members: MemberOption[];
+  suppliers?: { id: string; name: string; type: string }[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -259,6 +262,7 @@ export function EventForm({
       fichaOQueLevar:    event?.fichaOQueLevar    ?? [],
       fichaObs:          event?.fichaObs          ?? "",
       fichaAtencao:      event?.fichaAtencao      ?? "",
+      supplierId:        event?.supplierId        ?? "",
     },
   });
 
@@ -529,6 +533,29 @@ export function EventForm({
                     {errors.guideIds.message}
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* Fornecedor contratado (opcional) */}
+            {suppliers.length > 0 && (
+              <div>
+                <Label htmlFor="supplierId">Fornecedor contratado</Label>
+                <Controller
+                  name="supplierId"
+                  control={control}
+                  render={({ field }) => (
+                    <select
+                      id="supplierId"
+                      {...field}
+                      className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="">Nenhum</option>
+                      {suppliers.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  )}
+                />
               </div>
             )}
 

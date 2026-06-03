@@ -74,6 +74,7 @@ export const transactionSchema = z.object({
   linkedActivity: z.string().trim().optional().or(z.literal("")),
   paymentMethod: z.string().trim().optional().or(z.literal("")),
   notes: z.string().trim().optional().or(z.literal("")),
+  supplierId: z.string().trim().optional().or(z.literal("")),
 });
 
 export type TransactionFormValues = z.input<typeof transactionSchema>;
@@ -92,6 +93,7 @@ export type TransactionFormState = {
   linkedActivity?: string;
   paymentMethod?: string;
   notes: string;
+  supplierId?: string;
 };
 
 export const planSchema = z.object({

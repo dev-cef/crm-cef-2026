@@ -86,15 +86,16 @@ export function scopedEventWhere(user: SessionUser) {
 
 // Mapa de acesso por prefixo de rota. ADMIN acessa tudo.
 export const ROUTE_ACCESS: { prefix: string; roles: Role[] }[] = [
-  { prefix: "/relatorios",  roles: ["ADMIN", "DEPARTAMENTO"] },
-  { prefix: "/financeiro", roles: ["ADMIN", "DEPARTAMENTO"] },
+  { prefix: "/relatorios",    roles: ["ADMIN", "DEPARTAMENTO"] },
+  { prefix: "/financeiro",    roles: ["ADMIN", "DEPARTAMENTO"] },
   { prefix: "/configuracoes", roles: ["ADMIN"] },
-  { prefix: "/associados", roles: ["ADMIN", "DEPARTAMENTO"] },
+  { prefix: "/associados",    roles: ["ADMIN", "DEPARTAMENTO"] },
   { prefix: "/aniversariantes", roles: ["ADMIN", "DEPARTAMENTO"] },
-  { prefix: "/eventos", roles: ["ADMIN", "DEPARTAMENTO", "ASSOCIADO"] },
-  { prefix: "/meu-espaco", roles: ["ADMIN", "ASSOCIADO"] },
-  { prefix: "/carteirinha", roles: ["ADMIN", "DEPARTAMENTO", "ASSOCIADO"] },
-  { prefix: "/dashboard", roles: ["ADMIN", "DEPARTAMENTO"] },
+  { prefix: "/fornecedores",  roles: ["ADMIN", "DEPARTAMENTO"] },
+  { prefix: "/eventos",       roles: ["ADMIN", "DEPARTAMENTO", "ASSOCIADO"] },
+  { prefix: "/meu-espaco",    roles: ["ADMIN", "ASSOCIADO"] },
+  { prefix: "/carteirinha",   roles: ["ADMIN", "DEPARTAMENTO", "ASSOCIADO"] },
+  { prefix: "/dashboard",     roles: ["ADMIN", "DEPARTAMENTO"] },
 ];
 
 export function isRouteAllowed(pathname: string, role: Role): boolean {
@@ -137,7 +138,7 @@ export const NAV_ITEMS: {
     href: "/financeiro",
     label: "Financeiro",
     visibleTo: ["ADMIN", "DEPARTAMENTO"],
-    moduleSlug: "financeiro",
+    moduleSlug: "financeiro" as const,
     children: [
       { href: "/financeiro/caixa",        label: "Caixa" },
       { href: "/financeiro/pagamentos",   label: "Pagamentos" },
@@ -145,6 +146,7 @@ export const NAV_ITEMS: {
       { href: "/financeiro/categorias",   label: "Categorias" },
     ],
   },
+  { href: "/fornecedores",    label: "Fornecedores",         visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "fornecedores" },
   { href: "/eventos",         label: "Eventos e Atividades", visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "eventos" },
   { href: "/relatorios",      label: "Relatórios",           visibleTo: ["ADMIN", "DEPARTAMENTO"] },
 ];

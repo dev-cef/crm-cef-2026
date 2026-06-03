@@ -99,10 +99,17 @@ export async function saveEvent(
     ...guideConnect,
   };
 
+  // Supplier connect/disconnect (relacional, para não conflitar com guideConnect)
+  const supplierConnect = d.supplierId?.trim()
+    ? { supplier: { connect: { id: d.supplierId.trim() } } }
+    : id
+      ? { supplier: { disconnect: true } }
+      : {};
+
   try {
     const ev = id
-      ? await prisma.event.update({ where: { id }, data })
-      : await prisma.event.create({ data });
+      ? await prisma.event.update({ where: { id }, data: { ...data, ...supplierConnect } })
+      : await prisma.event.create({ data: { ...data, ...supplierConnect } });
 
     // Sincronizar "Público que foi" (EventAttendee)
     const existingAttendees = await prisma.eventAttendee.findMany({

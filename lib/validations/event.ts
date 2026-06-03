@@ -30,6 +30,7 @@ export const eventSchema = z
     ),
     guideId: z.string().default(""),
     guideIds: z.array(z.string()).default([]),
+    supplierId: z.string().trim().optional().or(z.literal("")).default(""),
     speakerName: z.string().trim().default(""),
     filmDuration: z.string().trim().default(""),
     attendeeIds: z.array(z.string()).default([]),

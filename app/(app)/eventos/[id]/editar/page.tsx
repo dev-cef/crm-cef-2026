@@ -24,7 +24,7 @@ export default async function EditarEventoPage({
   const user = toSessionUser(session.user);
   if (!(await can(user, "eventos", "edit"))) redirect(`/eventos/${id}`);
 
-  const [ev, guides, members] = await Promise.all([
+  const [ev, guides, members, suppliers] = await Promise.all([
     prisma.event.findUnique({
       where: { id },
       include: { attendees: { select: { memberId: true } } },
@@ -38,6 +38,11 @@ export default async function EditarEventoPage({
       where: { deletedAt: null, status: "ACTIVE" },
       orderBy: { fullName: "asc" },
       select: { id: true, fullName: true },
+    }),
+    prisma.supplier.findMany({
+      where: { active: true },
+      select: { id: true, name: true, type: true },
+      orderBy: [{ type: "asc" }, { name: "asc" }],
     }),
   ]);
   if (!ev) notFound();
@@ -83,9 +88,11 @@ export default async function EditarEventoPage({
           fichaOQueLevar:    (() => { try { return JSON.parse(ev.fichaOQueLevar); } catch { return []; } })(),
           fichaObs:          ev.fichaObs,
           fichaAtencao:      ev.fichaAtencao,
+          supplierId:        ev.supplierId,
         }}
         guides={guides.map((g) => ({ id: g.id, name: g.fullName }))}
         members={members}
+        suppliers={suppliers}
       />
     </div>
   );

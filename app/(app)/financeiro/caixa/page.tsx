@@ -80,6 +80,7 @@ export default async function CaixaPage({
     prisma.transaction.findMany({
       where,
       orderBy: { date: "desc" },
+      include: { supplier: { select: { name: true } } },
     }),
   ]);
 
@@ -277,6 +278,9 @@ export default async function CaixaPage({
                   {t.notes && (
                     <p className="text-xs text-muted-foreground italic">{t.notes}</p>
                   )}
+                  {t.supplier?.name && (
+                    <p className="text-xs text-muted-foreground">Fornecedor: {t.supplier.name}</p>
+                  )}
                 </TableCell>
                 <TableCell
                   className={cn(
@@ -307,6 +311,7 @@ export default async function CaixaPage({
                       linkedActivity: t.linkedActivity ?? "",
                       paymentMethod: t.paymentMethod ?? "",
                       notes: t.notes ?? "",
+                      supplierId: t.supplierId ?? "",
                     }}
                   />
                 </TableCell>
