@@ -170,6 +170,49 @@ export async function markAsPaid(
   }
 }
 
+export async function editPayment(
+  id: string,
+  values: {
+    amount: number;
+    dueDate: string; // DD/MM/YYYY
+    referenceMonth: number;
+    referenceYear: number;
+    status: "PAGO" | "PENDENTE" | "ATRASADO";
+    notes?: string;
+  },
+): Promise<Result> {
+  const session = await auth();
+  if (!values.amount || values.amount <= 0) return { ok: false, error: "Valor inválido." };
+  const due = parseBrDate(values.dueDate);
+  if (!due) return { ok: false, error: "Data de vencimento inválida." };
+  try {
+    await prisma.payment.update({
+      where: { id },
+      data: {
+        amount: values.amount,
+        dueDate: due,
+        referenceMonth: values.referenceMonth,
+        referenceYear: values.referenceYear,
+        status: values.status,
+        paidAt: values.status === "PAGO" ? (await prisma.payment.findUnique({ where: { id }, select: { paidAt: true } }))?.paidAt ?? new Date() : null,
+        notes: values.notes?.trim() || null,
+      },
+    });
+    await recordAudit({
+      userId: session?.user?.id,
+      action: "UPDATE",
+      entity: "Payment",
+      entityId: id,
+      metadata: { amount: values.amount, status: values.status },
+    });
+    revalidatePath("/financeiro/pagamentos");
+    revalidatePath("/financeiro");
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Erro ao editar o pagamento." };
+  }
+}
+
 export async function cancelPayment(id: string): Promise<Result> {
   const session = await auth();
   try {

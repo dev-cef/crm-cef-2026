@@ -22,6 +22,8 @@ import { PaymentPeriodFilter } from "@/components/modules/financeiro/payment-per
 import { PaymentSearch } from "@/components/modules/financeiro/payment-search";
 import { CountUp } from "@/components/unlumen-ui/count-up";
 import { CardBeam } from "@/components/ui/card-beam";
+import { auth } from "@/lib/auth";
+import { toSessionUser } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +51,10 @@ export default async function PagamentosPage({
     q?: string;
   }>;
 }) {
+  const session = await auth();
+  const userRole = session?.user ? toSessionUser(session.user).role : null;
+  const isAdmin = userRole === "ADMIN";
+
   const sp = await searchParams;
   const now = new Date();
 
@@ -319,6 +325,9 @@ export default async function PagamentosPage({
                     paidAt={p.paidAt?.toISOString() ?? null}
                     receiptNumber={p.receiptNumber ?? null}
                     notes={p.notes ?? null}
+                    referenceMonth={p.referenceMonth}
+                    referenceYear={p.referenceYear}
+                    isAdmin={isAdmin}
                   />
                 </TableCell>
               </TableRow>

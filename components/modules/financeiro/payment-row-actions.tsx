@@ -2,11 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, XCircle, FileText } from "lucide-react";
+import { CheckCircle2, XCircle, FileText, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { cancelPayment } from "@/app/(app)/financeiro/actions";
 import { DarBaixaDialog } from "@/components/modules/financeiro/dar-baixa-dialog";
 import { ReciboModal } from "@/components/modules/financeiro/recibo-modal";
+import { EditPaymentDialog } from "@/components/modules/financeiro/edit-payment-dialog";
 import { usePermissions } from "@/hooks/usePermissions";
 
 type Props = {
@@ -20,6 +21,9 @@ type Props = {
   paidAt: string | null;
   receiptNumber: string | null;
   notes: string | null;
+  referenceMonth: number;
+  referenceYear: number;
+  isAdmin?: boolean;
 };
 
 export function PaymentRowActions({
@@ -33,14 +37,18 @@ export function PaymentRowActions({
   paidAt,
   receiptNumber,
   notes,
+  referenceMonth,
+  referenceYear,
+  isAdmin = false,
 }: Props) {
-  const { can } = usePermissions();
+  const { can, loading } = usePermissions();
   const router = useRouter();
   const [baixaOpen, setBaixaOpen] = useState(false);
   const [reciboOpen, setReciboOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  const canEdit = can("financeiro", "edit");
+  const canEdit = isAdmin || can("financeiro", "edit");
 
   function handleCancel() {
     startTransition(async () => {
@@ -59,6 +67,17 @@ export function PaymentRowActions({
   return (
     <>
       <div className="flex items-center justify-end gap-3 text-xs font-medium">
+        {/* Editar — sempre visível para quem tem permissão */}
+        {canEdit && (
+          <button
+            type="button"
+            onClick={() => setEditOpen(true)}
+            className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
+          >
+            <Pencil className="size-3.5" /> Editar
+          </button>
+        )}
+
         {!isPaid && (
           <>
             {canEdit && (
@@ -99,6 +118,19 @@ export function PaymentRowActions({
           </button>
         )}
       </div>
+
+      <EditPaymentDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        id={id}
+        memberName={memberName}
+        amount={amount}
+        dueDate={dueDate}
+        referenceMonth={referenceMonth}
+        referenceYear={referenceYear}
+        status={status}
+        notes={notes}
+      />
 
       <DarBaixaDialog
         open={baixaOpen}
