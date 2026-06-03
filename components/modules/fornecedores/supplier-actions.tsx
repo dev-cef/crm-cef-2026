@@ -32,6 +32,7 @@ type SupplierRow = {
   phone: string | null;
   email: string | null;
   document: string | null;
+  pix: string | null;
   notes: string | null;
   active: boolean;
 };

@@ -15,6 +15,7 @@ export const supplierSchema = z.object({
   phone:    z.string().trim().optional().or(z.literal("")),
   email:    z.string().trim().email("E-mail inválido").optional().or(z.literal("")),
   document: z.string().trim().optional().or(z.literal("")),
+  pix:      z.string().trim().optional().or(z.literal("")),
   notes:    z.string().trim().optional().or(z.literal("")),
   active:   z.boolean().default(true),
 });

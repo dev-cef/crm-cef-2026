@@ -40,6 +40,7 @@ type SupplierRow = {
   phone: string | null;
   email: string | null;
   document: string | null;
+  pix: string | null;
   notes: string | null;
   active: boolean;
 };
@@ -65,6 +66,7 @@ export function SupplierDialog({ trigger, supplier, open: controlledOpen, onOpen
         phone:    supplier?.phone ?? "",
         email:    supplier?.email ?? "",
         document: supplier?.document ?? "",
+        pix:      supplier?.pix ?? "",
         notes:    supplier?.notes ?? "",
         active:   supplier?.active ?? true,
       },
@@ -78,6 +80,7 @@ export function SupplierDialog({ trigger, supplier, open: controlledOpen, onOpen
         phone:    supplier?.phone ?? "",
         email:    supplier?.email ?? "",
         document: supplier?.document ?? "",
+        pix:      supplier?.pix ?? "",
         notes:    supplier?.notes ?? "",
         active:   supplier?.active ?? true,
       });
@@ -136,10 +139,16 @@ export function SupplierDialog({ trigger, supplier, open: controlledOpen, onOpen
         </div>
       </div>
 
-      {/* CNPJ/CPF */}
-      <div className="space-y-1.5">
-        <Label htmlFor="s-doc">CNPJ / CPF</Label>
-        <Input id="s-doc" {...register("document")} placeholder="00.000.000/0001-00" />
+      {/* CNPJ/CPF + PIX */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="s-doc">CNPJ / CPF</Label>
+          <Input id="s-doc" {...register("document")} placeholder="00.000.000/0001-00" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="s-pix">Chave PIX</Label>
+          <Input id="s-pix" {...register("pix")} placeholder="CPF, CNPJ, e-mail ou telefone" />
+        </div>
       </div>
 
       {/* Observações */}

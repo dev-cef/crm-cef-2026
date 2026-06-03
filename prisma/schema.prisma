@@ -529,6 +529,7 @@ model Supplier {
   phone        String?
   email        String?
   document     String?       // CNPJ ou CPF
+  pix          String?       // Chave PIX
   notes        String?
   active       Boolean       @default(true)
   createdAt    DateTime      @default(now())

@@ -24,6 +24,7 @@ export async function saveSupplier(
     phone:    d.phone?.trim() || null,
     email:    d.email?.trim() || null,
     document: d.document?.trim() || null,
+    pix:      d.pix?.trim() || null,
     notes:    d.notes?.trim() || null,
     active:   d.active,
   };
