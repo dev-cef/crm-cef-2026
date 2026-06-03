@@ -79,7 +79,11 @@ export default async function FornecedoresPage() {
             {suppliers.map((s) => {
               return (
                 <TableRow key={s.id} className={cn(!s.active && "opacity-50")}>
-                  <TableCell className="font-medium">{s.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link href={`/fornecedores/${s.id}`} className="hover:underline">
+                      {s.name}
+                    </Link>
+                  </TableCell>
                   <TableCell>
                     <Badge variant="secondary">{s.type}</Badge>
                   </TableCell>
