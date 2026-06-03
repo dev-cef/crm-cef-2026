@@ -32,6 +32,8 @@ import { TransactionDialog } from "@/components/modules/financeiro/transaction-d
 import { TransactionRowActions } from "@/components/modules/financeiro/transaction-row-actions";
 import { CaixaPeriodFilter } from "@/components/modules/financeiro/caixa-period-filter";
 import { ServerPermissionGate } from "@/components/auth/ServerPermissionGate";
+import { auth } from "@/lib/auth";
+import { toSessionUser } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +42,10 @@ export default async function CaixaPage({
 }: {
   searchParams: Promise<{ period?: string; type?: string }>;
 }) {
+  const session = await auth();
+  const userRole = session?.user ? toSessionUser(session.user).role : null;
+  const isAdmin = userRole === "ADMIN";
+
   const sp = await searchParams;
   const now = new Date();
 
@@ -286,6 +292,7 @@ export default async function CaixaPage({
                 <TableCell className="text-right">
                   <TransactionRowActions
                     id={t.id}
+                    isAdmin={isAdmin}
                     initial={{
                       type: t.type as "ENTRADA" | "SAIDA",
                       category: t.category,

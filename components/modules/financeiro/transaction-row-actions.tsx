@@ -29,18 +29,22 @@ import { usePermissions } from "@/hooks/usePermissions";
 type Props = {
   id: string;
   initial: TransactionFormState;
+  isAdmin?: boolean;
 };
 
-export function TransactionRowActions({ id, initial }: Props) {
-  const { can } = usePermissions();
+export function TransactionRowActions({ id, initial, isAdmin = false }: Props) {
+  const { can, loading } = usePermissions();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
-  const canEdit = can("financeiro", "edit");
-  const canDelete = can("financeiro", "delete");
+  // isAdmin vem do servidor — não depende do fetch client-side
+  const canEdit   = isAdmin || can("financeiro", "edit");
+  const canDelete = isAdmin || can("financeiro", "delete");
 
+  // Enquanto carrega (e não é admin confirmado pelo servidor), não renderiza
+  if (!isAdmin && loading) return null;
   if (!canEdit && !canDelete) return null;
 
   function handleDelete() {
