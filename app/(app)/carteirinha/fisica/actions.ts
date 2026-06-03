@@ -65,6 +65,16 @@ export async function createRequest(memberId: string) {
     return { error: "Já existe uma solicitação para este associado no trimestre atual." };
   }
 
+  // Bloquear se houver pagamentos pendentes ou atrasados
+  const pendingPayments = await prisma.payment.count({
+    where: { memberId, status: { in: ["PENDENTE", "ATRASADO"] } },
+  });
+  if (pendingPayments > 0) {
+    return {
+      error: `Associado possui ${pendingPayments} pagamento(s) pendente(s) ou atrasado(s). Regularize a situação financeira antes de solicitar a carteirinha física.`,
+    };
+  }
+
   const eligibility = checkEligibility(member.createdAt, member.eventRegistrations);
   if (!eligibility.isEligible) {
     return {
@@ -130,6 +140,15 @@ export async function createRequestBatch(memberIds: string[]) {
     });
     if (existing) {
       errors.push({ name: member.fullName, reason: "Já possui solicitação no trimestre." });
+      continue;
+    }
+
+    // Bloquear se houver pagamentos pendentes ou atrasados
+    const pendingPayments = await prisma.payment.count({
+      where: { memberId: member.id, status: { in: ["PENDENTE", "ATRASADO"] } },
+    });
+    if (pendingPayments > 0) {
+      errors.push({ name: member.fullName, reason: `${pendingPayments} pagamento(s) pendente(s) ou atrasado(s).` });
       continue;
     }
 
@@ -427,6 +446,16 @@ export async function createSecondCopyRequest(memberId: string) {
     select: { id: true, fullName: true },
   });
   if (!member) return { error: "Associado não encontrado." };
+
+  // Bloquear se houver pagamentos pendentes ou atrasados
+  const pendingPayments = await prisma.payment.count({
+    where: { memberId, status: { in: ["PENDENTE", "ATRASADO"] } },
+  });
+  if (pendingPayments > 0) {
+    return {
+      error: `Associado possui ${pendingPayments} pagamento(s) pendente(s) ou atrasado(s). Regularize a situação financeira antes de solicitar a 2ª via.`,
+    };
+  }
 
   const { quarter, year } = currentQuarter();
 
