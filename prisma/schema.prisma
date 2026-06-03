@@ -489,3 +489,27 @@ model Snapshot {
 
   @@index([createdAt])
 }
+
+model TransactionCategory {
+  id            String                   @id @default(cuid())
+  type          String                   // ENTRADA | SAIDA
+  name          String
+  order         Int                      @default(0)
+  subcategories TransactionSubcategory[]
+  createdAt     DateTime                 @default(now())
+
+  @@unique([type, name])
+  @@index([type])
+}
+
+model TransactionSubcategory {
+  id         String              @id @default(cuid())
+  name       String
+  categoryId String
+  category   TransactionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  order      Int                 @default(0)
+  createdAt  DateTime            @default(now())
+
+  @@unique([categoryId, name])
+  @@index([categoryId])
+}

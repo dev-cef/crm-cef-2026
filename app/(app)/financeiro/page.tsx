@@ -6,6 +6,7 @@ import {
   ArrowUpCircle,
   CircleDollarSign,
   CreditCard,
+  LayoutList,
   TrendingDown,
   TrendingUp,
   Users,
@@ -273,7 +274,7 @@ export default async function FinanceiroPage() {
         </CardContent>
       </Card>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Link href="/financeiro/caixa">
           <Card className="group relative overflow-hidden transition-colors hover:bg-accent/40">
             <CardBeam />
@@ -317,6 +318,23 @@ export default async function FinanceiroPage() {
                 <p className="font-medium">Pagamentos</p>
                 <p className="text-sm text-muted-foreground">
                   Lançar mensalidades e controlar inadimplência
+                </p>
+              </div>
+              <ArrowRight className="size-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/financeiro/categorias">
+          <Card className="group relative overflow-hidden transition-colors hover:bg-accent/40">
+            <CardBeam />
+            <CardContent className="flex items-center gap-4 py-6">
+              <div className="flex size-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <LayoutList className="size-5" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium">Categorias</p>
+                <p className="text-sm text-muted-foreground">
+                  Gerenciar categorias e subcategorias do caixa
                 </p>
               </div>
               <ArrowRight className="size-4 text-muted-foreground" />

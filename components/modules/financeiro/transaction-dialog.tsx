@@ -4,10 +4,8 @@ import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, PlusCircle, Pencil } from "lucide-react";
 import { toast } from "sonner";
-import { saveTransaction } from "@/app/(app)/financeiro/actions";
+import { saveTransaction, getTransactionCategories, type CategoryWithSubs } from "@/app/(app)/financeiro/actions";
 import {
-  TRANSACTION_CATEGORIES,
-  TRANSACTION_SUBCATEGORIES,
   PAYMENT_METHODS,
   MONTHS,
   type TransactionFormValues,
@@ -91,6 +89,11 @@ export function TransactionDialog({
   });
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+  const [dbCategories, setDbCategories] = useState<Record<"ENTRADA" | "SAIDA", CategoryWithSubs[]>>({ ENTRADA: [], SAIDA: [] });
+
+  useEffect(() => {
+    getTransactionCategories().then(setDbCategories);
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -104,8 +107,9 @@ export function TransactionDialog({
     }
   }, [open, defaultType, initial]);
 
-  const categories = TRANSACTION_CATEGORIES[form.type];
-  const subcategories = form.category ? (TRANSACTION_SUBCATEGORIES[form.category] ?? []) : [];
+  const categories = dbCategories[form.type].map((c) => c.name);
+  const currentCat = dbCategories[form.type].find((c) => c.name === form.category);
+  const subcategories = currentCat?.subcategories.map((s) => s.name) ?? [];
   const isEntry = form.type === "ENTRADA";
 
   // Clear subcategory when category changes

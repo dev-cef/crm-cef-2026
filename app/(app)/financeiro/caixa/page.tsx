@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   ArrowDownCircle,
   ArrowUpCircle,
+  LayoutList,
   Wallet,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -140,6 +141,13 @@ export default async function CaixaPage({
         title="Caixa"
         description="Controle de entradas e saídas do clube"
       >
+        <Link
+          href="/financeiro/categorias"
+          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+        >
+          <LayoutList className="size-4" />
+          Categorias
+        </Link>
         <ServerPermissionGate module="financeiro" action="create">
           <TransactionDialog defaultType="SAIDA" />
         </ServerPermissionGate>

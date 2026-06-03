@@ -316,3 +316,148 @@ export async function deleteTransaction(id: string): Promise<Result> {
     return { ok: false, error: "Erro ao excluir a transação." };
   }
 }
+
+// ─── Transaction Categories ───────────────────────────────────────────────────
+
+export type CategoryWithSubs = {
+  id: string;
+  type: string;
+  name: string;
+  order: number;
+  subcategories: { id: string; name: string; order: number }[];
+};
+
+export async function getTransactionCategories(): Promise<{
+  ENTRADA: CategoryWithSubs[];
+  SAIDA: CategoryWithSubs[];
+}> {
+  await initDefaultCategories();
+  const cats = await prisma.transactionCategory.findMany({
+    orderBy: [{ order: "asc" }, { name: "asc" }],
+    include: {
+      subcategories: { orderBy: [{ order: "asc" }, { name: "asc" }] },
+    },
+  });
+  return {
+    ENTRADA: cats.filter((c) => c.type === "ENTRADA"),
+    SAIDA: cats.filter((c) => c.type === "SAIDA"),
+  };
+}
+
+async function initDefaultCategories() {
+  const count = await prisma.transactionCategory.count();
+  if (count > 0) return;
+
+  const defaults: { type: string; name: string; subs: string[] }[] = [
+    { type: "ENTRADA", name: "Mensalidade", subs: ["Mensalidade Sócio Efetivo", "Mensalidade Sócio Familiar", "Mensalidade Estudante", "Taxa de Inscrição", "Regularização de débito"] },
+    { type: "ENTRADA", name: "Inscrições", subs: ["Trilha / Caminhada", "Escalada", "Curso de montanhismo", "Bike", "Campanha ecológica", "Outro evento"] },
+    { type: "ENTRADA", name: "Patrocínio", subs: ["Pessoa Física", "Empresa", "Apoio Institucional"] },
+    { type: "ENTRADA", name: "Projetos ambientais", subs: ["Edital público", "Convênio", "Doação vinculada"] },
+    { type: "ENTRADA", name: "Outros", subs: ["Doação avulsa", "Multa / Ressarcimento", "Receita diversa"] },
+    { type: "SAIDA", name: "Manutenção", subs: [] },
+    { type: "SAIDA", name: "Material", subs: [] },
+    { type: "SAIDA", name: "Equipamento", subs: [] },
+    { type: "SAIDA", name: "Evento / Trilha", subs: [] },
+    { type: "SAIDA", name: "Administrativo", subs: [] },
+    { type: "SAIDA", name: "Sede", subs: [] },
+    { type: "SAIDA", name: "Outros", subs: [] },
+  ];
+
+  for (let i = 0; i < defaults.length; i++) {
+    const d = defaults[i];
+    const cat = await prisma.transactionCategory.create({
+      data: { type: d.type, name: d.name, order: i },
+    });
+    for (let j = 0; j < d.subs.length; j++) {
+      await prisma.transactionSubcategory.create({
+        data: { categoryId: cat.id, name: d.subs[j], order: j },
+      });
+    }
+  }
+}
+
+export async function createTransactionCategory(
+  type: "ENTRADA" | "SAIDA",
+  name: string,
+): Promise<Result> {
+  const session = await auth();
+  const trimmed = name.trim();
+  if (!trimmed) return { ok: false, error: "Informe o nome da categoria." };
+  try {
+    const count = await prisma.transactionCategory.count({ where: { type } });
+    await prisma.transactionCategory.create({ data: { type, name: trimmed, order: count } });
+    await recordAudit({
+      userId: session?.user?.id,
+      action: "CREATE",
+      entity: "TransactionCategory",
+      entityId: trimmed,
+    });
+    revalidatePath("/financeiro/categorias");
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Já existe uma categoria com este nome." };
+  }
+}
+
+export async function deleteTransactionCategory(id: string): Promise<Result> {
+  const session = await auth();
+  try {
+    const cat = await prisma.transactionCategory.findUnique({ where: { id } });
+    if (!cat) return { ok: false, error: "Categoria não encontrada." };
+    await prisma.transactionCategory.delete({ where: { id } });
+    await recordAudit({
+      userId: session?.user?.id,
+      action: "DELETE",
+      entity: "TransactionCategory",
+      entityId: id,
+      metadata: { name: cat.name },
+    });
+    revalidatePath("/financeiro/categorias");
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Erro ao excluir a categoria." };
+  }
+}
+
+export async function createTransactionSubcategory(
+  categoryId: string,
+  name: string,
+): Promise<Result> {
+  const session = await auth();
+  const trimmed = name.trim();
+  if (!trimmed) return { ok: false, error: "Informe o nome da subcategoria." };
+  try {
+    const count = await prisma.transactionSubcategory.count({ where: { categoryId } });
+    await prisma.transactionSubcategory.create({ data: { categoryId, name: trimmed, order: count } });
+    await recordAudit({
+      userId: session?.user?.id,
+      action: "CREATE",
+      entity: "TransactionSubcategory",
+      entityId: trimmed,
+    });
+    revalidatePath("/financeiro/categorias");
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Já existe uma subcategoria com este nome." };
+  }
+}
+
+export async function deleteTransactionSubcategory(id: string): Promise<Result> {
+  const session = await auth();
+  try {
+    const sub = await prisma.transactionSubcategory.findUnique({ where: { id } });
+    if (!sub) return { ok: false, error: "Subcategoria não encontrada." };
+    await prisma.transactionSubcategory.delete({ where: { id } });
+    await recordAudit({
+      userId: session?.user?.id,
+      action: "DELETE",
+      entity: "TransactionSubcategory",
+      entityId: id,
+      metadata: { name: sub.name },
+    });
+    revalidatePath("/financeiro/categorias");
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Erro ao excluir a subcategoria." };
+  }
+}

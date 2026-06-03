@@ -139,9 +139,10 @@ export const NAV_ITEMS: {
     visibleTo: ["ADMIN", "DEPARTAMENTO"],
     moduleSlug: "financeiro",
     children: [
-      { href: "/financeiro/caixa",       label: "Caixa" },
-      { href: "/financeiro/pagamentos",  label: "Pagamentos" },
-      { href: "/financeiro/planos",      label: "Planos" },
+      { href: "/financeiro/caixa",        label: "Caixa" },
+      { href: "/financeiro/pagamentos",   label: "Pagamentos" },
+      { href: "/financeiro/planos",       label: "Planos" },
+      { href: "/financeiro/categorias",   label: "Categorias" },
     ],
   },
   { href: "/eventos",         label: "Eventos e Atividades", visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "eventos" },
