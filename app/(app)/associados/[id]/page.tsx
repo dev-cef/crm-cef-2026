@@ -434,17 +434,19 @@ export default async function AssociadoPerfilPage({
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <PaymentReciboButton
-                          paymentId={p.id}
-                          memberName={member.fullName}
-                          memberCpf={member.cpf}
-                          planName={member.plan?.name ?? "—"}
-                          amount={p.amount}
-                          dueDate={p.dueDate.toISOString()}
-                          paidAt={p.paidAt?.toISOString() ?? null}
-                          receiptNumber={p.receiptNumber ?? null}
-                          notes={p.notes ?? null}
-                        />
+                        {p.status === "PAGO" && (
+                          <PaymentReciboButton
+                            paymentId={p.id}
+                            memberName={member.fullName}
+                            memberCpf={member.cpf}
+                            planName={member.plan?.name ?? "—"}
+                            amount={p.amount}
+                            dueDate={p.dueDate.toISOString()}
+                            paidAt={p.paidAt?.toISOString() ?? null}
+                            receiptNumber={p.receiptNumber ?? null}
+                            notes={p.notes ?? null}
+                          />
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
