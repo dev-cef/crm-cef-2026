@@ -94,11 +94,12 @@ export function TransactionDialog({
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const [dbCategories, setDbCategories] = useState<Record<"ENTRADA" | "SAIDA", CategoryWithSubs[]>>({ ENTRADA: [], SAIDA: [] });
-  const [suppliers, setSuppliers] = useState<{ id: string; name: string; type: string }[]>([]);
+  const [suppliers, setSuppliers] = useState<{ id: string; name: string; type: string; active: boolean }[]>([]);
+  const [suppliersLoaded, setSuppliersLoaded] = useState(false);
 
   useEffect(() => {
     getTransactionCategories().then(setDbCategories);
-    getActiveSuppliers().then(setSuppliers);
+    getActiveSuppliers().then((s) => { setSuppliers(s); setSuppliersLoaded(true); });
   }, []);
 
   useEffect(() => {
@@ -401,23 +402,29 @@ export function TransactionDialog({
           </div>
 
           {/* Fornecedor — apenas para SAÍDA */}
-          {!isEntry && suppliers.length > 0 && (
+          {!isEntry && (
             <div className="space-y-1.5">
               <Label htmlFor="tx-supplier">Fornecedor</Label>
-              <Select
-                value={form.supplierId ?? ""}
-                onValueChange={(v) => set("supplierId", v === "_none" ? "" : (v ?? ""))}
-              >
-                <SelectTrigger id="tx-supplier">
-                  <SelectValue placeholder="Selecionar fornecedor (opcional)…" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_none">Nenhum</SelectItem>
-                  {suppliers.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {!suppliersLoaded ? (
+                <div className="h-9 animate-pulse rounded-md border bg-muted/40" />
+              ) : (
+                <Select
+                  value={form.supplierId ?? ""}
+                  onValueChange={(v) => set("supplierId", v === "_none" ? "" : (v ?? ""))}
+                >
+                  <SelectTrigger id="tx-supplier">
+                    <SelectValue placeholder="Selecionar fornecedor (opcional)…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">Nenhum</SelectItem>
+                    {suppliers.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}{!s.active ? " (inativo)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           )}
 

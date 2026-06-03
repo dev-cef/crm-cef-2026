@@ -90,11 +90,10 @@ export async function deleteSupplier(id: string): Promise<Result> {
 }
 
 export async function getActiveSuppliers(): Promise<
-  { id: string; name: string; type: string }[]
+  { id: string; name: string; type: string; active: boolean }[]
 > {
   return prisma.supplier.findMany({
-    where: { active: true },
-    select: { id: true, name: true, type: true },
+    select: { id: true, name: true, type: true, active: true },
     orderBy: [{ type: "asc" }, { name: "asc" }],
   });
 }
