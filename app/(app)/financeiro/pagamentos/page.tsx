@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { LaunchMonthly } from "@/components/modules/financeiro/launch-monthly";
+import { LaunchRetroativoDialog } from "@/components/modules/financeiro/launch-retroativo-dialog";
 import { ServerPermissionGate } from "@/components/auth/ServerPermissionGate";
 import { PaymentRowActions } from "@/components/modules/financeiro/payment-row-actions";
 import { PaymentPeriodFilter } from "@/components/modules/financeiro/payment-period-filter";
@@ -174,6 +175,9 @@ export default async function PagamentosPage({
           >
             <Download className="size-4" /> Exportar CSV
           </Link>
+        </ServerPermissionGate>
+        <ServerPermissionGate module="financeiro" action="create">
+          <LaunchRetroativoDialog />
         </ServerPermissionGate>
         <ServerPermissionGate module="financeiro" action="create">
           <LaunchMonthly

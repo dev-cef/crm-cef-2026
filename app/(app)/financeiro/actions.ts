@@ -80,6 +80,64 @@ export async function deletePlan(id: string): Promise<Result> {
   }
 }
 
+// Lança mensalidades de um intervalo de meses para um único associado
+export async function launchMemberMonthlyRange(
+  memberId: string,
+  fromMonth: number,
+  fromYear: number,
+  toMonth: number,
+  toYear: number,
+): Promise<{ ok: boolean; created: number; skipped: number; error?: string }> {
+  const session = await auth();
+
+  const member = await prisma.member.findUnique({
+    where: { id: memberId, deletedAt: null },
+    include: { plan: true },
+  });
+  if (!member) return { ok: false, created: 0, skipped: 0, error: "Associado não encontrado." };
+  if (!member.plan) return { ok: false, created: 0, skipped: 0, error: "Associado sem plano vinculado." };
+
+  // Gera lista de meses no intervalo
+  const months: { month: number; year: number }[] = [];
+  let m = fromMonth, y = fromYear;
+  while (y < toYear || (y === toYear && m <= toMonth)) {
+    months.push({ month: m, year: y });
+    m++;
+    if (m > 12) { m = 1; y++; }
+  }
+
+  let created = 0, skipped = 0;
+  for (const { month, year } of months) {
+    const exists = await prisma.payment.findUnique({
+      where: { memberId_referenceMonth_referenceYear: { memberId, referenceMonth: month, referenceYear: year } },
+    });
+    if (exists) { skipped++; continue; }
+    await prisma.payment.create({
+      data: {
+        memberId,
+        planId: member.planId,
+        amount: member.plan.monthlyPrice,
+        referenceMonth: month,
+        referenceYear: year,
+        status: "PENDENTE",
+        dueDate: new Date(Date.UTC(year, month - 1, 10)),
+      },
+    });
+    created++;
+  }
+
+  await recordAudit({
+    userId: session?.user?.id,
+    action: "CREATE",
+    entity: "Payment",
+    entityId: `range-${memberId}-${fromMonth}/${fromYear}-${toMonth}/${toYear}`,
+    metadata: { created, skipped, memberId },
+  });
+  revalidatePath("/financeiro/pagamentos");
+  revalidatePath("/financeiro");
+  return { ok: true, created, skipped };
+}
+
 // Lança a mensalidade do mês/ano para todos os associados ativos com plano
 export async function launchMonthly(
   month: number,
