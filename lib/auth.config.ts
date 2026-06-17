@@ -27,9 +27,11 @@ export const authConfig = {
       const isLoggedIn = !!user;
       const isOnLogin = nextUrl.pathname.startsWith("/login");
 
-      // Rotas públicas: validação de carteirinha (QR) e auto-cadastro
+      // Rotas públicas: validação de carteirinha (QR), auto-cadastro e reset de senha
       if (nextUrl.pathname.startsWith("/validar")) return true;
       if (nextUrl.pathname.startsWith("/criar-conta")) return true;
+      if (nextUrl.pathname.startsWith("/esqueci-a-senha")) return true;
+      if (nextUrl.pathname.startsWith("/redefinir-senha")) return true;
 
       if (isOnLogin) {
         if (isLoggedIn) {
