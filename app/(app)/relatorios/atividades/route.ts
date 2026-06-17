@@ -28,9 +28,24 @@ export async function GET(request: Request) {
     where,
     include: {
       _count: { select: { registrations: true, attendees: true } },
+      guide:  { select: { fullName: true } },
     },
     orderBy: { dateTime: "desc" },
   });
+
+  // Fetch names for multi-guide events in bulk
+  const allGuideIds = events.flatMap((e) => {
+    try { return JSON.parse(e.guideIds) as string[]; } catch { return []; }
+  });
+  const uniqueIds = [...new Set(allGuideIds)];
+  const guideMap = new Map<string, string>();
+  if (uniqueIds.length > 0) {
+    const guides = await prisma.member.findMany({
+      where: { id: { in: uniqueIds } },
+      select: { id: true, fullName: true },
+    });
+    for (const g of guides) guideMap.set(g.id, g.fullName);
+  }
 
   const header = [
     "Nome",
@@ -41,12 +56,17 @@ export async function GET(request: Request) {
     "Inscritos",
     "Presentes",
     "Local",
+    "Guia(s)",
   ];
 
   const rows = events.map((e) => {
-    const guideIds: string[] = (() => {
-      try { return JSON.parse(e.guideIds); } catch { return []; }
+    const extraGuideIds: string[] = (() => {
+      try { return JSON.parse(e.guideIds) as string[]; } catch { return []; }
     })();
+    const guideNames = [
+      ...(e.guide ? [e.guide.fullName] : []),
+      ...extraGuideIds.filter((id) => id !== e.guideId).map((id) => guideMap.get(id) ?? id),
+    ];
     return [
       e.name,
       e.categoryCode ?? "",
@@ -56,6 +76,7 @@ export async function GET(request: Request) {
       e._count.registrations,
       e._count.attendees,
       e.location,
+      guideNames.join(", "),
     ].map(csvCell).join(";");
   });
 

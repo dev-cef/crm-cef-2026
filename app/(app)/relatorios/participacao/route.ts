@@ -24,14 +24,23 @@ export async function GET(request: Request) {
     };
   }
 
-  const attendees = await prisma.eventAttendee.findMany({
-    where: { event: eventWhere },
-    include: {
-      member: { select: { registration: true, fullName: true, plan: { select: { name: true } } } },
-      event: { select: { name: true, dateTime: true, categoryCode: true, location: true } },
-    },
-    orderBy: [{ event: { dateTime: "desc" } }, { member: { fullName: "asc" } }],
-  });
+  const [registrations, attendees] = await Promise.all([
+    prisma.eventRegistration.findMany({
+      where: { event: eventWhere },
+      include: {
+        member: { select: { id: true, registration: true, fullName: true, plan: { select: { name: true } } } },
+        event:  { select: { id: true, name: true, dateTime: true, categoryCode: true, location: true } },
+      },
+      orderBy: [{ event: { dateTime: "desc" } }, { member: { fullName: "asc" } }],
+    }),
+    prisma.eventAttendee.findMany({
+      where: { event: eventWhere },
+      select: { eventId: true, memberId: true },
+    }),
+  ]);
+
+  // Set of "eventId:memberId" for O(1) presence lookup
+  const presentSet = new Set(attendees.map((a) => `${a.eventId}:${a.memberId}`));
 
   const header = [
     "Matrícula",
@@ -44,18 +53,19 @@ export async function GET(request: Request) {
     "Presença",
   ];
 
-  const rows = attendees.map((a) =>
-    [
-      a.member.registration,
-      a.member.fullName,
-      a.member.plan?.name ?? "",
-      a.event.name,
-      a.event.categoryCode ?? "",
-      toBrDate(a.event.dateTime),
-      a.event.location,
-      "Presente",
-    ].map(csvCell).join(";"),
-  );
+  const rows = registrations.map((r) => {
+    const presente = presentSet.has(`${r.event.id}:${r.member.id}`);
+    return [
+      r.member.registration,
+      r.member.fullName,
+      r.member.plan?.name ?? "",
+      r.event.name,
+      r.event.categoryCode ?? "",
+      toBrDate(r.event.dateTime),
+      r.event.location,
+      presente ? "Presente" : "Inscrito",
+    ].map(csvCell).join(";");
+  });
 
   const csv = "﻿" + [header.join(";"), ...rows].join("\r\n");
   const now = new Date();
