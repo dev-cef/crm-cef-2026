@@ -221,7 +221,24 @@ export async function removeRegistration(
   eventId: string,
 ): Promise<Result> {
   try {
+    const registration = await prisma.eventRegistration.findUnique({
+      where: { id: registrationId },
+      select: { memberId: true },
+    });
+
     await prisma.eventRegistration.delete({ where: { id: registrationId } });
+
+    if (registration) {
+      const { memberId } = registration;
+      // Remove como passageiro de qualquer carona deste evento
+      await prisma.eventCaronaPassenger.deleteMany({
+        where: { memberId, carona: { eventId } },
+      });
+      // Remove a carona caso seja motorista neste evento
+      await prisma.eventCarona.deleteMany({
+        where: { driverId: memberId, eventId },
+      });
+    }
 
     // Promote first person from waitlist (if any)
     const ev = await prisma.event.findUnique({
@@ -255,7 +272,23 @@ export async function removeWaitlist(
   eventId: string,
 ): Promise<Result> {
   try {
+    const waitlist = await prisma.eventWaitlist.findUnique({
+      where: { id: waitlistId },
+      select: { memberId: true },
+    });
+
     await prisma.eventWaitlist.delete({ where: { id: waitlistId } });
+
+    if (waitlist) {
+      const { memberId } = waitlist;
+      await prisma.eventCaronaPassenger.deleteMany({
+        where: { memberId, carona: { eventId } },
+      });
+      await prisma.eventCarona.deleteMany({
+        where: { driverId: memberId, eventId },
+      });
+    }
+
     revalidatePath(`/eventos/${eventId}`);
     return { ok: true };
   } catch {
