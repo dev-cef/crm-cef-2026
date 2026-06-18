@@ -70,12 +70,28 @@ export async function createMember(
     // Avisa o grupo do CEF sobre o novo associado (fire-and-forget)
     const groupJid = process.env.WHATSAPP_CEF_GROUP_JID;
     if (evolutionConfigured() && groupJid) {
-      const msg =
-        `Novo associado no CEF!\n\n` +
-        `Nome: ${member.fullName}\n` +
-        `Matricula: ${member.registration}\n\n` +
-        `Sejam bem-vindos!`;
-      sendWhatsAppGroupMessage(groupJid, msg).catch(() => {});
+      prisma.plan
+        .findUnique({ where: { id: member.planId ?? "" }, select: { name: true } })
+        .then((plan) => {
+          const birthFormatted = member.birthDate
+            ? new Date(member.birthDate).toLocaleDateString("pt-BR", { timeZone: "UTC" })
+            : "—";
+          const msg =
+            `📋 *Nova inscrição recebida*\n\n` +
+            `Um novo associado se inscreveu no CEF e aguarda aprovação.\n\n` +
+            `O Diretor Social deve acessar o link abaixo para aprovar a inscrição:\n` +
+            `https://painel.cef.org.br/configuracoes/aprovacoes\n\n` +
+            `*Dados do associado:*\n` +
+            `• Nome: ${member.fullName}\n` +
+            `• Matrícula: ${member.registration}\n` +
+            `• CPF: ${member.cpf ?? "—"}\n` +
+            `• E-mail: ${member.email ?? "—"}\n` +
+            `• Telefone: ${member.phone ?? "—"}\n` +
+            `• Data de nascimento: ${birthFormatted}\n` +
+            `• Plano: ${plan?.name ?? "—"}`;
+          return sendWhatsAppGroupMessage(groupJid, msg);
+        })
+        .catch(() => {});
     }
 
     return { ok: true, id: member.id };
