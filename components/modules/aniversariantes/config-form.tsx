@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { saveBirthdayConfig } from "@/app/(app)/aniversariantes/actions";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,15 @@ export function ConfigForm({
         />
         Envio automático de aniversário ativado
       </label>
+      {enabled && (
+        <div className="flex items-start gap-2 rounded-md border border-dashed bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          <Clock className="mt-0.5 size-3.5 shrink-0" />
+          <span>
+            Disparo diário às <strong>06h (Brasília)</strong> via Resend API.
+            Requer a variável <code>RESEND_API_KEY</code> configurada no servidor.
+          </span>
+        </div>
+      )}
       <Button onClick={save} disabled={pending} size="sm">
         {pending ? (
           <Loader2 className="size-4 animate-spin" />

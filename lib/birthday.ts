@@ -49,3 +49,19 @@ export function whatsappLink(phone: string, message: string): string {
   const intl = digits.startsWith("55") ? digits : `55${digits}`;
   return `https://wa.me/${intl}?text=${encodeURIComponent(message)}`;
 }
+
+export function buildEmailHtml(message: string): string {
+  return `
+    <div style="font-family:sans-serif;max-width:480px;margin:auto">
+      <div style="background:#18181b;color:#fff;padding:16px 24px;border-radius:8px 8px 0 0">
+        <strong style="font-size:16px">Clube Excursionista de Friburgo</strong>
+      </div>
+      <div style="border:1px solid #e4e4e7;border-top:0;padding:24px;border-radius:0 0 8px 8px">
+        <p style="font-size:16px;color:#09090b;margin:0 0 16px">${message}</p>
+        <p style="font-size:13px;color:#71717a;margin:0">
+          — Equipe CEF 🏔️
+        </p>
+      </div>
+    </div>
+  `.trim();
+}
