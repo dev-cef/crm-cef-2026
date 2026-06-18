@@ -12,6 +12,7 @@ import {
   normalizeMember as normalize,
   memberDbError as dbError,
 } from "@/lib/member-data";
+import { sendWhatsAppMessage, evolutionConfigured } from "@/lib/whatsapp";
 
 export type ActionResult =
   | { ok: true; id: string }
@@ -65,6 +66,18 @@ export async function createMember(
     revalidatePath("/associados");
     revalidatePath("/dashboard");
     revalidatePath("/financeiro/pagamentos");
+
+    // Envio de boas-vindas via WhatsApp (fire-and-forget)
+    if (evolutionConfigured() && member.phone) {
+      const welcomeMsg =
+        `Olá, ${member.fullName}! Bem-vindo(a) ao Clube Excursionista de Friburgo!\n\n` +
+        `Sua matrícula nº ${member.registration} está confirmada.\n\n` +
+        `Entre no nosso grupo do WhatsApp para ficar por dentro de todos os eventos e novidades:\n` +
+        `https://chat.whatsapp.com/CNfNxDwzLmgD1F9fHOrqkt\n\n` +
+        `Até a próxima trilha!\nCEF`;
+      sendWhatsAppMessage(member.phone, welcomeMsg).catch(() => {});
+    }
+
     return { ok: true, id: member.id };
   } catch (e) {
     return { ok: false, error: dbError(e) };
