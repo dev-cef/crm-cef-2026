@@ -25,6 +25,26 @@ export async function sendWhatsAppMessage(phone: string, message: string): Promi
   }
 }
 
+export async function sendWhatsAppGroupMessage(groupJid: string, message: string): Promise<void> {
+  if (!BASE_URL || !API_KEY || !INSTANCE) {
+    throw new Error("Evolution API não configurada.");
+  }
+
+  const res = await fetch(`${BASE_URL}/message/sendText/${INSTANCE}`, {
+    method: "POST",
+    headers: {
+      "apikey": API_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ number: groupJid, text: message }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Evolution API ${res.status}: ${body}`);
+  }
+}
+
 export function evolutionConfigured(): boolean {
   return !!(BASE_URL && API_KEY && INSTANCE);
 }
