@@ -15,11 +15,15 @@ export function SendButtons({ memberId }: { memberId: string }) {
   function whatsapp() {
     startTransition(async () => {
       const res = await prepareWhatsApp(memberId);
-      if (res.ok && res.url) {
+      if (!res.ok) {
+        toast.error(res.error ?? "Erro ao enviar WhatsApp.");
+        return;
+      }
+      if (res.sent) {
+        toast.success("WhatsApp enviado!");
+      } else if (res.url) {
         window.open(res.url, "_blank", "noopener");
-        toast.success("Mensagem registrada. Abrindo WhatsApp...");
-      } else {
-        toast.error(res.error ?? "Erro ao preparar a mensagem.");
+        toast.success("Abrindo WhatsApp...");
       }
     });
   }

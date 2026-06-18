@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { buildBirthdayMessage, buildEmailHtml } from "@/lib/birthday";
+import { sendWhatsAppMessage, evolutionConfigured } from "@/lib/whatsapp";
 
 export async function GET(request: Request) {
   const auth = request.headers.get("authorization");
@@ -15,11 +16,11 @@ export async function GET(request: Request) {
 
   const today = new Date();
   const todayMonth = today.getUTCMonth() + 1;
-  const todayDay = today.getUTCDate();
+  const todayDay   = today.getUTCDate();
 
   const members = await prisma.member.findMany({
     where: { status: "ACTIVE", deletedAt: null },
-    select: { id: true, fullName: true, email: true, birthDate: true },
+    select: { id: true, fullName: true, email: true, phone: true, whatsapp: true, birthDate: true },
   });
 
   const birthdayMembers = members.filter((m) => {
@@ -28,65 +29,66 @@ export async function GET(request: Request) {
   });
 
   if (birthdayMembers.length === 0) {
-    return NextResponse.json({ sent: 0, skipped: 0, failed: 0 });
+    return NextResponse.json({ email: { sent: 0, skipped: 0, failed: 0 }, whatsapp: { sent: 0, skipped: 0, failed: 0 } });
   }
 
-  // Dedup: skip members who already received an email today
   const todayStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-  const todayEnd = new Date(todayStart.getTime() + 86_400_000);
+  const todayEnd   = new Date(todayStart.getTime() + 86_400_000);
 
-  const alreadySent = await prisma.birthdayMessageLog.findMany({
+  // Dedup por canal separadamente
+  const alreadySentLogs = await prisma.birthdayMessageLog.findMany({
     where: {
-      channel: "EMAIL",
       sentAt: { gte: todayStart, lt: todayEnd },
       memberId: { in: birthdayMembers.map((m) => m.id) },
     },
-    select: { memberId: true },
+    select: { memberId: true, channel: true },
   });
-  const sentSet = new Set(alreadySent.map((l) => l.memberId));
+  const sentEmail    = new Set(alreadySentLogs.filter((l) => l.channel === "EMAIL").map((l) => l.memberId));
+  const sentWhatsApp = new Set(alreadySentLogs.filter((l) => l.channel === "WHATSAPP").map((l) => l.memberId));
 
-  const toSend = birthdayMembers.filter((m) => !sentSet.has(m.id));
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.SMTP_FROM ?? "CEF <noreply@cef.org.br>";
+  const from   = process.env.SMTP_FROM ?? "CEF <noreply@cef.org.br>";
+  const useEvolution = evolutionConfigured();
 
-  let sent = 0;
-  let failed = 0;
+  let emailSent = 0, emailFailed = 0;
+  let waSent = 0, waFailed = 0;
 
-  for (const member of toSend) {
-    try {
-      const message = buildBirthdayMessage(config.template, member.fullName);
-      const html = buildEmailHtml(message);
+  for (const member of birthdayMembers) {
+    const message = buildBirthdayMessage(config.template, member.fullName);
 
-      if (apiKey) {
-        const res = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from,
-            to: member.email,
-            subject: "Feliz aniversário! 🎉 — CEF",
-            html,
-          }),
-        });
-
-        if (!res.ok) {
-          const body = await res.text();
-          throw new Error(`Resend ${res.status}: ${body}`);
+    // ── E-mail ──────────────────────────────────────────────────────────────
+    if (!sentEmail.has(member.id)) {
+      try {
+        if (apiKey) {
+          const res = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ from, to: member.email, subject: "Feliz aniversário! 🎉 — CEF", html: buildEmailHtml(message) }),
+          });
+          if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text()}`);
         }
+        await prisma.birthdayMessageLog.create({ data: { memberId: member.id, channel: "EMAIL" } });
+        emailSent++;
+      } catch {
+        emailFailed++;
       }
-      // If no API key configured, log the send anyway (useful for dev/testing)
+    }
 
-      await prisma.birthdayMessageLog.create({
-        data: { memberId: member.id, channel: "EMAIL" },
-      });
-      sent++;
-    } catch {
-      failed++;
+    // ── WhatsApp via Evolution API ───────────────────────────────────────────
+    if (!sentWhatsApp.has(member.id) && useEvolution) {
+      try {
+        const phone = member.whatsapp ?? member.phone;
+        await sendWhatsAppMessage(phone, message);
+        await prisma.birthdayMessageLog.create({ data: { memberId: member.id, channel: "WHATSAPP" } });
+        waSent++;
+      } catch {
+        waFailed++;
+      }
     }
   }
 
-  return NextResponse.json({ sent, skipped: sentSet.size, failed });
+  return NextResponse.json({
+    email:    { sent: emailSent,    skipped: sentEmail.size,    failed: emailFailed },
+    whatsapp: { sent: waSent,       skipped: sentWhatsApp.size, failed: waFailed    },
+  });
 }

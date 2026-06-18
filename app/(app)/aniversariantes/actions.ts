@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { recordAudit } from "@/lib/audit";
 import { buildBirthdayMessage, whatsappLink } from "@/lib/birthday";
+import { sendWhatsAppMessage, evolutionConfigured } from "@/lib/whatsapp";
 
 export async function getBirthdayConfig() {
   let cfg = await prisma.birthdayMessageConfig.findFirst();
@@ -39,7 +40,7 @@ export async function saveBirthdayConfig(
 
 export async function prepareWhatsApp(
   memberId: string,
-): Promise<{ ok: boolean; url?: string; error?: string }> {
+): Promise<{ ok: boolean; sent?: boolean; url?: string; error?: string }> {
   const session = await auth();
   const [member, cfg] = await Promise.all([
     prisma.member.findFirst({ where: { id: memberId, deletedAt: null } }),
@@ -47,9 +48,32 @@ export async function prepareWhatsApp(
   ]);
   if (!member) return { ok: false, error: "Associado não encontrado." };
 
+  const phone = member.whatsapp ?? member.phone;
   const message = buildBirthdayMessage(cfg.template, member.fullName);
-  const url = whatsappLink(member.phone, message);
 
+  // Tenta enviar via Evolution API; se não configurada, cai no link manual
+  if (evolutionConfigured()) {
+    try {
+      await sendWhatsAppMessage(phone, message);
+      await prisma.birthdayMessageLog.create({
+        data: { memberId: member.id, channel: "WHATSAPP" },
+      });
+      await recordAudit({
+        userId: session?.user?.id,
+        action: "CREATE",
+        entity: "BirthdayMessageLog",
+        entityId: member.id,
+        metadata: { channel: "WHATSAPP", via: "evolution" },
+      });
+      revalidatePath("/aniversariantes");
+      return { ok: true, sent: true };
+    } catch (e) {
+      return { ok: false, error: `Falha no envio: ${String((e as Error).message)}` };
+    }
+  }
+
+  // Fallback: link wa.me manual
+  const url = whatsappLink(phone, message);
   await prisma.birthdayMessageLog.create({
     data: { memberId: member.id, channel: "WHATSAPP" },
   });
@@ -58,10 +82,10 @@ export async function prepareWhatsApp(
     action: "CREATE",
     entity: "BirthdayMessageLog",
     entityId: member.id,
-    metadata: { channel: "WHATSAPP" },
+    metadata: { channel: "WHATSAPP", via: "link" },
   });
   revalidatePath("/aniversariantes");
-  return { ok: true, url };
+  return { ok: true, sent: false, url };
 }
 
 export async function sendBirthdayEmail(
