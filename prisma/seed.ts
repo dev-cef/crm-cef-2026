@@ -8,7 +8,7 @@ import { passwordSchema } from "../lib/validations/auth";
 
 // Senha padrão dos usuários semeados — compatível com a política (≥12, maiúscula,
 // minúscula, número, símbolo). Validada abaixo antes do hash.
-const SEED_PASSWORD = "Cef@2026Friburgo!";
+const SEED_PASSWORD = "59bMtAu$I6qPoYcE";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
