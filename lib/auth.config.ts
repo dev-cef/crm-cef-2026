@@ -30,6 +30,7 @@ export const authConfig = {
       // Rotas públicas: validação de carteirinha (QR), auto-cadastro e reset de senha
       if (nextUrl.pathname.startsWith("/validar")) return true;
       if (nextUrl.pathname.startsWith("/criar-conta")) return true;
+      if (nextUrl.pathname.startsWith("/ativar-acesso")) return true;
       if (nextUrl.pathname.startsWith("/esqueci-a-senha")) return true;
       if (nextUrl.pathname.startsWith("/redefinir-senha")) return true;
 

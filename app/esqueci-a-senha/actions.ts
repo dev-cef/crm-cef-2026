@@ -1,6 +1,7 @@
 "use server";
 
 import crypto from "crypto";
+import nodemailer from "nodemailer";
 import { prisma } from "@/lib/prisma";
 
 const EXPIRY_MINUTES = 60;
@@ -12,15 +13,6 @@ function getBaseUrl() {
 }
 
 async function sendResetEmail(to: string, name: string, resetUrl: string) {
-  const apiKey = process.env.RESEND_API_KEY;
-
-  if (!apiKey) {
-    console.log("[password-reset] RESEND_API_KEY não configurado. Link:", resetUrl);
-    return;
-  }
-
-  const from = process.env.SMTP_FROM ?? "CRM CEF <onboarding@resend.dev>";
-
   const html = `
     <div style="font-family:sans-serif;max-width:480px;margin:auto">
       <h2 style="color:#0f172a">Redefinir sua senha</h2>
@@ -38,24 +30,41 @@ async function sendResetEmail(to: string, name: string, resetUrl: string) {
     </div>
   `;
 
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from,
-      to,
-      subject: "Redefinição de senha — CRM CEF",
-      html,
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Resend error ${res.status}: ${body}`);
+  // Tenta Resend primeiro
+  const resendKey = process.env.RESEND_API_KEY;
+  if (resendKey) {
+    const from = process.env.SMTP_FROM ?? "CRM CEF <onboarding@resend.dev>";
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ from, to, subject: "Redefinição de senha — CRM CEF", html }),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Resend error ${res.status}: ${body}`);
+    }
+    return;
   }
+
+  // Fallback: SMTP via Nodemailer
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  if (smtpUser && smtpPass) {
+    const from = process.env.SMTP_FROM ?? `CRM CEF <${smtpUser}>`;
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST ?? "smtp.gmail.com",
+      port: Number(process.env.SMTP_PORT ?? 587),
+      secure: process.env.SMTP_SECURE === "true",
+      auth: { user: smtpUser, pass: smtpPass },
+    });
+    await transporter.sendMail({ from, to, subject: "Redefinição de senha — CRM CEF", html });
+    return;
+  }
+
+  console.log("[password-reset] Nenhum provedor de e-mail configurado. Link:", resetUrl);
 }
 
 export async function requestPasswordReset(formData: FormData) {

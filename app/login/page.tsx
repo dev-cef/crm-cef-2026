@@ -113,15 +113,26 @@ export default async function LoginPage({
                 </div>
               )}
               <LoginForm />
-              <p className="text-center text-sm text-muted-foreground">
-                Ainda não tem conta?{" "}
-                <Link
-                  href="/criar-conta"
-                  className="font-medium text-primary hover:underline"
-                >
-                  Criar conta
-                </Link>
-              </p>
+              <div className="space-y-1 text-center text-sm text-muted-foreground">
+                <p>
+                  É associado e quer ativar seu acesso?{" "}
+                  <Link
+                    href="/ativar-acesso"
+                    className="font-medium text-primary hover:underline"
+                  >
+                    Ativar acesso
+                  </Link>
+                </p>
+                <p>
+                  Ainda não é associado?{" "}
+                  <Link
+                    href="/criar-conta"
+                    className="font-medium text-primary hover:underline"
+                  >
+                    Criar conta
+                  </Link>
+                </p>
+              </div>
             </CardContent>
           </Card>
 
