@@ -42,11 +42,10 @@ export async function GET(
   const genericObject = {
     id: objectId,
     classId,
-    genericType: "GENERIC_TYPE_UNSPECIFIED",
     hexBackgroundColor: "#166534",
     logo: {
       sourceUri: {
-        uri: `${origin}/assets/wallet/cef-logo-white.png`,
+        uri: `${origin}/cef-crest.png`,
       },
       contentDescription: {
         defaultValue: { language: "pt-BR", value: "Logo CEF" },
@@ -102,7 +101,6 @@ export async function GET(
     payload: {
       genericObjects: [genericObject],
     },
-    origins: [origin],
   };
 
   const token = jwt.sign(payload, serviceAccountKey, { algorithm: "RS256" });
