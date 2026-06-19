@@ -33,9 +33,9 @@ export function WalletButtons({ memberId, appleEnabled, googleEnabled }: Props) 
   const appleUrl = `/api/carteirinha/${memberId}/apple`;
   const googleUrl = `/api/carteirinha/${memberId}/google`;
 
-  // iOS: only Apple; Android: only Google; other: both
-  const showApple = appleEnabled && (platform === "ios" || platform === "other");
-  const showGoogle = googleEnabled && (platform === "android" || platform === "other");
+  // Apple Wallet only on iOS (when configured); Google Wallet on all platforms
+  const showApple = appleEnabled && platform === "ios";
+  const showGoogle = googleEnabled;
 
   if (!showApple && !showGoogle) return null;
 
