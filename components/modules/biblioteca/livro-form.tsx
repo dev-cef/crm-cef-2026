@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import type { LivroFormValues } from "@/app/(app)/biblioteca/actions";
+import { buscarPorIsbn } from "@/app/(app)/biblioteca/actions";
 import type { BibliotecaCategoria, Member } from "@/app/generated/prisma/client";
 
 const livroSchema = z.object({
@@ -49,28 +50,21 @@ export function LivroForm({ defaultValues, categorias, membros, onSubmit, submit
   const origem = useWatch({ control, name: "origem" });
   const [buscandoIsbn, setBuscandoIsbn] = useState(false);
 
-  async function buscarPorIsbn() {
-    const isbn = getValues("isbn")?.replace(/[-\s]/g, "");
-    if (!isbn) { toast.error("Digite um ISBN antes de buscar."); return; }
+  async function handleBuscarIsbn() {
+    const isbn = getValues("isbn");
+    if (!isbn?.trim()) { toast.error("Digite um ISBN antes de buscar."); return; }
     setBuscandoIsbn(true);
-    try {
-      const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
-      const data = await res.json();
-      const info = data?.items?.[0]?.volumeInfo;
-      if (!info) { toast.error("Livro não encontrado no Google Books."); return; }
-      if (info.title)           setValue("titulo",        info.title);
-      if (info.authors?.length) setValue("autor",         info.authors.join(", "));
-      if (info.publisher)       setValue("editora",       info.publisher);
-      if (info.publishedDate)   setValue("anoPublicacao", parseInt(info.publishedDate.slice(0, 4)));
-      if (info.description)     setValue("descricao",     info.description.slice(0, 1000));
-      const capa = info.imageLinks?.extraLarge ?? info.imageLinks?.large ?? info.imageLinks?.medium ?? info.imageLinks?.thumbnail;
-      if (capa) setValue("capaUrl", capa.replace("http://", "https://"));
-      toast.success("Dados preenchidos a partir do Google Books!");
-    } catch {
-      toast.error("Erro ao consultar Google Books.");
-    } finally {
-      setBuscandoIsbn(false);
-    }
+    const result = await buscarPorIsbn(isbn);
+    setBuscandoIsbn(false);
+    if (!result.ok) { toast.error(result.error); return; }
+    const d = result.data!;
+    if (d.titulo)        setValue("titulo",        d.titulo);
+    if (d.autor)         setValue("autor",         d.autor);
+    if (d.editora)       setValue("editora",       d.editora);
+    if (d.anoPublicacao) setValue("anoPublicacao", d.anoPublicacao);
+    if (d.descricao)     setValue("descricao",     d.descricao);
+    if (d.capaUrl)       setValue("capaUrl",       d.capaUrl);
+    toast.success("Dados preenchidos a partir do Google Books!");
   }
 
   async function onValid(values: FormValues) {
@@ -113,7 +107,7 @@ export function LivroForm({ defaultValues, categorias, membros, onSubmit, submit
                 type="button"
                 variant="outline"
                 size="icon"
-                onClick={buscarPorIsbn}
+                onClick={handleBuscarIsbn}
                 disabled={buscandoIsbn}
                 title="Buscar no Google Books"
               >

@@ -266,3 +266,51 @@ export async function exportarCatalogoCsv(): Promise<string> {
 
   return header + rows;
 }
+
+// ── Google Books ISBN lookup ──────────────────────────────────────────────────
+
+export type IsbnData = {
+  titulo?: string;
+  autor?: string;
+  editora?: string;
+  anoPublicacao?: number;
+  descricao?: string;
+  capaUrl?: string;
+};
+
+export async function buscarPorIsbn(isbn: string): Promise<{ ok: boolean; data?: IsbnData; error?: string }> {
+  const clean = isbn.replace(/[-\s]/g, "");
+  if (!clean) return { ok: false, error: "ISBN inválido." };
+
+  try {
+    const res = await fetch(
+      `https://www.googleapis.com/books/v1/volumes?q=isbn:${clean}&maxResults=1`,
+      { next: { revalidate: 86400 } },
+    );
+    if (!res.ok) return { ok: false, error: `Google Books retornou ${res.status}.` };
+
+    const json = await res.json();
+    const info = json?.items?.[0]?.volumeInfo;
+    if (!info) return { ok: false, error: "Livro não encontrado no Google Books." };
+
+    const capa =
+      info.imageLinks?.extraLarge ??
+      info.imageLinks?.large ??
+      info.imageLinks?.medium ??
+      info.imageLinks?.thumbnail;
+
+    return {
+      ok: true,
+      data: {
+        titulo: info.title ?? undefined,
+        autor: info.authors?.join(", ") ?? undefined,
+        editora: info.publisher ?? undefined,
+        anoPublicacao: info.publishedDate ? parseInt(info.publishedDate.slice(0, 4)) : undefined,
+        descricao: info.description ? info.description.slice(0, 1000) : undefined,
+        capaUrl: capa ? capa.replace("http://", "https://") : undefined,
+      },
+    };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro ao consultar Google Books." };
+  }
+}
