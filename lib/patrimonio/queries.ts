@@ -101,6 +101,28 @@ export async function getLocais() {
   });
 }
 
+export async function getLocaisTodos() {
+  return prisma.patrimonioLocal.findMany({ orderBy: { nome: "asc" } });
+}
+
+export async function getEmprestimosAtivos() {
+  const bens = await prisma.patrimonioBem.findMany({
+    where: { status: "emprestado" },
+    include: {
+      responsavel: { select: { id: true, fullName: true } },
+      local: true,
+      movimentacoes: {
+        where: { tipo: "emprestimo" },
+        include: { responsavel: { select: { id: true, fullName: true } } },
+        orderBy: { data: "desc" },
+        take: 1,
+      },
+    },
+    orderBy: { codigo: "asc" },
+  });
+  return bens;
+}
+
 export async function getMembros() {
   return prisma.member.findMany({
     where: { deletedAt: null, status: "ACTIVE" },

@@ -158,7 +158,16 @@ export const NAV_ITEMS: {
     ],
   },
   { href: "/eventos",         label: "Eventos e Atividades", visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "eventos" },
-  { href: "/patrimonio",      label: "Patrimônio",           visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "patrimonio" },
+  {
+    href: "/patrimonio",
+    label: "Patrimônio",
+    visibleTo: ["ADMIN", "DEPARTAMENTO"],
+    moduleSlug: "patrimonio",
+    children: [
+      { href: "/patrimonio/emprestimos", label: "Empréstimos", visibleTo: ["ADMIN", "DEPARTAMENTO"] },
+      { href: "/patrimonio/locais",      label: "Locais",      visibleTo: ["ADMIN"] },
+    ],
+  },
   {
     href: "/biblioteca",
     label: "Biblioteca",

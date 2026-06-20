@@ -293,6 +293,45 @@ export async function exportarBensCSV(filters: BemFilters): Promise<string> {
   return header + rows;
 }
 
+export async function criarLocal(nome: string, descricao: string): Promise<Result> {
+  if (!nome.trim()) return { ok: false, error: "Nome obrigatório." };
+  try {
+    await prisma.patrimonioLocal.create({ data: { nome: nome.trim(), descricao: descricao.trim() || null } });
+    revalidatePath("/patrimonio/locais");
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Erro ao criar local." };
+  }
+}
+
+export async function editarLocal(id: string, nome: string, descricao: string): Promise<Result> {
+  if (!nome.trim()) return { ok: false, error: "Nome obrigatório." };
+  try {
+    await prisma.patrimonioLocal.update({
+      where: { id },
+      data: { nome: nome.trim(), descricao: descricao.trim() || null },
+    });
+    revalidatePath("/patrimonio/locais");
+    revalidatePath("/patrimonio");
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Erro ao editar local." };
+  }
+}
+
+export async function excluirLocal(id: string): Promise<Result> {
+  try {
+    const emUso = await prisma.patrimonioBem.count({ where: { localId: id } });
+    if (emUso > 0) return { ok: false, error: `Não é possível excluir: ${emUso} bem(ns) neste local.` };
+    await prisma.patrimonioLocal.delete({ where: { id } });
+    revalidatePath("/patrimonio/locais");
+    revalidatePath("/patrimonio");
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Erro ao excluir local." };
+  }
+}
+
 function buildWhere(filters: BemFilters): Record<string, unknown> {
   const where: Record<string, unknown> = {};
   if (filters.categoria) where.categoria = filters.categoria;
