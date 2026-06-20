@@ -25,6 +25,7 @@ import {
   KeyRound,
   ClipboardList,
   HardDriveDownload,
+  Package,
 } from "lucide-react";
 import { CefLogo } from "@/components/layout/cef-logo";
 import { SessionBadge } from "@/components/layout/session-badge";
@@ -59,6 +60,7 @@ const ICONS: Record<string, typeof Users> = {
   "/financeiro": Wallet,
   "/fornecedores": Truck,
   "/eventos": CalendarDays,
+  "/patrimonio": Package,
   "/relatorios": BarChart3,
 };
 

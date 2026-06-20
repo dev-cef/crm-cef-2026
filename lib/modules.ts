@@ -9,6 +9,7 @@ export const CRM_MODULES = [
   { slug: "eventos",         label: "Eventos",         icon: "CalendarDays" },
   { slug: "aniversariantes", label: "Aniversariantes", icon: "Cake" },
   { slug: "carteirinha",     label: "Carteirinha",     icon: "CreditCard" },
+  { slug: "patrimonio",      label: "Patrimônio",      icon: "Package" },
 ] as const;
 
 export type ModuleSlug = (typeof CRM_MODULES)[number]["slug"];

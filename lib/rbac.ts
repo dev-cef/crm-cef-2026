@@ -96,6 +96,7 @@ export const ROUTE_ACCESS: { prefix: string; roles: Role[] }[] = [
   { prefix: "/meu-espaco",    roles: ["ADMIN", "ASSOCIADO"] },
   { prefix: "/carteirinha",   roles: ["ADMIN", "DEPARTAMENTO", "ASSOCIADO"] },
   { prefix: "/dashboard",     roles: ["ADMIN", "DEPARTAMENTO"] },
+  { prefix: "/patrimonio",    roles: ["ADMIN", "DEPARTAMENTO"] },
 ];
 
 export function isRouteAllowed(pathname: string, role: Role): boolean {
@@ -156,6 +157,7 @@ export const NAV_ITEMS: {
     ],
   },
   { href: "/eventos",         label: "Eventos e Atividades", visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "eventos" },
+  { href: "/patrimonio",      label: "Patrimônio",           visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "patrimonio" },
   { href: "/relatorios",      label: "Relatórios",           visibleTo: ["ADMIN", "DEPARTAMENTO"] },
 ];
 

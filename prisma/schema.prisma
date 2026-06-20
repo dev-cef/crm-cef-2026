@@ -213,6 +213,8 @@ model Member {
   caronasPassageiro    EventCaronaPassenger[] @relation("CaronaPassenger")
   birthdayLogs         BirthdayMessageLog[]
   physicalCardRequests PhysicalCardRequest[]
+  patrimonioBens          PatrimonioBem[]          @relation("BemResponsavel")
+  patrimonioMovimentacoes PatrimonioMovimentacao[] @relation("MovResponsavel")
 
   @@index([status])
   @@index([deletedAt])
@@ -564,4 +566,93 @@ model Supplier {
 
   @@index([type])
   @@index([active])
+}
+
+// ─── Módulo de Patrimônio ────────────────────────────────────────────────────
+
+model PatrimonioLocal {
+  id        String   @id @default(cuid())
+  nome      String
+  descricao String?
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bens                 PatrimonioBem[]
+  movimentacoesOrigem  PatrimonioMovimentacao[] @relation("MovOrigem")
+  movimentacoesDestino PatrimonioMovimentacao[] @relation("MovDestino")
+
+  @@index([ativo])
+}
+
+model PatrimonioBem {
+  id          String  @id @default(cuid())
+  codigo      String  @unique // CEF-YYYY-NNN
+  nome        String
+  descricao   String?
+  marca       String?
+  modelo      String?
+  numeroSerie String?
+
+  // equipamento | movel_utensilio | eletronico
+  categoria String
+  // otimo | bom | regular | danificado | descartado
+  estado    String @default("bom")
+  // disponivel | em_uso | manutencao | emprestado | baixado
+  status    String @default("disponivel")
+
+  localId String?
+  local   PatrimonioLocal? @relation(fields: [localId], references: [id])
+
+  responsavelId String?
+  responsavel   Member? @relation("BemResponsavel", fields: [responsavelId], references: [id])
+
+  valorAquisicao Decimal?  @db.Decimal(10, 2)
+  dataAquisicao  DateTime?
+  notaFiscal     String?
+  fornecedor     String?
+  vidaUtilAnos   Int?
+  valorResidual  Decimal?  @db.Decimal(10, 2)
+
+  observacoes String?
+  fotoUrl     String?
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  movimentacoes PatrimonioMovimentacao[]
+
+  @@index([status])
+  @@index([categoria])
+  @@index([localId])
+}
+
+model PatrimonioMovimentacao {
+  id    String        @id @default(cuid())
+  bemId String
+  bem   PatrimonioBem @relation(fields: [bemId], references: [id], onDelete: Cascade)
+
+  // entrada | transferencia | emprestimo | devolucao | manutencao | retorno_manutencao | baixa
+  tipo String
+  data DateTime @default(now())
+
+  localOrigemId String?
+  localOrigem   PatrimonioLocal? @relation("MovOrigem", fields: [localOrigemId], references: [id])
+
+  localDestinoId String?
+  localDestino   PatrimonioLocal? @relation("MovDestino", fields: [localDestinoId], references: [id])
+
+  responsavelId String?
+  responsavel   Member? @relation("MovResponsavel", fields: [responsavelId], references: [id])
+
+  dataDevolucaoPrevista DateTime?
+  dataDevolucaoReal     DateTime?
+  observacoes           String?
+  createdById           String?
+  createdAt             DateTime @default(now())
+
+  @@index([bemId])
+  @@index([data(sort: Desc)])
 }
