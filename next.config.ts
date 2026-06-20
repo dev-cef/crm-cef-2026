@@ -6,7 +6,7 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  "img-src 'self' data: blob: https://covers.openlibrary.org https://books.google.com",
   "font-src 'self'",
   "connect-src 'self' https://viacep.com.br",
   "frame-ancestors 'none'",
@@ -31,6 +31,12 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "covers.openlibrary.org" },
+      { protocol: "https", hostname: "books.google.com" },
+    ],
+  },
   serverExternalPackages: ["@neondatabase/serverless", "@prisma/adapter-neon", "@prisma/adapter-pg", "@prisma/client"],
   experimental: {
     serverActions: {
