@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm, useWatch, Controller } from "react-hook-form";
 import { z } from "zod";
 import { Search, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -48,7 +48,8 @@ export function LivroForm({ defaultValues, categorias, membros, onSubmit, submit
     defaultValues: { estado: "otimo", origem: "proprio", ...defaultValues },
   });
 
-  const origem = useWatch({ control, name: "origem" });
+  const origem = useWatch({ control, name: "origem", defaultValue: defaultValues?.origem ?? "proprio" });
+  const doadorSocioIdWatch = useWatch({ control, name: "doadorSocioId", defaultValue: defaultValues?.doadorSocioId ?? "" });
   const [buscandoIsbn, setBuscandoIsbn] = useState(false);
   const [doadorEhSocio, setDoadorEhSocio] = useState(
     !!defaultValues?.doadorSocioId
@@ -186,7 +187,7 @@ export function LivroForm({ defaultValues, categorias, membros, onSubmit, submit
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setDoadorEhSocio(false); setValue("doadorSocioId", undefined); }}
+                    onClick={() => { setDoadorEhSocio(false); setValue("doadorSocioId", ""); }}
                     className={`px-3 py-1 rounded-md text-sm border transition-colors ${!doadorEhSocio ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
                   >
                     Não
@@ -199,14 +200,21 @@ export function LivroForm({ defaultValues, categorias, membros, onSubmit, submit
                   <Label>Selecionar sócio</Label>
                   <MemberCombobox
                     membros={membros}
-                    value={getValues("doadorSocioId")}
-                    onChange={(id) => setValue("doadorSocioId", id)}
+                    value={doadorSocioIdWatch || undefined}
+                    onChange={(id) => setValue("doadorSocioId", id ?? "")}
                   />
                 </div>
               ) : (
                 <div className="space-y-1">
                   <Label htmlFor="doadorNome">Nome ou instituição doadora</Label>
-                  <Input id="doadorNome" {...register("doadorNome")} placeholder="Ex: João Silva, Editora XYZ, Prefeitura Municipal..." />
+                  <Controller
+                    control={control}
+                    name="doadorNome"
+                    defaultValue={defaultValues?.doadorNome ?? ""}
+                    render={({ field }) => (
+                      <Input id="doadorNome" {...field} placeholder="Ex: João Silva, Editora XYZ, Prefeitura Municipal..." />
+                    )}
+                  />
                 </div>
               )}
             </div>
