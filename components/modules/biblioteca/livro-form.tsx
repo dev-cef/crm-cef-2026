@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import type { LivroFormValues } from "@/app/(app)/biblioteca/actions";
 import { buscarPorIsbn } from "@/app/(app)/biblioteca/actions";
+import { MemberCombobox } from "@/components/modules/biblioteca/member-combobox";
 import type { BibliotecaCategoria, Member } from "@/app/generated/prisma/client";
 
 const livroSchema = z.object({
@@ -196,15 +197,11 @@ export function LivroForm({ defaultValues, categorias, membros, onSubmit, submit
               {doadorEhSocio ? (
                 <div className="space-y-1">
                   <Label>Selecionar sócio</Label>
-                  <Select
-                    defaultValue={defaultValues?.doadorSocioId ?? ""}
-                    onValueChange={(v) => setValue("doadorSocioId", String(v) || undefined)}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Buscar sócio..." /></SelectTrigger>
-                    <SelectContent>
-                      {membros.map((m) => <SelectItem key={m.id} value={m.id}>{m.fullName}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <MemberCombobox
+                    membros={membros}
+                    value={getValues("doadorSocioId")}
+                    onChange={(id) => setValue("doadorSocioId", id)}
+                  />
                 </div>
               ) : (
                 <div className="space-y-1">
