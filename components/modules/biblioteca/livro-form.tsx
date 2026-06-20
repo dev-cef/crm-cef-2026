@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
+import { Search, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -40,11 +42,36 @@ interface Props {
 }
 
 export function LivroForm({ defaultValues, categorias, membros, onSubmit, submitLabel = "Salvar", tomboSugerido }: Props) {
-  const { register, handleSubmit, setValue, control, formState: { errors, isSubmitting } } = useForm<FormValues>({
+  const { register, handleSubmit, setValue, getValues, control, formState: { errors, isSubmitting } } = useForm<FormValues>({
     defaultValues: { estado: "otimo", origem: "proprio", ...defaultValues },
   });
 
   const origem = useWatch({ control, name: "origem" });
+  const [buscandoIsbn, setBuscandoIsbn] = useState(false);
+
+  async function buscarPorIsbn() {
+    const isbn = getValues("isbn")?.replace(/[-\s]/g, "");
+    if (!isbn) { toast.error("Digite um ISBN antes de buscar."); return; }
+    setBuscandoIsbn(true);
+    try {
+      const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
+      const data = await res.json();
+      const info = data?.items?.[0]?.volumeInfo;
+      if (!info) { toast.error("Livro não encontrado no Google Books."); return; }
+      if (info.title)           setValue("titulo",        info.title);
+      if (info.authors?.length) setValue("autor",         info.authors.join(", "));
+      if (info.publisher)       setValue("editora",       info.publisher);
+      if (info.publishedDate)   setValue("anoPublicacao", parseInt(info.publishedDate.slice(0, 4)));
+      if (info.description)     setValue("descricao",     info.description.slice(0, 1000));
+      const capa = info.imageLinks?.extraLarge ?? info.imageLinks?.large ?? info.imageLinks?.medium ?? info.imageLinks?.thumbnail;
+      if (capa) setValue("capaUrl", capa.replace("http://", "https://"));
+      toast.success("Dados preenchidos a partir do Google Books!");
+    } catch {
+      toast.error("Erro ao consultar Google Books.");
+    } finally {
+      setBuscandoIsbn(false);
+    }
+  }
 
   async function onValid(values: FormValues) {
     const result = await onSubmit(values as LivroFormValues);
@@ -80,7 +107,20 @@ export function LivroForm({ defaultValues, categorias, membros, onSubmit, submit
           </div>
           <div className="space-y-1">
             <Label htmlFor="isbn">ISBN</Label>
-            <Input id="isbn" {...register("isbn")} placeholder="978-..." />
+            <div className="flex gap-2">
+              <Input id="isbn" {...register("isbn")} placeholder="978-..." className="flex-1" />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={buscarPorIsbn}
+                disabled={buscandoIsbn}
+                title="Buscar no Google Books"
+              >
+                {buscandoIsbn ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">Clique na lupa para preencher automaticamente pelo ISBN</p>
           </div>
           <div className="space-y-1">
             <Label>Categoria</Label>
