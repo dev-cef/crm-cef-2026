@@ -208,6 +208,12 @@ export async function registrarMovimentacao(values: MovimentacaoFormValues): Pro
       if (d.tipo === "transferencia" && d.localDestinoId) {
         updateData.localId = d.localDestinoId;
       }
+      if (d.tipo === "emprestimo" && d.responsavelId) {
+        updateData.responsavelId = d.responsavelId;
+      }
+      if (d.tipo === "devolucao") {
+        updateData.responsavelId = null;
+      }
       if (Object.keys(updateData).length > 0) {
         await tx.patrimonioBem.update({ where: { id: d.bemId }, data: updateData });
       }

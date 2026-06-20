@@ -119,13 +119,14 @@ export default async function PatrimonioPage({
               <TableHead>Categoria</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Local</TableHead>
+              <TableHead>Responsável</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {bens.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
                   Nenhum bem encontrado.
                 </TableCell>
               </TableRow>
@@ -138,6 +139,9 @@ export default async function PatrimonioPage({
                 <TableCell><BemStatusBadge status={bem.status} /></TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {bem.local?.nome ?? "—"}
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {bem.responsavel?.fullName ?? "—"}
                 </TableCell>
                 <TableCell className="text-right">
                   <Link href={`/patrimonio/${bem.id}`} className="text-sm text-primary hover:underline">
