@@ -27,8 +27,10 @@ export default async function EditarBemPage({ params }: { params: Promise<{ id: 
     dataAquisicao: bem.dataAquisicao
       ? new Date(bem.dataAquisicao).toISOString().split("T")[0]
       : "",
+    formaAquisicao: (bem.formaAquisicao as BemFormValues["formaAquisicao"]) ?? "propria",
     notaFiscal: bem.notaFiscal ?? "",
     fornecedor: bem.fornecedor ?? "",
+    doador: bem.doador ?? "",
     vidaUtilAnos: bem.vidaUtilAnos ?? undefined,
     valorResidual: bem.valorResidual ? Number(bem.valorResidual) : undefined,
     observacoes: bem.observacoes ?? "",

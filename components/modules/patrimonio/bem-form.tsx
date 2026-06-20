@@ -148,6 +148,21 @@ export function BemForm({ defaultValues, locais, membros, onSubmit, submitLabel 
       <section className="rounded-xl border bg-card p-5 space-y-4">
         <h2 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Aquisição</h2>
         <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1 sm:col-span-2">
+            <Label>Forma de aquisição *</Label>
+            <Select
+              defaultValue={defaultValues?.formaAquisicao ?? "propria"}
+              onValueChange={(v) => setValue("formaAquisicao", String(v) as BemFormValues["formaAquisicao"])}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="propria">Própria (compra)</SelectItem>
+                <SelectItem value="doacao">Doação</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-1">
             <Label htmlFor="valorAquisicao">Valor de aquisição (R$)</Label>
             <Input id="valorAquisicao" type="number" step="0.01" min="0" {...register("valorAquisicao")} />
@@ -163,6 +178,10 @@ export function BemForm({ defaultValues, locais, membros, onSubmit, submitLabel 
           <div className="space-y-1">
             <Label htmlFor="fornecedor">Fornecedor</Label>
             <Input id="fornecedor" {...register("fornecedor")} />
+          </div>
+          <div className="space-y-1 sm:col-span-2">
+            <Label htmlFor="doador">Doador</Label>
+            <Input id="doador" {...register("doador")} placeholder="Nome do doador (se doação)" />
           </div>
           <div className="space-y-1">
             <Label htmlFor="vidaUtilAnos">Vida útil (anos)</Label>

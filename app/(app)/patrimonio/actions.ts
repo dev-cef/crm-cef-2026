@@ -22,10 +22,12 @@ const bemSchema = z.object({
   numeroSerie: z.string().optional(),
   localId: z.string().optional(),
   responsavelId: z.string().optional(),
+  formaAquisicao: z.enum(["propria", "doacao"]).default("propria"),
   valorAquisicao: z.coerce.number().optional(),
   dataAquisicao: z.string().optional(),
   notaFiscal: z.string().optional(),
   fornecedor: z.string().optional(),
+  doador: z.string().optional(),
   vidaUtilAnos: z.coerce.number().int().optional(),
   valorResidual: z.coerce.number().optional(),
   observacoes: z.string().optional(),
@@ -56,10 +58,12 @@ export async function createBem(values: BemFormValues): Promise<Result> {
         numeroSerie: d.numeroSerie || null,
         localId: d.localId || null,
         responsavelId: d.responsavelId || null,
+        formaAquisicao: d.formaAquisicao,
         valorAquisicao: d.valorAquisicao ?? null,
         dataAquisicao: d.dataAquisicao ? new Date(d.dataAquisicao) : null,
         notaFiscal: d.notaFiscal || null,
         fornecedor: d.fornecedor || null,
+        doador: d.doador || null,
         vidaUtilAnos: d.vidaUtilAnos ?? null,
         valorResidual: d.valorResidual ?? null,
         observacoes: d.observacoes || null,
@@ -116,10 +120,12 @@ export async function updateBem(id: string, values: BemFormValues): Promise<Resu
         numeroSerie: d.numeroSerie || null,
         localId: d.localId || null,
         responsavelId: d.responsavelId || null,
+        formaAquisicao: d.formaAquisicao,
         valorAquisicao: d.valorAquisicao ?? null,
         dataAquisicao: d.dataAquisicao ? new Date(d.dataAquisicao) : null,
         notaFiscal: d.notaFiscal || null,
         fornecedor: d.fornecedor || null,
+        doador: d.doador || null,
         vidaUtilAnos: d.vidaUtilAnos ?? null,
         valorResidual: d.valorResidual ?? null,
         observacoes: d.observacoes || null,
@@ -259,7 +265,7 @@ export async function exportarBensCSV(filters: BemFilters): Promise<string> {
     orderBy: { codigo: "asc" },
   });
 
-  const header = "Código,Nome,Categoria,Estado,Status,Local,Responsável,Valor Aquisição,Data Aquisição\n";
+  const header = "Código,Nome,Categoria,Estado,Status,Forma Aquisição,Doador,Local,Responsável,Valor Aquisição,Data Aquisição\n";
   const rows = todos
     .map((b) =>
       [
@@ -268,6 +274,8 @@ export async function exportarBensCSV(filters: BemFilters): Promise<string> {
         b.categoria,
         b.estado,
         b.status,
+        b.formaAquisicao === "doacao" ? "Doação" : "Própria",
+        b.doador ?? "",
         b.local?.nome ?? "",
         b.responsavel?.fullName ?? "",
         b.valorAquisicao ? Number(b.valorAquisicao).toFixed(2) : "",

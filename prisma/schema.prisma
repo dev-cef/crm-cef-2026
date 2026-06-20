@@ -607,10 +607,12 @@ model PatrimonioBem {
   responsavelId String?
   responsavel   Member? @relation("BemResponsavel", fields: [responsavelId], references: [id])
 
+  formaAquisicao String    @default("propria") // propria | doacao
   valorAquisicao Decimal?  @db.Decimal(10, 2)
   dataAquisicao  DateTime?
   notaFiscal     String?
   fornecedor     String?
+  doador         String?
   vidaUtilAnos   Int?
   valorResidual  Decimal?  @db.Decimal(10, 2)
 

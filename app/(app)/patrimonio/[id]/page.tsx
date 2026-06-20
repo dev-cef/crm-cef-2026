@@ -96,6 +96,9 @@ export default async function BemPage({ params }: { params: Promise<{ id: string
           <dd className="sm:col-span-2">{bem.local?.nome ?? "—"}</dd>
           <dt className="text-muted-foreground">Responsável</dt>
           <dd className="sm:col-span-2">{bem.responsavel?.fullName ?? "—"}</dd>
+          <dt className="text-muted-foreground">Forma de aquisição</dt>
+          <dd className="sm:col-span-2">{bem.formaAquisicao === "doacao" ? "Doação" : "Própria (compra)"}</dd>
+          {bem.doador && <><dt className="text-muted-foreground">Doador</dt><dd className="sm:col-span-2">{bem.doador}</dd></>}
           {bem.valorAquisicao && (
             <>
               <dt className="text-muted-foreground">Valor aquisição</dt>
