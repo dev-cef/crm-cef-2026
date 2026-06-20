@@ -49,6 +49,9 @@ export function LivroForm({ defaultValues, categorias, membros, onSubmit, submit
 
   const origem = useWatch({ control, name: "origem" });
   const [buscandoIsbn, setBuscandoIsbn] = useState(false);
+  const [doadorEhSocio, setDoadorEhSocio] = useState(
+    !!defaultValues?.doadorSocioId
+  );
 
   async function handleBuscarIsbn() {
     const isbn = getValues("isbn");
@@ -169,24 +172,47 @@ export function LivroForm({ defaultValues, categorias, membros, onSubmit, submit
             </Select>
           </div>
           {origem === "doacao" && (
-            <>
-              <div className="space-y-1">
-                <Label htmlFor="doadorNome">Nome do doador</Label>
-                <Input id="doadorNome" {...register("doadorNome")} />
+            <div className="space-y-3 sm:col-span-2">
+              <div className="flex items-center gap-3">
+                <Label>O doador é sócio do CEF?</Label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setDoadorEhSocio(true); setValue("doadorNome", ""); }}
+                    className={`px-3 py-1 rounded-md text-sm border transition-colors ${doadorEhSocio ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
+                  >
+                    Sim
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setDoadorEhSocio(false); setValue("doadorSocioId", undefined); }}
+                    className={`px-3 py-1 rounded-md text-sm border transition-colors ${!doadorEhSocio ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
+                  >
+                    Não
+                  </button>
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label>Doador é sócio?</Label>
-                <Select
-                  defaultValue={defaultValues?.doadorSocioId ?? ""}
-                  onValueChange={(v) => setValue("doadorSocioId", String(v) || undefined)}
-                >
-                  <SelectTrigger><SelectValue placeholder="Selecione (opcional)" /></SelectTrigger>
-                  <SelectContent>
-                    {membros.map((m) => <SelectItem key={m.id} value={m.id}>{m.fullName}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
+
+              {doadorEhSocio ? (
+                <div className="space-y-1">
+                  <Label>Selecionar sócio</Label>
+                  <Select
+                    defaultValue={defaultValues?.doadorSocioId ?? ""}
+                    onValueChange={(v) => setValue("doadorSocioId", String(v) || undefined)}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Buscar sócio..." /></SelectTrigger>
+                    <SelectContent>
+                      {membros.map((m) => <SelectItem key={m.id} value={m.id}>{m.fullName}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <Label htmlFor="doadorNome">Nome ou instituição doadora</Label>
+                  <Input id="doadorNome" {...register("doadorNome")} placeholder="Ex: João Silva, Editora XYZ, Prefeitura Municipal..." />
+                </div>
+              )}
+            </div>
           )}
         </div>
       </section>
