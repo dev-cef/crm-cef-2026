@@ -113,7 +113,7 @@ export async function getCategorias() {
 
 export async function getMembrosAtivos() {
   return prisma.member.findMany({
-    where: { status: "ATIVO", deletedAt: null },
+    where: { status: "ACTIVE", deletedAt: null },
     select: { id: true, fullName: true, registration: true },
     orderBy: { fullName: "asc" },
   });
