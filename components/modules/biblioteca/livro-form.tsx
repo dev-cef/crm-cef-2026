@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useForm, useWatch, Controller } from "react-hook-form";
+import { useState, useEffect } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Search, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -54,6 +54,14 @@ export function LivroForm({ defaultValues, categorias, membros, onSubmit, submit
   const [doadorEhSocio, setDoadorEhSocio] = useState(
     !!defaultValues?.doadorSocioId
   );
+
+  // Base UI's Input doesn't support uncontrolled ref-based value setting,
+  // so we need to explicitly push edit-mode defaultValues via setValue.
+  useEffect(() => {
+    if (defaultValues?.doadorNome) setValue("doadorNome", defaultValues.doadorNome);
+    if (defaultValues?.doadorSocioId) setValue("doadorSocioId", defaultValues.doadorSocioId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleBuscarIsbn() {
     const isbn = getValues("isbn");
@@ -207,14 +215,7 @@ export function LivroForm({ defaultValues, categorias, membros, onSubmit, submit
               ) : (
                 <div className="space-y-1">
                   <Label htmlFor="doadorNome">Nome ou instituição doadora</Label>
-                  <Controller
-                    control={control}
-                    name="doadorNome"
-                    defaultValue={defaultValues?.doadorNome ?? ""}
-                    render={({ field }) => (
-                      <Input id="doadorNome" {...field} placeholder="Ex: João Silva, Editora XYZ, Prefeitura Municipal..." />
-                    )}
-                  />
+                  <Input id="doadorNome" {...register("doadorNome")} placeholder="Ex: João Silva, Editora XYZ, Prefeitura Municipal..." />
                 </div>
               )}
             </div>
