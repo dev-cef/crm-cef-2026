@@ -26,6 +26,7 @@ import {
   ClipboardList,
   HardDriveDownload,
   Package,
+  BookOpen,
 } from "lucide-react";
 import { CefLogo } from "@/components/layout/cef-logo";
 import { SessionBadge } from "@/components/layout/session-badge";
@@ -61,6 +62,7 @@ const ICONS: Record<string, typeof Users> = {
   "/fornecedores": Truck,
   "/eventos": CalendarDays,
   "/patrimonio": Package,
+  "/biblioteca": BookOpen,
   "/relatorios": BarChart3,
 };
 

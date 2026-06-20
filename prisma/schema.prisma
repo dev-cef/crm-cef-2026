@@ -33,11 +33,12 @@ model User {
   image           String?
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
-  auditLogs       AuditLog[]
-  member          Member?
-  departments     UserDepartment[]
-  moduleOverrides UserModuleOverride[]
-  passwordResets  PasswordResetToken[]
+  auditLogs                AuditLog[]
+  member                   Member?
+  departments              UserDepartment[]
+  moduleOverrides          UserModuleOverride[]
+  passwordResets           PasswordResetToken[]
+  emprestimosRegistrados   BibliotecaEmprestimo[] @relation("RegistradoPor")
 }
 
 model PasswordResetToken {
@@ -215,6 +216,9 @@ model Member {
   physicalCardRequests PhysicalCardRequest[]
   patrimonioBens          PatrimonioBem[]          @relation("BemResponsavel")
   patrimonioMovimentacoes PatrimonioMovimentacao[] @relation("MovResponsavel")
+  livrosDoados            BibliotecaLivro[]        @relation("LivroDoador")
+  emprestimosLivros       BibliotecaEmprestimo[]   @relation("EmprestimoSocio")
+  reservasLivros          BibliotecaReserva[]      @relation("ReservaSocio")
 
   @@index([status])
   @@index([deletedAt])
@@ -657,4 +661,97 @@ model PatrimonioMovimentacao {
 
   @@index([bemId])
   @@index([data(sort: Desc)])
+}
+
+// ─── Módulo de Biblioteca ────────────────────────────────────────────────────
+
+model BibliotecaCategoria {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  descricao String?
+  criadoEm  DateTime @default(now())
+
+  livros BibliotecaLivro[]
+}
+
+model BibliotecaLivro {
+  id             String   @id @default(cuid())
+  titulo         String
+  autor          String?
+  editora        String?
+  anoPublicacao  Int?
+  isbn           String?
+  categoriaId    String?
+  categoria      BibliotecaCategoria? @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
+
+  // proprio | doacao
+  origem        String  @default("proprio")
+  doadorNome    String?
+  doadorSocioId String?
+  doadorSocio   Member? @relation("LivroDoador", fields: [doadorSocioId], references: [id], onDelete: SetNull)
+
+  // otimo | bom | regular | danificado | perdido
+  estado     String  @default("otimo")
+  disponivel Boolean @default(true)
+
+  capaUrl     String?
+  descricao   String?
+  numeroTombo String? @unique
+  observacoes String?
+
+  criadoEm    DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  emprestimos BibliotecaEmprestimo[]
+  reservas    BibliotecaReserva[]
+
+  @@index([disponivel])
+  @@index([categoriaId])
+  @@index([origem])
+}
+
+model BibliotecaEmprestimo {
+  id             String          @id @default(cuid())
+  livroId        String
+  livro          BibliotecaLivro @relation(fields: [livroId], references: [id], onDelete: Restrict)
+  socioId        String
+  socio          Member          @relation("EmprestimoSocio", fields: [socioId], references: [id], onDelete: Restrict)
+
+  retiradoEm     DateTime @default(now())
+  prazoDevolucao DateTime
+
+  devolvidoEm     DateTime?
+  // ativo | devolvido | atrasado | extraviado
+  status          String    @default("ativo")
+  estadoRetirada  String    @default("otimo")
+  estadoDevolucao String?
+
+  registradoPorId String?
+  registradoPor   User?   @relation("RegistradoPor", fields: [registradoPorId], references: [id], onDelete: SetNull)
+  observacoes     String?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([socioId])
+  @@index([livroId])
+  @@index([status])
+  @@index([prazoDevolucao])
+}
+
+model BibliotecaReserva {
+  id       String          @id @default(cuid())
+  livroId  String
+  livro    BibliotecaLivro @relation(fields: [livroId], references: [id], onDelete: Cascade)
+  socioId  String
+  socio    Member          @relation("ReservaSocio", fields: [socioId], references: [id], onDelete: Cascade)
+
+  reservadoEm  DateTime  @default(now())
+  notificadoEm DateTime?
+  expiradoEm   DateTime?
+  ativa        Boolean   @default(true)
+
+  @@unique([livroId, socioId, ativa])
+  @@index([livroId])
+  @@index([socioId])
 }

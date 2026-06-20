@@ -87,6 +87,10 @@ async function main() {
   await prisma.patrimonioMovimentacao.deleteMany();
   await prisma.patrimonioBem.deleteMany();
   await prisma.patrimonioLocal.deleteMany();
+  await prisma.bibliotecaEmprestimo.deleteMany();
+  await prisma.bibliotecaReserva.deleteMany();
+  await prisma.bibliotecaLivro.deleteMany();
+  await prisma.bibliotecaCategoria.deleteMany();
   await prisma.member.deleteMany();
   await prisma.department.deleteMany();
   await prisma.plan.deleteMany();
@@ -407,6 +411,55 @@ async function main() {
       await prisma.patrimonioMovimentacao.create({ data: { bemId: bem.id, tipo: "baixa", data: new Date("2026-06-05"), observacoes: "Bem danificado além do reparo. Descartado." } });
     }
   }
+
+  // ─── Biblioteca ──────────────────────────────────────────────────────────
+  console.log("📚 Criando biblioteca...");
+
+  const [catMont, catTrek, catNat, catAv, catPrim, catFoto, catOut] = await Promise.all([
+    prisma.bibliotecaCategoria.create({ data: { nome: "Montanhismo e Escalada", descricao: "Técnicas, história e relatos de montanhismo" } }),
+    prisma.bibliotecaCategoria.create({ data: { nome: "Trekking e Caminhada", descricao: "Guias e roteiros de trilhas" } }),
+    prisma.bibliotecaCategoria.create({ data: { nome: "Natureza e Meio Ambiente", descricao: "Ecologia, flora e fauna" } }),
+    prisma.bibliotecaCategoria.create({ data: { nome: "Aventura e Exploração", descricao: "Relatos de expedições e aventuras" } }),
+    prisma.bibliotecaCategoria.create({ data: { nome: "Primeiros Socorros", descricao: "Emergências em campo" } }),
+    prisma.bibliotecaCategoria.create({ data: { nome: "Fotografia de Natureza", descricao: "Técnicas fotográficas em ambiente externo" } }),
+    prisma.bibliotecaCategoria.create({ data: { nome: "Outros", descricao: "Demais títulos" } }),
+  ]);
+
+  const anoAtual = 2026;
+  const livros = [
+    { titulo: "Oitomilistas", autor: "Reinhold Messner", editora: "Martins Fontes", anoPublicacao: 1989, categoriaId: catMont.id, estado: "bom", origem: "proprio", numeroTombo: `CEF-LIV-${anoAtual}-001`, descricao: "Relato das conquistas dos 14 picos acima de 8000m por Messner." },
+    { titulo: "Annapurna", autor: "Maurice Herzog", editora: "Record", anoPublicacao: 1952, categoriaId: catMont.id, estado: "regular", origem: "proprio", numeroTombo: `CEF-LIV-${anoAtual}-002`, descricao: "A primeira conquista de um pico acima de 8000m." },
+    { titulo: "Into Thin Air", autor: "Jon Krakauer", editora: "Anchor Books", anoPublicacao: 1997, categoriaId: catMont.id, estado: "otimo", origem: "doacao", doadorNome: "Paulo Moutinho", numeroTombo: `CEF-LIV-${anoAtual}-003` },
+    { titulo: "Guia de Trilhas da Serra dos Órgãos", autor: "Roberto Verdan", editora: "Editora Serra", anoPublicacao: 2018, categoriaId: catTrek.id, estado: "bom", origem: "proprio", numeroTombo: `CEF-LIV-${anoAtual}-004` },
+    { titulo: "Trilhas do Rio de Janeiro", autor: "Marcus Buendia", editora: "Qualitymark", anoPublicacao: 2015, categoriaId: catTrek.id, estado: "bom", origem: "proprio", numeroTombo: `CEF-LIV-${anoAtual}-005` },
+    { titulo: "A Mata Atlântica", autor: "Carlos Joly", editora: "Audubon", anoPublicacao: 2011, categoriaId: catNat.id, estado: "otimo", origem: "doacao", doadorNome: "Fernanda Lopes", numeroTombo: `CEF-LIV-${anoAtual}-006` },
+    { titulo: "Fotografia na Natureza", autor: "John Shaw", editora: "Bookman", anoPublicacao: 2000, categoriaId: catFoto.id, estado: "regular", origem: "proprio", numeroTombo: `CEF-LIV-${anoAtual}-007` },
+    { titulo: "Primeiros Socorros em Campo", autor: "Warren Bowman", editora: "Wilderness Medical Society", anoPublicacao: 2009, categoriaId: catPrim.id, estado: "bom", origem: "proprio", numeroTombo: `CEF-LIV-${anoAtual}-008` },
+    { titulo: "O Chamado da Natureza", autor: "Jack London", editora: "Martin Claret", anoPublicacao: 1903, categoriaId: catAv.id, estado: "bom", origem: "proprio", numeroTombo: `CEF-LIV-${anoAtual}-009` },
+    { titulo: "Escalada — Técnicas Avançadas", autor: "John Long", editora: "Falcon Guides", anoPublicacao: 2004, categoriaId: catMont.id, estado: "otimo", origem: "proprio", disponivel: false, numeroTombo: `CEF-LIV-${anoAtual}-010` },
+  ];
+
+  const livrosCriados = await Promise.all(
+    livros.map((l) => prisma.bibliotecaLivro.create({ data: l }))
+  );
+
+  // Empréstimo ativo no livro 10 (disponivel: false)
+  const membro = memberIds[0] ? await prisma.member.findUnique({ where: { id: memberIds[0] } }) : null;
+  if (membro) {
+    await prisma.bibliotecaEmprestimo.create({
+      data: {
+        livroId: livrosCriados[9].id,
+        socioId: membro.id,
+        retiradoEm: new Date("2026-06-01"),
+        prazoDevolucao: new Date("2026-07-01"),
+        estadoRetirada: "otimo",
+        status: "ativo",
+        observacoes: "Empréstimo para estudo de técnicas de escalada.",
+      },
+    });
+  }
+
+  console.log(`  ✅ ${livrosCriados.length} livros criados, 7 categorias`);
 
   console.log("✅ Seed concluído!");
   console.log(`   ADMIN        admin@cef.org.br     / ${SEED_PASSWORD}`);
