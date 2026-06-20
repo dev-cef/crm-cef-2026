@@ -3,6 +3,26 @@ import { PrismaClient } from "../app/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
+// ─── Guarda contra execução acidental em produção ────────────────────────────
+const dbUrl = process.env.DATABASE_URL ?? "";
+const isProduction =
+  !process.env.ALLOW_SEED &&
+  (process.env.NODE_ENV === "production" ||
+    dbUrl.includes("neon.tech") ||
+    dbUrl.includes("supabase") ||
+    dbUrl.includes("railway") ||
+    dbUrl.includes("planetscale"));
+
+if (isProduction) {
+  console.error(
+    "🚫 SEED BLOQUEADO: banco de produção detectado.\n" +
+      "   Para executar intencionalmente, defina ALLOW_SEED=true:\n" +
+      "   ALLOW_SEED=true npx tsx prisma/seed-patrimonio.ts",
+  );
+  process.exit(1);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });

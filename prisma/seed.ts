@@ -6,6 +6,28 @@ import { Pool } from "pg";
 import { generateCpf } from "../lib/cpf";
 import { passwordSchema } from "../lib/validations/auth";
 
+// ─── Guarda contra execução acidental em produção ────────────────────────────
+// O seed apaga TODOS os dados. Só deve rodar em ambiente de desenvolvimento.
+// Para forçar em ambientes de teste, defina ALLOW_SEED=true explicitamente.
+const dbUrl = process.env.DATABASE_URL ?? "";
+const isProduction =
+  !process.env.ALLOW_SEED &&
+  (process.env.NODE_ENV === "production" ||
+    dbUrl.includes("neon.tech") ||
+    dbUrl.includes("supabase") ||
+    dbUrl.includes("railway") ||
+    dbUrl.includes("planetscale"));
+
+if (isProduction) {
+  console.error(
+    "🚫 SEED BLOQUEADO: banco de produção detectado.\n" +
+      "   Para executar intencionalmente, defina ALLOW_SEED=true antes do comando:\n" +
+      "   ALLOW_SEED=true npm run seed",
+  );
+  process.exit(1);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Senha padrão dos usuários semeados — compatível com a política (≥12, maiúscula,
 // minúscula, número, símbolo). Validada abaixo antes do hash.
 const SEED_PASSWORD = "59bMtAu$I6qPoYcE";
