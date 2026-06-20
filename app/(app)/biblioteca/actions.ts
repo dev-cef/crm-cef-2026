@@ -282,16 +282,47 @@ export async function buscarPorIsbn(isbn: string): Promise<{ ok: boolean; data?:
   const clean = isbn.replace(/[-\s]/g, "");
   if (!clean) return { ok: false, error: "ISBN inválido." };
 
+  // 1. Open Library (sem limite de requisições)
+  try {
+    const res = await fetch(
+      `https://openlibrary.org/api/books?bibkeys=ISBN:${clean}&format=json&jscmd=data`,
+      { next: { revalidate: 86400 } },
+    );
+    if (res.ok) {
+      const json = await res.json();
+      const info = json[`ISBN:${clean}`];
+      if (info) {
+        const capa = info.cover?.large ?? info.cover?.medium ?? info.cover?.small;
+        return {
+          ok: true,
+          data: {
+            titulo: info.title ?? undefined,
+            autor: info.authors?.map((a: { name: string }) => a.name).join(", ") ?? undefined,
+            editora: info.publishers?.[0]?.name ?? undefined,
+            anoPublicacao: info.publish_date ? parseInt(info.publish_date.slice(-4)) : undefined,
+            descricao: info.description
+              ? (typeof info.description === "string" ? info.description : info.description.value ?? "").slice(0, 1000)
+              : undefined,
+            capaUrl: capa ? capa.replace("http://", "https://") : undefined,
+          },
+        };
+      }
+    }
+  } catch {
+    // segue para Google Books
+  }
+
+  // 2. Google Books (fallback)
   try {
     const res = await fetch(
       `https://www.googleapis.com/books/v1/volumes?q=isbn:${clean}&maxResults=1`,
       { next: { revalidate: 86400 } },
     );
-    if (!res.ok) return { ok: false, error: `Google Books retornou ${res.status}.` };
+    if (!res.ok) return { ok: false, error: "Livro não encontrado. Preencha os campos manualmente." };
 
     const json = await res.json();
     const info = json?.items?.[0]?.volumeInfo;
-    if (!info) return { ok: false, error: "Livro não encontrado no Google Books." };
+    if (!info) return { ok: false, error: "Livro não encontrado. Preencha os campos manualmente." };
 
     const capa =
       info.imageLinks?.extraLarge ??
@@ -311,6 +342,6 @@ export async function buscarPorIsbn(isbn: string): Promise<{ ok: boolean; data?:
       },
     };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Erro ao consultar Google Books." };
+    return { ok: false, error: e instanceof Error ? e.message : "Erro ao buscar livro." };
   }
 }
