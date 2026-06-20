@@ -84,6 +84,9 @@ async function main() {
   await prisma.event.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.userDepartment.deleteMany();
+  await prisma.patrimonioMovimentacao.deleteMany();
+  await prisma.patrimonioBem.deleteMany();
+  await prisma.patrimonioLocal.deleteMany();
   await prisma.member.deleteMany();
   await prisma.department.deleteMany();
   await prisma.plan.deleteMany();
@@ -355,6 +358,55 @@ async function main() {
       enabled: true,
     },
   });
+
+  console.log("📦 Criando patrimônio...");
+  const [sede, deposito, campo] = await Promise.all([
+    prisma.patrimonioLocal.create({ data: { nome: "Sede CEF", descricao: "Sede principal do CEF em Nova Friburgo" } }),
+    prisma.patrimonioLocal.create({ data: { nome: "Depósito", descricao: "Depósito de equipamentos" } }),
+    prisma.patrimonioLocal.create({ data: { nome: "Campo", descricao: "Equipamentos em uso em atividades externas" } }),
+  ]);
+
+  function codigo(ano: number, seq: number) {
+    return `CEF-${ano}-${String(seq).padStart(3, "0")}`;
+  }
+
+  const bensDados: Parameters<typeof prisma.patrimonioBem.create>[0]["data"][] = [
+    { codigo: codigo(2024, 1), nome: "Corda Semiestática 50m", marca: "Petzl", modelo: "Arial 10.5", categoria: "equipamento", estado: "bom", status: "disponivel", localId: deposito.id, valorAquisicao: 480, dataAquisicao: new Date("2024-02-10"), fornecedor: "Loja do Alpinista" },
+    { codigo: codigo(2024, 2), nome: "Corda Dinâmica 60m", marca: "Mammut", modelo: "Crag Classic", categoria: "equipamento", estado: "bom", status: "disponivel", localId: deposito.id, valorAquisicao: 650, dataAquisicao: new Date("2024-03-15") },
+    { codigo: codigo(2024, 3), nome: "Capacete de Escalada #1", marca: "Black Diamond", modelo: "Half Dome", numeroSerie: "BD2024-0043", categoria: "equipamento", estado: "otimo", status: "disponivel", localId: deposito.id, valorAquisicao: 320, dataAquisicao: new Date("2024-01-20") },
+    { codigo: codigo(2024, 4), nome: "Capacete de Escalada #2", marca: "Black Diamond", modelo: "Half Dome", numeroSerie: "BD2024-0044", categoria: "equipamento", estado: "bom", status: "emprestado", localId: campo.id, valorAquisicao: 320, dataAquisicao: new Date("2024-01-20") },
+    { codigo: codigo(2024, 5), nome: "Kit Mosquetões HMS (10 un.)", marca: "Petzl", modelo: "William Ball-Lock", categoria: "equipamento", estado: "bom", status: "disponivel", localId: deposito.id, valorAquisicao: 750, dataAquisicao: new Date("2023-11-05") },
+    { codigo: codigo(2024, 6), nome: "Arnês de Escalada #1", marca: "Singing Rock", modelo: "Onyx", categoria: "equipamento", estado: "regular", status: "manutencao", localId: sede.id, valorAquisicao: 280, dataAquisicao: new Date("2022-06-12"), observacoes: "Costura de fixação com desgaste. Enviado para revisão." },
+    { codigo: codigo(2024, 7), nome: "Arnês de Escalada #2", marca: "Singing Rock", modelo: "Onyx", categoria: "equipamento", estado: "bom", status: "disponivel", localId: deposito.id, valorAquisicao: 280, dataAquisicao: new Date("2023-04-08") },
+    { codigo: codigo(2024, 8), nome: "Barraca Expedition 4 lugares", marca: "Mountain Hardwear", modelo: "EV 4", categoria: "equipamento", estado: "bom", status: "disponivel", localId: deposito.id, valorAquisicao: 1850, dataAquisicao: new Date("2023-07-20") },
+    { codigo: codigo(2024, 9), nome: "Barraca Camping 2 lugares", marca: "Quechua", modelo: "MH100 Ultra", categoria: "equipamento", estado: "bom", status: "disponivel", localId: deposito.id, valorAquisicao: 390, dataAquisicao: new Date("2024-04-01") },
+    { codigo: codigo(2024, 10), nome: "Kit Primeiros Socorros", categoria: "equipamento", estado: "bom", status: "disponivel", localId: sede.id, valorAquisicao: 180, dataAquisicao: new Date("2024-01-05"), observacoes: "Verificar validade dos medicamentos semestralmente." },
+    { codigo: codigo(2024, 11), nome: "Rádio Comunicador (par)", marca: "Motorola", modelo: "T400", categoria: "eletronico", estado: "bom", status: "disponivel", localId: sede.id, valorAquisicao: 420, dataAquisicao: new Date("2023-09-15"), vidaUtilAnos: 5, valorResidual: 50 },
+    { codigo: codigo(2024, 12), nome: "GPS de Navegação", marca: "Garmin", modelo: "eTrex 32x", numeroSerie: "GMN-2024-7741", categoria: "eletronico", estado: "otimo", status: "emprestado", localId: campo.id, valorAquisicao: 890, dataAquisicao: new Date("2024-02-28"), vidaUtilAnos: 7, valorResidual: 100 },
+    { codigo: codigo(2024, 13), nome: "Projetor Multimídia", marca: "Epson", modelo: "S41+", numeroSerie: "EPS-2023-1188", categoria: "eletronico", estado: "bom", status: "disponivel", localId: sede.id, valorAquisicao: 1200, dataAquisicao: new Date("2023-03-10"), vidaUtilAnos: 6, valorResidual: 200 },
+    { codigo: codigo(2024, 14), nome: "Notebook Dell", marca: "Dell", modelo: "Inspiron 15", numeroSerie: "DL2023-44821", categoria: "eletronico", estado: "bom", status: "em_uso", localId: sede.id, valorAquisicao: 2800, dataAquisicao: new Date("2023-06-01"), vidaUtilAnos: 4, valorResidual: 400 },
+    { codigo: codigo(2024, 15), nome: "Mesa de Reunião 8 lugares", marca: "Tok&Stok", categoria: "movel_utensilio", estado: "bom", status: "em_uso", localId: sede.id, valorAquisicao: 950, dataAquisicao: new Date("2020-08-15"), vidaUtilAnos: 10, valorResidual: 100 },
+    { codigo: codigo(2024, 16), nome: "Cadeiras Empilháveis (8 un.)", categoria: "movel_utensilio", estado: "bom", status: "em_uso", localId: sede.id, valorAquisicao: 640, dataAquisicao: new Date("2020-08-15"), vidaUtilAnos: 10, valorResidual: 80 },
+    { codigo: codigo(2024, 17), nome: "Armário de Equipamentos", descricao: "Armário metálico com 4 compartimentos para EPIs", categoria: "movel_utensilio", estado: "bom", status: "em_uso", localId: deposito.id, valorAquisicao: 780, dataAquisicao: new Date("2021-05-20"), vidaUtilAnos: 15, valorResidual: 100 },
+    { codigo: codigo(2024, 18), nome: "Fogão Camping 2 bocas", marca: "Brasfort", categoria: "movel_utensilio", estado: "bom", status: "disponivel", localId: deposito.id, valorAquisicao: 220, dataAquisicao: new Date("2023-10-05") },
+    { codigo: codigo(2023, 1), nome: "Caixa de Som Portátil", marca: "JBL", modelo: "Charge 5", numeroSerie: "JBL-2023-9902", categoria: "eletronico", estado: "danificado", status: "baixado", localId: sede.id, valorAquisicao: 780, dataAquisicao: new Date("2023-01-10"), observacoes: "Entrada de carregamento danificada por água. Descartado." },
+  ];
+
+  for (const data of bensDados) {
+    const bem = await prisma.patrimonioBem.create({ data });
+    await prisma.patrimonioMovimentacao.create({
+      data: { bemId: bem.id, tipo: "entrada", data: (data.dataAquisicao as Date) ?? new Date(), localDestinoId: data.localId as string ?? null, observacoes: "Cadastro inicial do bem." },
+    });
+    if (data.status === "manutencao") {
+      await prisma.patrimonioMovimentacao.create({ data: { bemId: bem.id, tipo: "manutencao", data: new Date("2026-06-01"), localOrigemId: deposito.id, observacoes: "Enviado para manutenção." } });
+    }
+    if (data.status === "emprestado") {
+      await prisma.patrimonioMovimentacao.create({ data: { bemId: bem.id, tipo: "emprestimo", data: new Date("2026-06-10"), localOrigemId: deposito.id, localDestinoId: campo.id, dataDevolucaoPrevista: new Date("2026-06-30"), observacoes: "Emprestado para atividade de campo." } });
+    }
+    if (data.status === "baixado") {
+      await prisma.patrimonioMovimentacao.create({ data: { bemId: bem.id, tipo: "baixa", data: new Date("2026-06-05"), observacoes: "Bem danificado além do reparo. Descartado." } });
+    }
+  }
 
   console.log("✅ Seed concluído!");
   console.log(`   ADMIN        admin@cef.org.br     / ${SEED_PASSWORD}`);
