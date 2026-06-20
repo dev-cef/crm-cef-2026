@@ -40,7 +40,7 @@ export default async function EditarLivroPage({ params }: { params: Promise<{ id
         defaultValues={defaultValues}
         categorias={categorias}
         membros={membros}
-        onSubmit={(v) => atualizarLivro(id, v)}
+        onSubmit={atualizarLivro.bind(null, id)}
         submitLabel="Salvar alterações"
       />
     </div>

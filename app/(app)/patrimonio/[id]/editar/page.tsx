@@ -44,7 +44,7 @@ export default async function EditarBemPage({ params }: { params: Promise<{ id: 
         defaultValues={defaultValues}
         locais={locais}
         membros={membros}
-        onSubmit={(v) => updateBem(id, v)}
+        onSubmit={updateBem.bind(null, id)}
         submitLabel="Salvar alterações"
       />
     </div>
