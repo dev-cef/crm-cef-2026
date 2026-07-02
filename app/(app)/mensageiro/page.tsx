@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/table";
 import { ConfigCard } from "@/components/modules/mensageiro/config-card";
 import { RecipientsCard } from "@/components/modules/mensageiro/recipients-card";
+import { WhatsappBaixaCard } from "@/components/modules/mensageiro/whatsapp-baixa-card";
 import { LogFilter } from "@/components/modules/mensageiro/log-filter";
 import {
   saveBirthdayTemplate,
@@ -31,7 +32,17 @@ import {
   saveNewMemberTemplate,
   saveCardRequestTemplate,
   saveRecipients,
+  saveWhatsappBaixa,
 } from "@/app/(app)/mensageiro/actions";
+
+function parseAllowlist(json: string): string {
+  try {
+    const arr = JSON.parse(json);
+    return Array.isArray(arr) ? arr.join("\n") : "";
+  } catch {
+    return "";
+  }
+}
 
 export const dynamic = "force-dynamic";
 
@@ -100,6 +111,14 @@ export default async function MensageiroPage({
           initialFinanceGroupJid={cfg.financeGroupJid ?? ""}
           initialSecretariaGroupJid={cfg.secretariaGroupJid ?? ""}
           save={saveRecipients}
+        />
+      )}
+
+      {canEdit && (
+        <WhatsappBaixaCard
+          initialEnabled={cfg.whatsappBaixaEnabled}
+          initialAllowlist={parseAllowlist(cfg.whatsappBaixaAllowlist)}
+          save={saveWhatsappBaixa}
         />
       )}
 

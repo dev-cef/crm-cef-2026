@@ -93,3 +93,37 @@ export async function saveRecipients(values: {
   revalidatePath("/mensageiro");
   return { ok: true };
 }
+
+// Baixa via WhatsApp: liga/desliga + allowlist de números autorizados.
+export async function saveWhatsappBaixa(enabled: boolean, allowlistRaw: string): Promise<Result> {
+  const session = await auth();
+  const sessionUser = toSessionUser(session?.user ?? {});
+  if (!(await can(sessionUser, "mensageiro", "edit"))) {
+    return { ok: false, error: "Você não tem permissão para editar o Mensageiro." };
+  }
+  const numbers = Array.from(
+    new Set(
+      allowlistRaw
+        .split(/[\n,;]+/)
+        .map((s) => s.replace(/\D/g, ""))
+        .filter((d) => d.length >= 8),
+    ),
+  );
+  if (enabled && numbers.length === 0) {
+    return { ok: false, error: "Adicione ao menos um número autorizado antes de ativar a baixa por WhatsApp." };
+  }
+  const cfg = await getMessengerConfig();
+  await prisma.messengerConfig.update({
+    where: { id: cfg.id },
+    data: { whatsappBaixaEnabled: enabled, whatsappBaixaAllowlist: JSON.stringify(numbers) },
+  });
+  await recordAudit({
+    userId: session?.user?.id,
+    action: "UPDATE",
+    entity: "MessengerConfig",
+    entityId: cfg.id,
+    metadata: { field: "whatsappBaixa", enabled, count: numbers.length },
+  });
+  revalidatePath("/mensageiro");
+  return { ok: true };
+}

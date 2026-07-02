@@ -65,6 +65,7 @@ export async function POST(request: Request) {
     // Aviso ao financeiro pelo Mensageiro (best-effort, nunca lança, sempre registra no log).
     const cfg = await getSystemConfig();
     await notifyReceiptReceived({
+      paymentId: payment.id,
       memberId: payment.memberId,
       memberFullName: payment.member.fullName,
       amount: payment.amount,

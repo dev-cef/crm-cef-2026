@@ -65,13 +65,11 @@ export async function sendMessengerNotification(params: {
   memberId?: string | null;
   recipient: string;
   message: string;
-}): Promise<{ ok: boolean; error?: string }> {
+}): Promise<{ ok: boolean; error?: string; messageId?: string | null }> {
   try {
-    if (params.recipient.includes("@g.us")) {
-      await sendWhatsAppGroupMessage(params.recipient, params.message);
-    } else {
-      await sendWhatsAppMessage(params.recipient, params.message);
-    }
+    const messageId = params.recipient.includes("@g.us")
+      ? await sendWhatsAppGroupMessage(params.recipient, params.message)
+      : await sendWhatsAppMessage(params.recipient, params.message);
     await logMessengerAttempt({
       type: params.type,
       channel: "WHATSAPP",
@@ -79,7 +77,7 @@ export async function sendMessengerNotification(params: {
       recipient: params.recipient,
       status: "ENVIADO",
     });
-    return { ok: true };
+    return { ok: true, messageId };
   } catch (e) {
     const error = String((e as Error).message ?? e);
     await logMessengerAttempt({
@@ -98,6 +96,7 @@ export async function sendMessengerNotification(params: {
 // nunca lança. Recipient (financeiroWhatsapp) vem por parâmetro pra evitar
 // import circular com financeiro/actions.ts.
 export async function notifyReceiptReceived(params: {
+  paymentId: string;
   memberId: string;
   memberFullName: string;
   amount: number;
@@ -120,12 +119,19 @@ export async function notifyReceiptReceived(params: {
       valor: formatBRL(params.amount),
     });
 
-    await sendMessengerNotification({
+    const res = await sendMessengerNotification({
       type: "COMPROVANTE_RECEBIDO",
       memberId: params.memberId,
       recipient,
       message,
     });
+
+    // Guarda o ID da msg no grupo → permite baixa respondendo (reply) essa msg.
+    if (res.ok && res.messageId && recipient.includes("@g.us")) {
+      await prisma.payment
+        .update({ where: { id: params.paymentId }, data: { receiptWhatsappMsgId: res.messageId } })
+        .catch(() => {});
+    }
   } catch (err) {
     console.error("Falha ao notificar comprovante recebido:", err);
   }

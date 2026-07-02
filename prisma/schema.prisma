@@ -242,7 +242,8 @@ model Payment {
   receiptPath        String? // Comprovante enviado pelo associado (data URI base64)
   receiptSubmittedAt DateTime? // Data/hora do envio do comprovante
   receiptNumber      String? // Número do recibo gerado pelo financeiro (YYYY-NNNN)
-  confirmedVia       String? // MANUAL | ASAAS — como a baixa aconteceu
+  confirmedVia       String? // MANUAL | ASAAS | WHATSAPP — como a baixa aconteceu
+  receiptWhatsappMsgId String? // ID da msg da notificação de comprovante no grupo (p/ baixa via reply no WhatsApp)
 
   // Cobrança PIX automática via Asaas (cacheada; regenerada quando expira)
   asaasChargeId     String?   @unique
@@ -452,6 +453,11 @@ model MessengerConfig {
   defaultPhone       String? @default("22996194503") // telefone padrão do Centro Excursionista Friburguense
   financeGroupJid    String? // grupo que recebe alertas do financeiro (comprovante/pagamento)
   secretariaGroupJid String? // grupo que recebe novo associado / solicitação de carteirinha
+
+  // Baixa via WhatsApp: membro autorizado responde a notificação de comprovante
+  // no grupo Financeiro com "baixa" e o pagamento é confirmado. Desligado por padrão.
+  whatsappBaixaEnabled   Boolean @default(false)
+  whatsappBaixaAllowlist String  @default("[]") // JSON: telefones (só dígitos) autorizados a dar baixa
 
   updatedAt DateTime @updatedAt
 
