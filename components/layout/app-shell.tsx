@@ -28,6 +28,7 @@ import {
   Package,
   BookOpen,
   QrCode,
+  MessagesSquare,
 } from "lucide-react";
 import { CefLogo } from "@/components/layout/cef-logo";
 import { SessionBadge } from "@/components/layout/session-badge";
@@ -59,6 +60,7 @@ const ICONS: Record<string, typeof Users> = {
   "/associados": Users,
   "/carteirinha": CreditCard,
   "/aniversariantes": Cake,
+  "/mensageiro": MessagesSquare,
   "/financeiro": Wallet,
   "/fornecedores": Truck,
   "/eventos": CalendarDays,

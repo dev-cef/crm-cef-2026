@@ -91,6 +91,7 @@ export const ROUTE_ACCESS: { prefix: string; roles: Role[] }[] = [
   { prefix: "/configuracoes", roles: ["ADMIN"] },
   { prefix: "/associados",    roles: ["ADMIN", "DEPARTAMENTO"] },
   { prefix: "/aniversariantes", roles: ["ADMIN", "DEPARTAMENTO"] },
+  { prefix: "/mensageiro",    roles: ["ADMIN", "DEPARTAMENTO"] },
   { prefix: "/fornecedores",  roles: ["ADMIN", "DEPARTAMENTO"] },
   { prefix: "/eventos",       roles: ["ADMIN", "DEPARTAMENTO", "ASSOCIADO"] },
   { prefix: "/meu-espaco",    roles: ["ADMIN", "ASSOCIADO"] },
@@ -136,6 +137,7 @@ export const NAV_ITEMS: {
     ],
   },
   { href: "/aniversariantes", label: "Aniversariantes", visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "aniversariantes" },
+  { href: "/mensageiro",      label: "Mensageiro",      visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "mensageiro" },
   {
     href: "/financeiro",
     label: "Financeiro",

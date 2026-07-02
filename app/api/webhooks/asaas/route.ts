@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
+import { notifyPaymentConfirmed } from "@/lib/messenger";
 
 const PAID_EVENTS = ["PAYMENT_RECEIVED", "PAYMENT_CONFIRMED"];
 
@@ -43,6 +44,9 @@ export async function POST(request: Request) {
         confirmedVia: "ASAAS",
         asaasChargeId: body.payment.id ?? existing.asaasChargeId,
       },
+      include: {
+        member: { select: { id: true, fullName: true, whatsapp: true, phone: true } },
+      },
     });
   });
 
@@ -58,6 +62,19 @@ export async function POST(request: Request) {
         event: body.event,
       },
     });
+
+    // Aviso ao associado pelo Mensageiro — nunca deve derrubar o 200 (Asaas reenvia em retry).
+    await notifyPaymentConfirmed({
+      memberId: updated.member.id,
+      memberFullName: updated.member.fullName,
+      memberWhatsapp: updated.member.whatsapp,
+      memberPhone: updated.member.phone,
+      amount: updated.amount,
+      referenceMonth: updated.referenceMonth,
+      referenceYear: updated.referenceYear,
+      receiptNumber: updated.receiptNumber!,
+    });
+
     revalidatePath("/financeiro/pagamentos");
     revalidatePath("/meu-espaco");
   }

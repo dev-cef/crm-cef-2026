@@ -9,7 +9,6 @@ import {
   FileSpreadsheet,
   FileText,
   MessageCircle,
-  MessageSquareText,
   Pencil,
   Target,
   Trash2,
@@ -23,13 +22,10 @@ import { can } from "@/lib/permissions";
 import { calculateAge, monthName } from "@/lib/format";
 import { isBirthdayInPeriod, type BirthdayPeriod } from "@/lib/birthday";
 import { cn } from "@/lib/utils";
-import { getBirthdayConfig } from "@/app/(app)/aniversariantes/actions";
-import { ServerPermissionGate } from "@/components/auth/ServerPermissionGate";
 import { PageHeader } from "@/components/layout/page-header";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -49,7 +45,6 @@ import { SexDonut } from "@/components/modules/dashboard/sex-donut";
 import { AgeBars } from "@/components/modules/dashboard/age-bars";
 import { MonthBars } from "@/components/modules/aniversariantes/month-bars";
 import { IconFeminino, IconMasculino } from "@/components/icons/sex-icons";
-import { ConfigForm } from "@/components/modules/aniversariantes/config-form";
 import { BirthdayFilters } from "@/components/modules/aniversariantes/birthday-filters";
 import { DeleteMemberDialog } from "@/components/modules/associados/delete-member-dialog";
 import { CardBeam } from "@/components/ui/card-beam";
@@ -106,26 +101,18 @@ export default async function AniversariantesPage({
   const sort = (["nome", "dia", "mes", "sexo", "idade"].includes(sp.sort ?? "") ? sp.sort : "mes") as "nome" | "dia" | "mes" | "sexo" | "idade";
   const dir = sp.dir === "desc" ? "desc" : "asc";
 
-  const [members, cfg, logs] = await Promise.all([
-    prisma.member.findMany({
-      where: { deletedAt: null, status: "ACTIVE" },
-      select: {
-        id: true,
-        fullName: true,
-        sex: true,
-        phone: true,
-        instagram: true,
-        photoUrl: true,
-        birthDate: true,
-      },
-    }),
-    getBirthdayConfig(),
-    prisma.birthdayMessageLog.findMany({
-      orderBy: { sentAt: "desc" },
-      take: 30,
-      include: { member: { select: { fullName: true } } },
-    }),
-  ]);
+  const members = await prisma.member.findMany({
+    where: { deletedAt: null, status: "ACTIVE" },
+    select: {
+      id: true,
+      fullName: true,
+      sex: true,
+      phone: true,
+      instagram: true,
+      photoUrl: true,
+      birthDate: true,
+    },
+  });
 
   const inPeriod = members.filter((m) =>
     isBirthdayInPeriod(new Date(m.birthDate), period, month, today),
@@ -526,65 +513,6 @@ export default async function AniversariantesPage({
           </Table>
         </CardContent>
       </Card>
-
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <Card className="group relative">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <MessageSquareText className="size-4" /> Mensagem de parabéns
-            </CardTitle>
-            <CardDescription>
-              {cfg.enabled
-                ? "Envio automático ativado."
-                : "Envio automático desativado."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ServerPermissionGate module="aniversariantes" action="edit">
-              <ConfigForm
-                initialTemplate={cfg.template}
-                initialEnabled={cfg.enabled}
-              />
-            </ServerPermissionGate>
-          </CardContent>
-        </Card>
-
-        <Card className="group relative">
-          <CardHeader>
-            <CardTitle className="text-base">
-              Log de mensagens enviadas
-            </CardTitle>
-            <CardDescription>Últimos 30 envios</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {logs.length === 0 ? (
-              <p className="py-4 text-sm text-muted-foreground">
-                Nenhuma mensagem enviada ainda.
-              </p>
-            ) : (
-              <ul className="divide-y text-sm">
-                {logs.map((l) => (
-                  <li
-                    key={l.id}
-                    className="flex items-center justify-between py-2"
-                  >
-                    <span className="truncate">{l.member.fullName}</span>
-                    <span className="flex items-center gap-2 text-muted-foreground">
-                      <Badge variant="secondary">{l.channel}</Badge>
-                      {new Intl.DateTimeFormat("pt-BR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      }).format(new Date(l.sentAt))}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
