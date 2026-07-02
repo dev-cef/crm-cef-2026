@@ -73,11 +73,27 @@ export async function POST(request: Request) {
   const text =
     (typeof message.conversation === "string" ? message.conversation : "") ||
     (typeof ext.text === "string" ? ext.text : "");
-  if (!BAIXA_RE.test(text)) return NextResponse.json({ ignored: "not-command" });
 
   // Precisa ser resposta (reply) à notificação do comprovante → pega o ID citado.
   const ctx = (ext.contextInfo ?? {}) as Record<string, unknown>;
   const stanzaId = typeof ctx.stanzaId === "string" ? ctx.stanzaId : null;
+
+  // DIAGNÓSTICO (temporário): dump do que chega pra ajustar parsing/allowlist.
+  console.log(
+    "[evolution] rx",
+    JSON.stringify({
+      remoteJid,
+      text,
+      stanzaId,
+      participant: key.participant,
+      participantPn: key.participantPn,
+      senderPn: key.senderPn,
+      messageKeys: Object.keys(message),
+      ctxKeys: Object.keys(ctx),
+    }),
+  );
+
+  if (!BAIXA_RE.test(text)) return NextResponse.json({ ignored: "not-command" });
   if (!stanzaId) {
     await sendWhatsAppGroupMessage(
       cfg.financeGroupJid,
@@ -91,6 +107,7 @@ export async function POST(request: Request) {
     include: { member: { select: { fullName: true } } },
   });
   if (!payment) {
+    console.log("[evolution] payment-not-found para stanzaId:", stanzaId);
     await sendWhatsAppGroupMessage(
       cfg.financeGroupJid,
       "⚠️ Não encontrei o comprovante correspondente a essa mensagem.",
