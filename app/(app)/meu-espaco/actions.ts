@@ -8,6 +8,13 @@ import { requireUser } from "@/lib/authz";
 import { recordAudit } from "@/lib/audit";
 import { getSystemConfig } from "@/app/(app)/financeiro/actions";
 import { sendWhatsAppMessage, sendWhatsAppGroupMessage, evolutionConfigured } from "@/lib/whatsapp";
+import {
+  asaasConfigured,
+  asaasFindCustomerByCpf,
+  asaasCreateCustomer,
+  asaasCreatePixCharge,
+  asaasGetPixQrCode,
+} from "@/lib/asaas";
 import { formatBRL, monthName } from "@/lib/format";
 
 const profileSchema = z.object({
@@ -183,6 +190,114 @@ export async function sendPaymentReceipt(paymentId: string, fileDataUri: string)
     return { ok: true };
   } catch {
     return { error: "Erro ao enviar comprovante. Tente novamente." };
+  }
+}
+
+export async function getOrCreateAsaasCharge(paymentId: string): Promise<
+  | { ok: true; pixPayload: string; qrDataUrl: string; expiresAt: string }
+  | { ok: false; error: string }
+> {
+  const user = await requireUser();
+  if (!user.memberId) return { ok: false, error: "Sem cadastro vinculado." };
+  if (!asaasConfigured()) {
+    return {
+      ok: false,
+      error: "Cobrança automática não configurada. Use a transferência bancária ou envie o comprovante.",
+    };
+  }
+
+  const payment = await prisma.payment.findUnique({
+    where: { id: paymentId },
+    include: { member: true },
+  });
+  if (!payment || payment.memberId !== user.memberId) {
+    return { ok: false, error: "Cobrança não encontrada." };
+  }
+  if (payment.status === "PAGO") {
+    return { ok: false, error: "Esta cobrança já está paga." };
+  }
+
+  // Cobrança já gerada e QR ainda válido — reaproveita sem chamar a Asaas de novo.
+  if (
+    payment.asaasPixPayload &&
+    payment.asaasPixQrCode &&
+    payment.asaasPixExpiresAt &&
+    payment.asaasPixExpiresAt.getTime() > Date.now()
+  ) {
+    return {
+      ok: true,
+      pixPayload: payment.asaasPixPayload,
+      qrDataUrl: payment.asaasPixQrCode,
+      expiresAt: payment.asaasPixExpiresAt.toISOString(),
+    };
+  }
+
+  try {
+    let customerId = payment.member.asaasCustomerId;
+    if (!customerId) {
+      const cpfDigits = payment.member.cpf.replace(/\D/g, "");
+      const existing = await asaasFindCustomerByCpf(cpfDigits);
+      customerId =
+        existing?.id ??
+        (
+          await asaasCreateCustomer({
+            name: payment.member.fullName,
+            cpfCnpj: cpfDigits,
+            email: payment.member.email,
+            phone: payment.member.phone,
+          })
+        ).id;
+      await prisma.member.update({
+        where: { id: payment.member.id },
+        data: { asaasCustomerId: customerId },
+      });
+    }
+
+    let chargeId = payment.asaasChargeId;
+    if (!chargeId) {
+      // Cobrança vencida: envia vencimento de hoje pra Asaas sem alterar o dueDate interno (usado pro badge ATRASADO).
+      const asaasDueDate = payment.dueDate < new Date() ? new Date() : payment.dueDate;
+      const charge = await asaasCreatePixCharge({
+        customer: customerId,
+        value: payment.amount,
+        dueDate: asaasDueDate.toISOString().slice(0, 10),
+        externalReference: payment.id,
+        description: `CEF ${monthName(payment.referenceMonth)}/${payment.referenceYear}`,
+      });
+      chargeId = charge.id;
+    }
+
+    const qr = await asaasGetPixQrCode(chargeId);
+    const qrDataUrl = qr.encodedImage.startsWith("data:")
+      ? qr.encodedImage
+      : `data:image/png;base64,${qr.encodedImage}`;
+    const expiresAt = new Date(qr.expirationDate);
+
+    await prisma.payment.update({
+      where: { id: paymentId },
+      data: {
+        asaasChargeId: chargeId,
+        asaasPixPayload: qr.payload,
+        asaasPixQrCode: qrDataUrl,
+        asaasPixExpiresAt: expiresAt,
+      },
+    });
+
+    await recordAudit({
+      userId: user.id,
+      action: "UPDATE",
+      entity: "Payment",
+      entityId: paymentId,
+      metadata: { action: "asaas_charge_generated", asaasChargeId: chargeId },
+    });
+
+    return { ok: true, pixPayload: qr.payload, qrDataUrl, expiresAt: expiresAt.toISOString() };
+  } catch (err) {
+    console.error("Erro ao gerar cobrança Asaas:", err);
+    return {
+      ok: false,
+      error: "Não foi possível gerar o PIX automático agora. Use a transferência bancária ou envie o comprovante manualmente.",
+    };
   }
 }
 

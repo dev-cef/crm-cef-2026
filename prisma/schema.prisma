@@ -147,6 +147,7 @@ model Member {
   birthDate DateTime
   cpf       String   @unique
   photoUrl  String?
+  asaasCustomerId String? @unique // cliente no Asaas (cus_xxx), criado 1x e reaproveitado nas cobranças
 
   // Seção 02 — Endereço
   cep          String
@@ -241,6 +242,14 @@ model Payment {
   receiptPath        String? // Comprovante enviado pelo associado (data URI base64)
   receiptSubmittedAt DateTime? // Data/hora do envio do comprovante
   receiptNumber      String? // Número do recibo gerado pelo financeiro (YYYY-NNNN)
+  confirmedVia       String? // MANUAL | ASAAS — como a baixa aconteceu
+
+  // Cobrança PIX automática via Asaas (cacheada; regenerada quando expira)
+  asaasChargeId     String?   @unique
+  asaasPixPayload   String? // código PIX copia-e-cola dinâmico
+  asaasPixQrCode    String? // QR Code (data URI base64)
+  asaasPixExpiresAt DateTime?
+
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -424,6 +433,7 @@ model BirthdayMessageConfig {
 model SystemConfig {
   id            String   @id @default(cuid())
   enrollmentFee Float    @default(50) // taxa de inscrição única para novos associados
+  billingMode   String   @default("MANUAL") // MANUAL | ASAAS — modo de cobrança do clube
 
   // Dados de cobrança exibidos ao associado (PIX / conta bancária)
   pixKey             String? // chave PIX do clube

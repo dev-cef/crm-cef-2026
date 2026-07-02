@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Check, Download, ExternalLink, Paperclip } from "lucide-react";
+import { ArrowLeft, Check, Download, ExternalLink, Paperclip, Zap } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
 import { formatBRL, formatDate, monthName } from "@/lib/format";
@@ -319,6 +319,9 @@ export default async function PagamentosPage({
                     </Badge>
                     {p.receiptPath && (
                       <Paperclip className="size-3.5 text-muted-foreground" aria-label="Comprovante anexado" />
+                    )}
+                    {p.confirmedVia === "ASAAS" && (
+                      <Zap className="size-3.5 text-primary" aria-label="Baixa automática via Asaas" />
                     )}
                   </div>
                 </TableCell>

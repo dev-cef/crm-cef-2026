@@ -1,11 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Copy, FileUp, Loader2, Paperclip } from "lucide-react";
+import { Copy, FileUp, Loader2, Paperclip, Zap } from "lucide-react";
 import { toast } from "sonner";
-import { sendPaymentReceipt } from "@/app/(app)/meu-espaco/actions";
+import { sendPaymentReceipt, getOrCreateAsaasCharge } from "@/app/(app)/meu-espaco/actions";
 import { formatBRL } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +26,8 @@ const PIX_KEY_TYPE_LABEL: Record<string, string> = {
   ALEATORIA: "Chave aleatória",
 };
 
+type AsaasData = { pixPayload: string; qrDataUrl: string; expiresAt: string };
+
 type Props = {
   trigger: React.ReactElement;
   paymentId: string;
@@ -34,6 +36,8 @@ type Props = {
   dueDateLabel: string;
   status: string;
   receiptSubmittedAtLabel: string | null;
+  billingMode: "MANUAL" | "ASAAS";
+  initialAsaas: AsaasData | null;
   pixKey: string | null;
   pixKeyType: string | null;
   pixPayload: string | null;
@@ -53,6 +57,8 @@ export function PaymentDialog(props: Props) {
     dueDateLabel,
     status,
     receiptSubmittedAtLabel,
+    billingMode,
+    initialAsaas,
     pixKey,
     pixKeyType,
     pixPayload,
@@ -70,8 +76,36 @@ export function PaymentDialog(props: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
+  const [asaasData, setAsaasData] = useState<AsaasData | null>(initialAsaas);
+  const [asaasLoading, setAsaasLoading] = useState(false);
+  const [asaasError, setAsaasError] = useState<string | null>(null);
+
   const awaitingReview = status === "AGUARDANDO_CONFIRMACAO";
   const hasBankInfo = bankName || bankAgency || bankAccount;
+  const isAsaasMode = billingMode === "ASAAS";
+
+  useEffect(() => {
+    if (!open || awaitingReview || !isAsaasMode) return;
+    const expired = asaasData && new Date(asaasData.expiresAt).getTime() <= Date.now();
+    if (asaasData && !expired) return;
+
+    let cancelled = false;
+    setAsaasLoading(true);
+    setAsaasError(null);
+    getOrCreateAsaasCharge(paymentId).then((res) => {
+      if (cancelled) return;
+      setAsaasLoading(false);
+      if (res.ok) {
+        setAsaasData({ pixPayload: res.pixPayload, qrDataUrl: res.qrDataUrl, expiresAt: res.expiresAt });
+      } else {
+        setAsaasError(res.error);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isAsaasMode, awaitingReview]);
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -92,10 +126,10 @@ export function PaymentDialog(props: Props) {
     reader.readAsDataURL(file);
   }
 
-  async function copyPix() {
-    if (!pixPayload) return;
+  async function copyToClipboard(text: string | null) {
+    if (!text) return;
     try {
-      await navigator.clipboard.writeText(pixPayload);
+      await navigator.clipboard.writeText(text);
       toast.success("Código PIX copiado!");
     } catch {
       toast.error("Não foi possível copiar o código.");
@@ -142,7 +176,50 @@ export function PaymentDialog(props: Props) {
           </div>
         ) : (
           <div className="space-y-4">
-            {pixKey ? (
+            {isAsaasMode ? (
+              <div className="space-y-2 rounded-md border p-3">
+                <p className="flex items-center gap-1.5 text-sm font-medium">
+                  <Zap className="size-3.5 text-primary" /> Pague com PIX (automático)
+                </p>
+                {asaasLoading && (
+                  <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" /> Gerando o QR Code...
+                  </div>
+                )}
+                {!asaasLoading && asaasData && (
+                  <>
+                    <div className="flex justify-center py-1">
+                      <Image
+                        src={asaasData.qrDataUrl}
+                        alt="QR Code PIX"
+                        width={180}
+                        height={180}
+                        className="rounded-md border"
+                        unoptimized
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-2 rounded-md bg-muted px-2 py-1.5 text-xs">
+                      <span className="truncate">Código copia e cola</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => copyToClipboard(asaasData.pixPayload)}
+                      >
+                        <Copy className="size-3.5" /> Copiar
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Confirmação automática — assim que o pagamento cair, esta cobrança é dada
+                      como paga sozinha. Não é necessário enviar comprovante.
+                    </p>
+                  </>
+                )}
+                {!asaasLoading && !asaasData && asaasError && (
+                  <p className="text-sm text-muted-foreground">{asaasError}</p>
+                )}
+              </div>
+            ) : pixKey ? (
               <div className="space-y-2 rounded-md border p-3">
                 <p className="text-sm font-medium">Pague com PIX</p>
                 {qrDataUrl && (
@@ -161,7 +238,7 @@ export function PaymentDialog(props: Props) {
                   <span className="truncate">
                     {PIX_KEY_TYPE_LABEL[pixKeyType ?? ""] ?? "Chave"}: {pixKey}
                   </span>
-                  <Button type="button" size="sm" variant="outline" onClick={copyPix}>
+                  <Button type="button" size="sm" variant="outline" onClick={() => copyToClipboard(pixPayload)}>
                     <Copy className="size-3.5" /> Copiar
                   </Button>
                 </div>
@@ -183,7 +260,9 @@ export function PaymentDialog(props: Props) {
             )}
 
             <div className="space-y-2 rounded-md border border-dashed p-3">
-              <p className="text-sm font-medium">Já pagou? Envie o comprovante</p>
+              <p className="text-sm font-medium">
+                {isAsaasMode ? "Pagou de outra forma? Envie o comprovante" : "Já pagou? Envie o comprovante"}
+              </p>
               <input
                 ref={inputRef}
                 type="file"

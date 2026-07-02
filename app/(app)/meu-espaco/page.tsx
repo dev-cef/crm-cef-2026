@@ -165,6 +165,8 @@ export default async function MeuEspacoPage() {
 
   function renderPaymentDialog(p: PaymentRow, trigger: React.ReactElement) {
     const data = paymentDialogData.get(p.id) ?? { qrDataUrl: null, pixPayload: null };
+    const asaasValid =
+      p.asaasPixPayload && p.asaasPixQrCode && p.asaasPixExpiresAt && p.asaasPixExpiresAt.getTime() > Date.now();
     return (
       <PaymentDialog
         trigger={trigger}
@@ -174,6 +176,16 @@ export default async function MeuEspacoPage() {
         dueDateLabel={toBrDate(p.dueDate)}
         status={p.status}
         receiptSubmittedAtLabel={p.receiptSubmittedAt ? toBrDate(p.receiptSubmittedAt) : null}
+        billingMode={(billingCfg.billingMode as "MANUAL" | "ASAAS") ?? "MANUAL"}
+        initialAsaas={
+          asaasValid
+            ? {
+                pixPayload: p.asaasPixPayload!,
+                qrDataUrl: p.asaasPixQrCode!,
+                expiresAt: p.asaasPixExpiresAt!.toISOString(),
+              }
+            : null
+        }
         pixKey={billingCfg.pixKey}
         pixKeyType={billingCfg.pixKeyType}
         pixPayload={data.pixPayload}

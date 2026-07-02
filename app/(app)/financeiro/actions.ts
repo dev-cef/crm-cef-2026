@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { recordAudit } from "@/lib/audit";
 import { parseBrDate } from "@/lib/format";
+import { asaasConfigured, asaasCancelCharge } from "@/lib/asaas";
 import { planSchema, type PlanFormValues, transactionSchema, type TransactionFormValues } from "@/lib/validations/finance";
 
 type Result = { ok: boolean; error?: string };
@@ -209,6 +210,7 @@ export async function markAsPaid(
           paidAt: resolvedDate,
           ...(notes?.trim() ? { notes: notes.trim() } : {}),
           receiptNumber,
+          confirmedVia: "MANUAL",
         },
       });
     });
@@ -272,6 +274,17 @@ export async function editPayment(
   const due = parseBrDate(values.dueDate);
   if (!due) return { ok: false, error: "Data de vencimento inválida." };
   try {
+    const current = await prisma.payment.findUnique({ where: { id } });
+    if (!current) return { ok: false, error: "Pagamento não encontrado." };
+
+    // Valor ou vencimento mudou com uma cobrança Asaas já gerada: invalida o cache
+    // (e tenta cancelar a cobrança antiga) pra próxima abertura gerar uma nova com os dados corretos.
+    const amountOrDueChanged =
+      current.amount !== values.amount || current.dueDate.getTime() !== due.getTime();
+    if (amountOrDueChanged && current.asaasChargeId) {
+      await asaasCancelCharge(current.asaasChargeId).catch(() => {});
+    }
+
     await prisma.payment.update({
       where: { id },
       data: {
@@ -280,8 +293,17 @@ export async function editPayment(
         referenceMonth: values.referenceMonth,
         referenceYear: values.referenceYear,
         status: values.status,
-        paidAt: values.status === "PAGO" ? (await prisma.payment.findUnique({ where: { id }, select: { paidAt: true } }))?.paidAt ?? new Date() : null,
+        paidAt: values.status === "PAGO" ? current.paidAt ?? new Date() : null,
         notes: values.notes?.trim() || null,
+        confirmedVia: values.status === "PAGO" ? (current.confirmedVia ?? "MANUAL") : current.confirmedVia,
+        ...(amountOrDueChanged && current.asaasChargeId
+          ? {
+              asaasChargeId: null,
+              asaasPixPayload: null,
+              asaasPixQrCode: null,
+              asaasPixExpiresAt: null,
+            }
+          : {}),
       },
     });
     await recordAudit({
@@ -302,6 +324,10 @@ export async function editPayment(
 export async function cancelPayment(id: string): Promise<Result> {
   const session = await auth();
   try {
+    const payment = await prisma.payment.findUnique({ where: { id }, select: { asaasChargeId: true } });
+    if (payment?.asaasChargeId) {
+      await asaasCancelCharge(payment.asaasChargeId).catch(() => {});
+    }
     await prisma.payment.delete({ where: { id } });
     await recordAudit({
       userId: session?.user?.id,
@@ -377,6 +403,7 @@ export async function saveEnrollmentFee(fee: number): Promise<Result> {
 }
 
 export type BillingConfigValues = {
+  billingMode: "MANUAL" | "ASAAS";
   pixKey: string;
   pixKeyType: string;
   pixCity: string;
@@ -391,11 +418,18 @@ export async function saveBillingConfig(
   values: BillingConfigValues,
 ): Promise<Result> {
   const session = await auth();
+  if (values.billingMode === "ASAAS" && !asaasConfigured()) {
+    return {
+      ok: false,
+      error: "Configure a integração Asaas no servidor (ASAAS_API_KEY / ASAAS_ENV) antes de ativar o modo automático.",
+    };
+  }
   try {
     const cfg = await getSystemConfig();
     await prisma.systemConfig.update({
       where: { id: cfg.id },
       data: {
+        billingMode: values.billingMode,
         pixKey: values.pixKey.trim() || null,
         pixKeyType: values.pixKeyType.trim() || null,
         pixCity: values.pixCity.trim() || null,

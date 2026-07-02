@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const PIX_KEY_TYPES = [
   { value: "CPF", label: "CPF" },
@@ -29,9 +30,11 @@ const PIX_KEY_TYPES = [
 export function BillingConfigForm({
   initialValues,
   whatsappConfigured,
+  asaasConfigured,
 }: {
   initialValues: BillingConfigValues;
   whatsappConfigured: boolean;
+  asaasConfigured: boolean;
 }) {
   const [values, setValues] = useState(initialValues);
   const [pending, startTransition] = useTransition();
@@ -48,8 +51,48 @@ export function BillingConfigForm({
     });
   }
 
+  const wantsAsaasButNotConfigured = values.billingMode === "ASAAS" && !asaasConfigured;
+
   return (
     <div className="space-y-5">
+      <div className="space-y-2">
+        <Label>Modo de cobrança</Label>
+        <RadioGroup
+          value={values.billingMode}
+          onValueChange={(v) => set("billingMode", (v as "MANUAL" | "ASAAS") ?? "MANUAL")}
+          className="gap-2.5"
+        >
+          <label className="flex cursor-pointer items-start gap-2 text-sm">
+            <RadioGroupItem value="MANUAL" className="mt-0.5" />
+            <span>
+              <span className="font-medium">Manual</span>
+              <span className="block text-xs text-muted-foreground">
+                Associado envia o comprovante e o financeiro aprova a baixa.
+              </span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-2 text-sm">
+            <RadioGroupItem value="ASAAS" className="mt-0.5" />
+            <span>
+              <span className="font-medium">Automático (Asaas)</span>
+              <span className="block text-xs text-muted-foreground">
+                Gera um PIX dinâmico por cobrança e dá baixa sozinho quando o pagamento cai.
+              </span>
+            </span>
+          </label>
+        </RadioGroup>
+        {wantsAsaasButNotConfigured && (
+          <div className="flex items-start gap-2 rounded-md border border-dashed bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+            <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+            <span>
+              A integração com a Asaas ainda não está configurada no servidor. Defina{" "}
+              <code>ASAAS_API_KEY</code> e <code>ASAAS_ENV</code> antes de ativar o modo
+              automático — o botão "Salvar" fica desabilitado até lá.
+            </span>
+          </div>
+        )}
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="pixKey">Chave PIX</Label>
@@ -150,7 +193,7 @@ export function BillingConfigForm({
         </div>
       )}
 
-      <Button onClick={save} disabled={pending} size="sm">
+      <Button onClick={save} disabled={pending || wantsAsaasButNotConfigured} size="sm">
         {pending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
         Salvar dados de cobrança
       </Button>

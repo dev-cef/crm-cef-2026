@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BillingConfigForm } from "@/components/modules/configuracoes/billing-config-form";
 import { evolutionConfigured } from "@/lib/whatsapp";
+import { asaasConfigured } from "@/lib/asaas";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ export default async function CobrancaConfigPage() {
         <CardContent>
           <BillingConfigForm
             initialValues={{
+              billingMode: (cfg.billingMode as "MANUAL" | "ASAAS") ?? "MANUAL",
               pixKey: cfg.pixKey ?? "",
               pixKeyType: cfg.pixKeyType ?? "CPF",
               pixCity: cfg.pixCity ?? "",
@@ -37,6 +39,7 @@ export default async function CobrancaConfigPage() {
               financeiroWhatsapp: cfg.financeiroWhatsapp ?? "",
             }}
             whatsappConfigured={evolutionConfigured()}
+            asaasConfigured={asaasConfigured()}
           />
         </CardContent>
       </Card>
