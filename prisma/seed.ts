@@ -99,8 +99,8 @@ function pad(n: number, len: number): string {
 async function main() {
   console.log("🌱 Limpando dados...");
   await prisma.auditLog.deleteMany();
-  await prisma.birthdayMessageLog.deleteMany();
-  await prisma.birthdayMessageConfig.deleteMany();
+  await prisma.messageLog.deleteMany();
+  await prisma.messengerConfig.deleteMany();
   await prisma.eventRegistration.deleteMany();
   await prisma.eventPhoto.deleteMany();
   await prisma.event.deleteMany();
@@ -377,7 +377,7 @@ async function main() {
   }
 
   console.log("🎂 Configuração de mensagem de aniversário...");
-  await prisma.birthdayMessageConfig.create({
+  await prisma.messengerConfig.create({
     data: {
       template:
         "Feliz aniversario, {nome}! O Clube Excursionista de Friburgo deseja muitas trilhas e conquistas neste novo ciclo!",

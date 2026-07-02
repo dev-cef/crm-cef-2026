@@ -5,38 +5,12 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { recordAudit } from "@/lib/audit";
 import { buildBirthdayMessage, whatsappLink } from "@/lib/birthday";
-import { sendWhatsAppMessage, evolutionConfigured } from "@/lib/whatsapp";
-
-export async function getBirthdayConfig() {
-  let cfg = await prisma.birthdayMessageConfig.findFirst();
-  if (!cfg) {
-    cfg = await prisma.birthdayMessageConfig.create({ data: {} });
-  }
-  return cfg;
-}
-
-export async function saveBirthdayConfig(
-  template: string,
-  enabled: boolean,
-): Promise<{ ok: boolean; error?: string }> {
-  const session = await auth();
-  if (template.trim().length < 5) {
-    return { ok: false, error: "O texto da mensagem é muito curto." };
-  }
-  const cfg = await getBirthdayConfig();
-  await prisma.birthdayMessageConfig.update({
-    where: { id: cfg.id },
-    data: { template: template.trim(), enabled },
-  });
-  await recordAudit({
-    userId: session?.user?.id,
-    action: "UPDATE",
-    entity: "BirthdayMessageConfig",
-    entityId: cfg.id,
-  });
-  revalidatePath("/aniversariantes");
-  return { ok: true };
-}
+import { evolutionConfigured } from "@/lib/whatsapp";
+import {
+  getMessengerConfig,
+  sendMessengerNotification,
+  logMessengerAttempt,
+} from "@/lib/messenger";
 
 export async function prepareWhatsApp(
   memberId: string,
@@ -44,7 +18,7 @@ export async function prepareWhatsApp(
   const session = await auth();
   const [member, cfg] = await Promise.all([
     prisma.member.findFirst({ where: { id: memberId, deletedAt: null } }),
-    getBirthdayConfig(),
+    getMessengerConfig(),
   ]);
   if (!member) return { ok: false, error: "Associado não encontrado." };
 
@@ -53,34 +27,37 @@ export async function prepareWhatsApp(
 
   // Tenta enviar via Evolution API; se não configurada, cai no link manual
   if (evolutionConfigured()) {
-    try {
-      await sendWhatsAppMessage(phone, message);
-      await prisma.birthdayMessageLog.create({
-        data: { memberId: member.id, channel: "WHATSAPP" },
-      });
-      await recordAudit({
-        userId: session?.user?.id,
-        action: "CREATE",
-        entity: "BirthdayMessageLog",
-        entityId: member.id,
-        metadata: { channel: "WHATSAPP", via: "evolution" },
-      });
-      revalidatePath("/aniversariantes");
-      return { ok: true, sent: true };
-    } catch (e) {
-      return { ok: false, error: `Falha no envio: ${String((e as Error).message)}` };
-    }
+    const res = await sendMessengerNotification({
+      type: "ANIVERSARIO",
+      memberId: member.id,
+      recipient: phone,
+      message,
+    });
+    if (!res.ok) return { ok: false, error: `Falha no envio: ${res.error}` };
+    await recordAudit({
+      userId: session?.user?.id,
+      action: "CREATE",
+      entity: "MessageLog",
+      entityId: member.id,
+      metadata: { channel: "WHATSAPP", via: "evolution" },
+    });
+    revalidatePath("/aniversariantes");
+    return { ok: true, sent: true };
   }
 
-  // Fallback: link wa.me manual
+  // Fallback: link wa.me manual (abrir o link já conta como envio).
   const url = whatsappLink(phone, message);
-  await prisma.birthdayMessageLog.create({
-    data: { memberId: member.id, channel: "WHATSAPP" },
+  await logMessengerAttempt({
+    type: "ANIVERSARIO",
+    channel: "WHATSAPP",
+    memberId: member.id,
+    recipient: phone,
+    status: "ENVIADO",
   });
   await recordAudit({
     userId: session?.user?.id,
     action: "CREATE",
-    entity: "BirthdayMessageLog",
+    entity: "MessageLog",
     entityId: member.id,
     metadata: { channel: "WHATSAPP", via: "link" },
   });
@@ -94,7 +71,7 @@ export async function sendBirthdayEmail(
   const session = await auth();
   const [member, cfg] = await Promise.all([
     prisma.member.findFirst({ where: { id: memberId, deletedAt: null } }),
-    getBirthdayConfig(),
+    getMessengerConfig(),
   ]);
   if (!member) return { ok: false, error: "Associado não encontrado." };
 
@@ -129,19 +106,32 @@ export async function sendBirthdayEmail(
       simulated = false;
     }
   } catch (e) {
+    await logMessengerAttempt({
+      type: "ANIVERSARIO",
+      channel: "EMAIL",
+      memberId: member.id,
+      recipient: member.email,
+      status: "FALHA",
+      errorMessage: String((e as Error).message ?? e),
+    });
     return {
       ok: false,
       error: `Falha no envio: ${String((e as Error).message)}`,
     };
   }
 
-  await prisma.birthdayMessageLog.create({
-    data: { memberId: member.id, channel: "EMAIL" },
+  await logMessengerAttempt({
+    type: "ANIVERSARIO",
+    channel: "EMAIL",
+    memberId: member.id,
+    recipient: member.email,
+    status: simulated ? "FALHA" : "ENVIADO",
+    errorMessage: simulated ? "SMTP não configurado (simulado)" : null,
   });
   await recordAudit({
     userId: session?.user?.id,
     action: "CREATE",
-    entity: "BirthdayMessageLog",
+    entity: "MessageLog",
     entityId: member.id,
     metadata: { channel: "EMAIL", simulated },
   });

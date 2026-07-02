@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { recordAudit } from "@/lib/audit";
 import { parseBrDate } from "@/lib/format";
 import { asaasConfigured, asaasCancelCharge } from "@/lib/asaas";
+import { notifyPaymentConfirmed } from "@/lib/messenger";
 import { planSchema, type PlanFormValues, transactionSchema, type TransactionFormValues } from "@/lib/validations/finance";
 
 type Result = { ok: boolean; error?: string };
@@ -212,6 +213,9 @@ export async function markAsPaid(
           receiptNumber,
           confirmedVia: "MANUAL",
         },
+        include: {
+          member: { select: { id: true, fullName: true, whatsapp: true, phone: true } },
+        },
       });
     });
 
@@ -222,6 +226,19 @@ export async function markAsPaid(
       entityId: id,
       metadata: { status: "PAGO", receiptNumber: updated.receiptNumber },
     });
+
+    // Aviso ao associado pelo Mensageiro (best-effort, nunca lança).
+    await notifyPaymentConfirmed({
+      memberId: updated.member.id,
+      memberFullName: updated.member.fullName,
+      memberWhatsapp: updated.member.whatsapp,
+      memberPhone: updated.member.phone,
+      amount: updated.amount,
+      referenceMonth: updated.referenceMonth,
+      referenceYear: updated.referenceYear,
+      receiptNumber: updated.receiptNumber!,
+    });
+
     revalidatePath("/financeiro/pagamentos");
     revalidatePath("/financeiro");
     return { ok: true, receiptNumber: updated.receiptNumber! };
@@ -274,8 +291,14 @@ export async function editPayment(
   const due = parseBrDate(values.dueDate);
   if (!due) return { ok: false, error: "Data de vencimento inválida." };
   try {
-    const current = await prisma.payment.findUnique({ where: { id } });
+    const current = await prisma.payment.findUnique({
+      where: { id },
+      include: { member: { select: { id: true, fullName: true, whatsapp: true, phone: true } } },
+    });
     if (!current) return { ok: false, error: "Pagamento não encontrado." };
+
+    // Só notifica quando o pagamento passa a PAGO (não a cada edição de um já pago).
+    const becomingPaid = values.status === "PAGO" && current.status !== "PAGO";
 
     // Valor ou vencimento mudou com uma cobrança Asaas já gerada: invalida o cache
     // (e tenta cancelar a cobrança antiga) pra próxima abertura gerar uma nova com os dados corretos.
@@ -285,26 +308,38 @@ export async function editPayment(
       await asaasCancelCharge(current.asaasChargeId).catch(() => {});
     }
 
-    await prisma.payment.update({
-      where: { id },
-      data: {
-        amount: values.amount,
-        dueDate: due,
-        referenceMonth: values.referenceMonth,
-        referenceYear: values.referenceYear,
-        status: values.status,
-        paidAt: values.status === "PAGO" ? current.paidAt ?? new Date() : null,
-        notes: values.notes?.trim() || null,
-        confirmedVia: values.status === "PAGO" ? (current.confirmedVia ?? "MANUAL") : current.confirmedVia,
-        ...(amountOrDueChanged && current.asaasChargeId
-          ? {
-              asaasChargeId: null,
-              asaasPixPayload: null,
-              asaasPixQrCode: null,
-              asaasPixExpiresAt: null,
-            }
-          : {}),
-      },
+    const updated = await prisma.$transaction(async (tx) => {
+      // Gera número de recibo se está virando PAGO e ainda não tem um.
+      let receiptNumber = current.receiptNumber;
+      if (becomingPaid && !receiptNumber) {
+        const year = new Date().getFullYear();
+        const count = await tx.payment.count({
+          where: { receiptNumber: { startsWith: `${year}-` } },
+        });
+        receiptNumber = `${year}-${String(count + 1).padStart(4, "0")}`;
+      }
+      return tx.payment.update({
+        where: { id },
+        data: {
+          amount: values.amount,
+          dueDate: due,
+          referenceMonth: values.referenceMonth,
+          referenceYear: values.referenceYear,
+          status: values.status,
+          paidAt: values.status === "PAGO" ? current.paidAt ?? new Date() : null,
+          notes: values.notes?.trim() || null,
+          confirmedVia: values.status === "PAGO" ? (current.confirmedVia ?? "MANUAL") : current.confirmedVia,
+          receiptNumber,
+          ...(amountOrDueChanged && current.asaasChargeId
+            ? {
+                asaasChargeId: null,
+                asaasPixPayload: null,
+                asaasPixQrCode: null,
+                asaasPixExpiresAt: null,
+              }
+            : {}),
+        },
+      });
     });
     await recordAudit({
       userId: session?.user?.id,
@@ -313,6 +348,21 @@ export async function editPayment(
       entityId: id,
       metadata: { amount: values.amount, status: values.status },
     });
+
+    // Baixa manual via "Editar" também avisa o associado pelo Mensageiro.
+    if (becomingPaid) {
+      await notifyPaymentConfirmed({
+        memberId: current.member.id,
+        memberFullName: current.member.fullName,
+        memberWhatsapp: current.member.whatsapp,
+        memberPhone: current.member.phone,
+        amount: updated.amount,
+        referenceMonth: updated.referenceMonth,
+        referenceYear: updated.referenceYear,
+        receiptNumber: updated.receiptNumber ?? "",
+      });
+    }
+
     revalidatePath("/financeiro/pagamentos");
     revalidatePath("/financeiro");
     return { ok: true };

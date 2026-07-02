@@ -8,6 +8,7 @@ export const CRM_MODULES = [
   { slug: "fornecedores",    label: "Fornecedores",    icon: "Truck" },
   { slug: "eventos",         label: "Eventos",         icon: "CalendarDays" },
   { slug: "aniversariantes", label: "Aniversariantes", icon: "Cake" },
+  { slug: "mensageiro",      label: "Mensageiro",      icon: "MessagesSquare" },
   { slug: "carteirinha",     label: "Carteirinha",     icon: "CreditCard" },
   { slug: "patrimonio",      label: "Patrimônio",      icon: "Package" },
   { slug: "biblioteca",      label: "Biblioteca",       icon: "BookOpen" },

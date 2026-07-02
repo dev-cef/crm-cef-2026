@@ -50,7 +50,7 @@ export async function GET() {
         // passwordHash, totpSecret, totpRecoveryCodes excluídos intencionalmente
       },
     }),
-    prisma.birthdayMessageConfig.findMany(),
+    prisma.messengerConfig.findMany(),
     prisma.systemConfig.findMany(),
     prisma.auditLog.findMany({ orderBy: { createdAt: "asc" } }),
   ]);

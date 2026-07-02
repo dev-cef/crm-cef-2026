@@ -4,8 +4,7 @@ import { requireUser } from "@/lib/authz";
 import { recordAudit } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { getSystemConfig } from "@/app/(app)/financeiro/actions";
-import { sendWhatsAppMessage, sendWhatsAppGroupMessage, evolutionConfigured } from "@/lib/whatsapp";
-import { formatBRL, monthName } from "@/lib/format";
+import { notifyReceiptReceived } from "@/lib/messenger";
 
 const RECEIPT_MIME_PREFIXES = ["data:image/jpeg", "data:image/png", "data:application/pdf"];
 
@@ -63,29 +62,16 @@ export async function POST(request: Request) {
       metadata: { action: "receipt_submitted" },
     });
 
-    // Aviso ao financeiro é best-effort — não deve impedir o envio do comprovante.
-    try {
-      const cfg = await getSystemConfig();
-      if (cfg.financeiroWhatsapp && evolutionConfigured()) {
-        const message = [
-          "📎 Novo comprovante de pagamento enviado",
-          "",
-          `Associado: ${payment.member.fullName}`,
-          `Referência: ${monthName(payment.referenceMonth)}/${payment.referenceYear}`,
-          `Valor: ${formatBRL(payment.amount)}`,
-          "",
-          "Confira em Financeiro > Cobranças no CRM.",
-        ].join("\n");
-
-        if (cfg.financeiroWhatsapp.includes("@g.us")) {
-          await sendWhatsAppGroupMessage(cfg.financeiroWhatsapp, message);
-        } else {
-          await sendWhatsAppMessage(cfg.financeiroWhatsapp, message);
-        }
-      }
-    } catch (err) {
-      console.error("Falha ao notificar financeiro via WhatsApp:", err);
-    }
+    // Aviso ao financeiro pelo Mensageiro (best-effort, nunca lança, sempre registra no log).
+    const cfg = await getSystemConfig();
+    await notifyReceiptReceived({
+      memberId: payment.memberId,
+      memberFullName: payment.member.fullName,
+      amount: payment.amount,
+      referenceMonth: payment.referenceMonth,
+      referenceYear: payment.referenceYear,
+      financeiroWhatsapp: cfg.financeiroWhatsapp,
+    });
 
     revalidatePath("/meu-espaco");
     revalidatePath("/financeiro/pagamentos");

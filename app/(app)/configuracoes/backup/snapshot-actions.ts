@@ -30,7 +30,7 @@ async function collectBackupData() {
         createdAt: true, updatedAt: true,
       },
     }),
-    prisma.birthdayMessageConfig.findMany(),
+    prisma.messengerConfig.findMany(),
     prisma.systemConfig.findMany(),
   ]);
 

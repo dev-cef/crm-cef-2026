@@ -213,7 +213,7 @@ model Member {
   waitlistEntries      EventWaitlist[]
   caronasOferecidas    EventCarona[]         @relation("CaronaDriver")
   caronasPassageiro    EventCaronaPassenger[] @relation("CaronaPassenger")
-  birthdayLogs         BirthdayMessageLog[]
+  messageLogs          MessageLog[]
   physicalCardRequests PhysicalCardRequest[]
   patrimonioBens          PatrimonioBem[]          @relation("BemResponsavel")
   patrimonioMovimentacoes PatrimonioMovimentacao[] @relation("MovResponsavel")
@@ -423,11 +423,24 @@ model EventCaronaPassenger {
   @@index([caronaId])
 }
 
-model BirthdayMessageConfig {
+model MessengerConfig {
   id        String   @id @default(cuid())
+
+  // Aniversário — nomes de campo mantidos como estão fisicamente na tabela
   template  String   @default("Feliz aniversario, {nome}! O Clube Excursionista de Friburgo deseja um dia incrivel!")
   enabled   Boolean  @default(true)
+
+  // Comprovante recebido (associado envia comprovante → avisa financeiro)
+  receiptTemplate String  @default("📎 Novo comprovante de pagamento enviado\n\nAssociado: {associado}\nReferência: {referencia}\nValor: {valor}\n\nConfira em Financeiro > Cobranças no CRM.")
+  receiptEnabled  Boolean @default(true)
+
+  // Pagamento confirmado (financeiro baixa / Asaas confirma → avisa associado)
+  paymentTemplate String  @default("Olá {nome}! Seu pagamento referente a {referencia} no valor de {valor} foi confirmado. Recibo nº {recibo}. Obrigado! — CEF")
+  paymentEnabled  Boolean @default(true)
+
   updatedAt DateTime @updatedAt
+
+  @@map("BirthdayMessageConfig")
 }
 
 model SystemConfig {
@@ -448,13 +461,21 @@ model SystemConfig {
   updatedAt DateTime @updatedAt
 }
 
-model BirthdayMessageLog {
-  id        String   @id @default(cuid())
-  memberId  String
-  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  channel   String // WHATSAPP | EMAIL
-  sentAt    DateTime @default(now())
-  createdAt DateTime @default(now())
+model MessageLog {
+  id           String   @id @default(cuid())
+  type         String   @default("ANIVERSARIO") // ANIVERSARIO | COMPROVANTE_RECEBIDO | PAGAMENTO_CONFIRMADO
+  memberId     String?
+  member       Member?  @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  channel      String // WHATSAPP | EMAIL
+  recipient    String? // telefone/JID ou e-mail de destino
+  status       String   @default("ENVIADO") // ENVIADO | FALHA
+  errorMessage String?
+  sentAt       DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  @@map("BirthdayMessageLog")
+  @@index([type])
+  @@index([sentAt])
 }
 
 model AuditLog {

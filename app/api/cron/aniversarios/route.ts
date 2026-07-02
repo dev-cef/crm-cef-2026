@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { buildBirthdayMessage, buildEmailHtml } from "@/lib/birthday";
-import { sendWhatsAppMessage, evolutionConfigured } from "@/lib/whatsapp";
+import { evolutionConfigured } from "@/lib/whatsapp";
+import {
+  getMessengerConfig,
+  sendMessengerNotification,
+  logMessengerAttempt,
+} from "@/lib/messenger";
 
 export async function GET(request: Request) {
   const auth = request.headers.get("authorization");
@@ -9,8 +14,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const config = await prisma.birthdayMessageConfig.findFirst();
-  if (!config?.enabled) {
+  const config = await getMessengerConfig();
+  if (!config.enabled) {
     return NextResponse.json({ skipped: "disabled" });
   }
 
@@ -36,8 +41,10 @@ export async function GET(request: Request) {
   const todayEnd   = new Date(todayStart.getTime() + 86_400_000);
 
   // Dedup por canal separadamente
-  const alreadySentLogs = await prisma.birthdayMessageLog.findMany({
+  const alreadySentLogs = await prisma.messageLog.findMany({
     where: {
+      type: "ANIVERSARIO",
+      status: "ENVIADO",
       sentAt: { gte: todayStart, lt: todayEnd },
       memberId: { in: birthdayMembers.map((m) => m.id) },
     },
@@ -58,32 +65,58 @@ export async function GET(request: Request) {
 
     // ── E-mail ──────────────────────────────────────────────────────────────
     if (!sentEmail.has(member.id)) {
-      try {
-        if (apiKey) {
+      if (!apiKey) {
+        // Sem provedor configurado, não finge sucesso: registra como falha visível.
+        await logMessengerAttempt({
+          type: "ANIVERSARIO",
+          channel: "EMAIL",
+          memberId: member.id,
+          recipient: member.email,
+          status: "FALHA",
+          errorMessage: "RESEND_API_KEY não configurada (simulado)",
+        });
+        emailFailed++;
+      } else {
+        try {
           const res = await fetch("https://api.resend.com/emails", {
             method: "POST",
             headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
             body: JSON.stringify({ from, to: member.email, subject: "Feliz aniversário! 🎉 — CEF", html: buildEmailHtml(message) }),
           });
           if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text()}`);
+          await logMessengerAttempt({
+            type: "ANIVERSARIO",
+            channel: "EMAIL",
+            memberId: member.id,
+            recipient: member.email,
+            status: "ENVIADO",
+          });
+          emailSent++;
+        } catch (e) {
+          await logMessengerAttempt({
+            type: "ANIVERSARIO",
+            channel: "EMAIL",
+            memberId: member.id,
+            recipient: member.email,
+            status: "FALHA",
+            errorMessage: String((e as Error).message ?? e),
+          });
+          emailFailed++;
         }
-        await prisma.birthdayMessageLog.create({ data: { memberId: member.id, channel: "EMAIL" } });
-        emailSent++;
-      } catch {
-        emailFailed++;
       }
     }
 
     // ── WhatsApp via Evolution API ───────────────────────────────────────────
     if (!sentWhatsApp.has(member.id) && useEvolution) {
-      try {
-        const phone = member.whatsapp ?? member.phone;
-        await sendWhatsAppMessage(phone, message);
-        await prisma.birthdayMessageLog.create({ data: { memberId: member.id, channel: "WHATSAPP" } });
-        waSent++;
-      } catch {
-        waFailed++;
-      }
+      const phone = member.whatsapp ?? member.phone;
+      const res = await sendMessengerNotification({
+        type: "ANIVERSARIO",
+        memberId: member.id,
+        recipient: phone,
+        message,
+      });
+      if (res.ok) waSent++;
+      else waFailed++;
     }
   }
 
