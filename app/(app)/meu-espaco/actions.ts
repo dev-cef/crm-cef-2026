@@ -6,8 +6,6 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/authz";
 import { recordAudit } from "@/lib/audit";
-import { getSystemConfig } from "@/app/(app)/financeiro/actions";
-import { sendWhatsAppMessage, sendWhatsAppGroupMessage, evolutionConfigured } from "@/lib/whatsapp";
 import {
   asaasConfigured,
   asaasFindCustomerByCpf,
@@ -15,7 +13,7 @@ import {
   asaasCreatePixCharge,
   asaasGetPixQrCode,
 } from "@/lib/asaas";
-import { formatBRL, monthName } from "@/lib/format";
+import { monthName } from "@/lib/format";
 
 const profileSchema = z.object({
   email: z.string().email("E-mail inválido"),
@@ -118,80 +116,9 @@ export async function updateMemberPhoto(photoUrl: string | null) {
   }
 }
 
-const RECEIPT_MIME_PREFIXES = ["data:image/jpeg", "data:image/png", "data:application/pdf"];
-
-export async function sendPaymentReceipt(paymentId: string, fileDataUri: string) {
-  const user = await requireUser();
-  if (!user.memberId) return { error: "Sem cadastro vinculado." };
-
-  if (!RECEIPT_MIME_PREFIXES.some((p) => fileDataUri.startsWith(p))) {
-    return { error: "Formato inválido. Envie uma imagem (JPG/PNG) ou PDF." };
-  }
-  const base64 = fileDataUri.split(",")[1] ?? "";
-  if (base64.length > 4 * 1024 * 1024) {
-    return { error: "O arquivo deve ter no máximo 3MB." };
-  }
-
-  const payment = await prisma.payment.findUnique({
-    where: { id: paymentId },
-    include: { member: { select: { fullName: true } } },
-  });
-  if (!payment || payment.memberId !== user.memberId) {
-    return { error: "Cobrança não encontrada." };
-  }
-  if (payment.status === "PAGO") {
-    return { error: "Esta cobrança já está paga." };
-  }
-
-  try {
-    await prisma.payment.update({
-      where: { id: paymentId },
-      data: {
-        receiptPath: fileDataUri,
-        receiptSubmittedAt: new Date(),
-        status: "AGUARDANDO_CONFIRMACAO",
-      },
-    });
-
-    await recordAudit({
-      userId: user.id,
-      action: "UPDATE",
-      entity: "Payment",
-      entityId: paymentId,
-      metadata: { action: "receipt_submitted" },
-    });
-
-    // Aviso ao financeiro é best-effort — não deve impedir o envio do comprovante.
-    try {
-      const cfg = await getSystemConfig();
-      if (cfg.financeiroWhatsapp && evolutionConfigured()) {
-        const message = [
-          "📎 Novo comprovante de pagamento enviado",
-          "",
-          `Associado: ${payment.member.fullName}`,
-          `Referência: ${monthName(payment.referenceMonth)}/${payment.referenceYear}`,
-          `Valor: ${formatBRL(payment.amount)}`,
-          "",
-          "Confira em Financeiro > Cobranças no CRM.",
-        ].join("\n");
-
-        if (cfg.financeiroWhatsapp.includes("@g.us")) {
-          await sendWhatsAppGroupMessage(cfg.financeiroWhatsapp, message);
-        } else {
-          await sendWhatsAppMessage(cfg.financeiroWhatsapp, message);
-        }
-      }
-    } catch (err) {
-      console.error("Falha ao notificar financeiro via WhatsApp:", err);
-    }
-
-    revalidatePath("/meu-espaco");
-    revalidatePath("/financeiro/pagamentos");
-    return { ok: true };
-  } catch {
-    return { error: "Erro ao enviar comprovante. Tente novamente." };
-  }
-}
+// O envio do comprovante em si virou uma rota comum (app/api/meu-espaco/receipt) —
+// o data URI é grande demais pra ir como argumento de Server Action (esbarra no
+// limite de serialização de arrays do React: "Maximum array nesting exceeded").
 
 export async function getOrCreateAsaasCharge(paymentId: string): Promise<
   | { ok: true; pixPayload: string; qrDataUrl: string; expiresAt: string }

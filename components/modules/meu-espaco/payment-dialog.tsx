@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Copy, FileUp, Loader2, Paperclip, Zap } from "lucide-react";
 import { toast } from "sonner";
-import { sendPaymentReceipt, getOrCreateAsaasCharge } from "@/app/(app)/meu-espaco/actions";
+import { getOrCreateAsaasCharge } from "@/app/(app)/meu-espaco/actions";
 import { formatBRL } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import {
@@ -142,15 +142,24 @@ export function PaymentDialog(props: Props) {
       return;
     }
     startTransition(async () => {
-      const res = await sendPaymentReceipt(paymentId, fileDataUri);
-      if ("ok" in res && res.ok) {
-        toast.success("Comprovante enviado! O financeiro foi avisado e vai conferir o pagamento.");
-        setOpen(false);
-        setFileDataUri(null);
-        setFileName(null);
-        router.refresh();
-      } else {
-        toast.error(("error" in res && res.error) || "Erro ao enviar comprovante.");
+      try {
+        const res = await fetch("/api/meu-espaco/receipt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentId, fileDataUri }),
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          toast.success("Comprovante enviado! O financeiro foi avisado e vai conferir o pagamento.");
+          setOpen(false);
+          setFileDataUri(null);
+          setFileName(null);
+          router.refresh();
+        } else {
+          toast.error(data.error || "Erro ao enviar comprovante.");
+        }
+      } catch {
+        toast.error("Erro ao enviar comprovante. Verifique sua conexão.");
       }
     });
   }
