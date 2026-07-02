@@ -40,7 +40,9 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@neondatabase/serverless", "@prisma/adapter-neon", "@prisma/adapter-pg", "@prisma/client"],
   experimental: {
     serverActions: {
-      bodySizeLimit: "4mb",
+      // Comprovantes/fotos são validados a até 3MB no cliente, mas base64
+      // infla o tamanho em ~33% — 4mb fica na borda exata do limite.
+      bodySizeLimit: "6mb",
     },
   },
   async headers() {
