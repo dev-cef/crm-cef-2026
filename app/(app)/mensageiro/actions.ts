@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { recordAudit } from "@/lib/audit";
+import { toSessionUser } from "@/lib/rbac";
+import { can } from "@/lib/permissions";
 import { getMessengerConfig } from "@/lib/messenger";
 
 type Result = { ok: boolean; error?: string };
@@ -15,6 +17,12 @@ async function saveTemplate(
   enabled: boolean,
 ): Promise<Result> {
   const session = await auth();
+  // A UI já esconde os cards sem permissão, mas a Server Action é um endpoint
+  // POST próprio — re-checa aqui para não confiar só no gate de rota/UI.
+  const sessionUser = toSessionUser(session?.user ?? {});
+  if (!(await can(sessionUser, "mensageiro", "edit"))) {
+    return { ok: false, error: "Você não tem permissão para editar o Mensageiro." };
+  }
   if (template.trim().length < 5) {
     return { ok: false, error: "O texto da mensagem é muito curto." };
   }
