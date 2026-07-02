@@ -22,11 +22,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ConfigCard } from "@/components/modules/mensageiro/config-card";
+import { RecipientsCard } from "@/components/modules/mensageiro/recipients-card";
 import { LogFilter } from "@/components/modules/mensageiro/log-filter";
 import {
   saveBirthdayTemplate,
   saveReceiptTemplate,
   savePaymentTemplate,
+  saveRecipients,
 } from "@/app/(app)/mensageiro/actions";
 
 export const dynamic = "force-dynamic";
@@ -80,6 +82,15 @@ export default async function MensageiroPage({
             mas as tentativas continuam registradas no histórico abaixo.
           </span>
         </div>
+      )}
+
+      {canEdit && (
+        <RecipientsCard
+          initialDefaultPhone={cfg.defaultPhone ?? ""}
+          initialFinanceGroupJid={cfg.financeGroupJid ?? ""}
+          initialSecretariaGroupJid={cfg.secretariaGroupJid ?? ""}
+          save={saveRecipients}
+        />
       )}
 
       {canEdit && (

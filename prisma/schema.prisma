@@ -438,6 +438,13 @@ model MessengerConfig {
   paymentTemplate String  @default("Olá {nome}! Seu pagamento referente a {referencia} no valor de {valor} foi confirmado. Recibo nº {recibo}. Obrigado! — CEF")
   paymentEnabled  Boolean @default(true)
 
+  // Destinatários — telefone padrão do clube e grupos de WhatsApp por área.
+  // Os JIDs de grupo (…@g.us) são preenchidos depois de adicionar o WhatsApp do
+  // clube aos grupos; enquanto vazios, o roteamento cai no financeiroWhatsapp/telefone padrão.
+  defaultPhone       String? @default("22996194503") // telefone padrão do Centro Excursionista Friburguense
+  financeGroupJid    String? // grupo que recebe alertas do financeiro (comprovante/pagamento)
+  secretariaGroupJid String? // grupo que recebe novo associado / solicitação de carteirinha
+
   updatedAt DateTime @updatedAt
 
   @@map("BirthdayMessageConfig")

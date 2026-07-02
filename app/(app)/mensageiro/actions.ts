@@ -53,3 +53,35 @@ export async function saveReceiptTemplate(template: string, enabled: boolean): P
 export async function savePaymentTemplate(template: string, enabled: boolean): Promise<Result> {
   return saveTemplate("paymentTemplate", "paymentEnabled", template, enabled);
 }
+
+// Destinatários: telefone padrão do clube + JIDs dos grupos por área.
+export async function saveRecipients(values: {
+  defaultPhone: string;
+  financeGroupJid: string;
+  secretariaGroupJid: string;
+}): Promise<Result> {
+  const session = await auth();
+  const sessionUser = toSessionUser(session?.user ?? {});
+  if (!(await can(sessionUser, "mensageiro", "edit"))) {
+    return { ok: false, error: "Você não tem permissão para editar o Mensageiro." };
+  }
+  const norm = (s: string) => s.trim() || null;
+  const cfg = await getMessengerConfig();
+  await prisma.messengerConfig.update({
+    where: { id: cfg.id },
+    data: {
+      defaultPhone: norm(values.defaultPhone),
+      financeGroupJid: norm(values.financeGroupJid),
+      secretariaGroupJid: norm(values.secretariaGroupJid),
+    },
+  });
+  await recordAudit({
+    userId: session?.user?.id,
+    action: "UPDATE",
+    entity: "MessengerConfig",
+    entityId: cfg.id,
+    metadata: { field: "recipients" },
+  });
+  revalidatePath("/mensageiro");
+  return { ok: true };
+}

@@ -106,7 +106,11 @@ export async function notifyReceiptReceived(params: {
   try {
     const cfg = await getMessengerConfig();
     if (!cfg.receiptEnabled) return;
-    if (!params.financeiroWhatsapp) return;
+
+    // Roteamento: grupo do Financeiro quando configurado; senão o número do
+    // financeiro (SystemConfig) e, por fim, o telefone padrão do clube.
+    const recipient = cfg.financeGroupJid ?? params.financeiroWhatsapp ?? cfg.defaultPhone;
+    if (!recipient) return;
 
     const message = renderTemplate(cfg.receiptTemplate, {
       associado: params.memberFullName,
@@ -117,7 +121,7 @@ export async function notifyReceiptReceived(params: {
     await sendMessengerNotification({
       type: "COMPROVANTE_RECEBIDO",
       memberId: params.memberId,
-      recipient: params.financeiroWhatsapp,
+      recipient,
       message,
     });
   } catch (err) {
