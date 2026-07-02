@@ -2,12 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, XCircle, FileText, Pencil } from "lucide-react";
+import { CheckCircle2, XCircle, FileText, Pencil, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { cancelPayment } from "@/app/(app)/financeiro/actions";
 import { DarBaixaDialog } from "@/components/modules/financeiro/dar-baixa-dialog";
 import { ReciboModal } from "@/components/modules/financeiro/recibo-modal";
 import { EditPaymentDialog } from "@/components/modules/financeiro/edit-payment-dialog";
+import { ReceiptDialog } from "@/components/modules/financeiro/receipt-dialog";
 import { usePermissions } from "@/hooks/usePermissions";
 
 type Props = {
@@ -24,6 +25,8 @@ type Props = {
   referenceMonth: number;
   referenceYear: number;
   isAdmin?: boolean;
+  receiptPath?: string | null;
+  receiptSubmittedAt?: string | null;
 };
 
 export function PaymentRowActions({
@@ -40,12 +43,15 @@ export function PaymentRowActions({
   referenceMonth,
   referenceYear,
   isAdmin = false,
+  receiptPath = null,
+  receiptSubmittedAt = null,
 }: Props) {
   const { can, loading } = usePermissions();
   const router = useRouter();
   const [baixaOpen, setBaixaOpen] = useState(false);
   const [reciboOpen, setReciboOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [receiptOpen, setReceiptOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const canEdit = isAdmin || can("financeiro", "edit");
@@ -85,6 +91,16 @@ export function PaymentRowActions({
             className="flex items-center gap-1 text-green-600 hover:text-green-700 dark:text-green-500"
           >
             <CheckCircle2 className="size-3.5" /> Dar baixa
+          </button>
+        )}
+
+        {receiptPath && (
+          <button
+            type="button"
+            onClick={() => setReceiptOpen(true)}
+            className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
+          >
+            <Paperclip className="size-3.5" /> Ver comprovante
           </button>
         )}
 
@@ -143,6 +159,17 @@ export function PaymentRowActions({
         receiptNumber={receiptNumber}
         notes={notes}
       />
+
+      {receiptPath && (
+        <ReceiptDialog
+          open={receiptOpen}
+          onClose={() => setReceiptOpen(false)}
+          paymentId={id}
+          memberName={memberName}
+          receiptPath={receiptPath}
+          receiptSubmittedAt={receiptSubmittedAt}
+        />
+      )}
     </>
   );
 }

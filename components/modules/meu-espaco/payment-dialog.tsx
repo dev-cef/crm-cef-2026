@@ -1,0 +1,225 @@
+"use client";
+
+import Image from "next/image";
+import { useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Copy, FileUp, Loader2, Paperclip } from "lucide-react";
+import { toast } from "sonner";
+import { sendPaymentReceipt } from "@/app/(app)/meu-espaco/actions";
+import { formatBRL } from "@/lib/format";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+const PIX_KEY_TYPE_LABEL: Record<string, string> = {
+  CPF: "CPF",
+  CNPJ: "CNPJ",
+  EMAIL: "E-mail",
+  TELEFONE: "Telefone",
+  ALEATORIA: "Chave aleatória",
+};
+
+type Props = {
+  trigger: React.ReactElement;
+  paymentId: string;
+  amount: number;
+  referenceLabel: string;
+  dueDateLabel: string;
+  status: string;
+  receiptSubmittedAtLabel: string | null;
+  pixKey: string | null;
+  pixKeyType: string | null;
+  pixPayload: string | null;
+  qrDataUrl: string | null;
+  bankName: string | null;
+  bankAgency: string | null;
+  bankAccount: string | null;
+  accountHolderName: string | null;
+};
+
+export function PaymentDialog(props: Props) {
+  const {
+    trigger,
+    paymentId,
+    amount,
+    referenceLabel,
+    dueDateLabel,
+    status,
+    receiptSubmittedAtLabel,
+    pixKey,
+    pixKeyType,
+    pixPayload,
+    qrDataUrl,
+    bankName,
+    bankAgency,
+    bankAccount,
+    accountHolderName,
+  } = props;
+
+  const [open, setOpen] = useState(false);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [fileDataUri, setFileDataUri] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+
+  const awaitingReview = status === "AGUARDANDO_CONFIRMACAO";
+  const hasBankInfo = bankName || bankAgency || bankAccount;
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "application/pdf"].includes(file.type)) {
+      toast.error("Use uma imagem (JPG/PNG) ou PDF.");
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      toast.error("O arquivo deve ter no máximo 3MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFileDataUri(String(reader.result));
+      setFileName(file.name);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function copyPix() {
+    if (!pixPayload) return;
+    try {
+      await navigator.clipboard.writeText(pixPayload);
+      toast.success("Código PIX copiado!");
+    } catch {
+      toast.error("Não foi possível copiar o código.");
+    }
+  }
+
+  function handleSend() {
+    if (!fileDataUri) {
+      toast.error("Selecione o arquivo do comprovante.");
+      return;
+    }
+    startTransition(async () => {
+      const res = await sendPaymentReceipt(paymentId, fileDataUri);
+      if ("ok" in res && res.ok) {
+        toast.success("Comprovante enviado! O financeiro foi avisado e vai conferir o pagamento.");
+        setOpen(false);
+        setFileDataUri(null);
+        setFileName(null);
+        router.refresh();
+      } else {
+        toast.error(("error" in res && res.error) || "Erro ao enviar comprovante.");
+      }
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger render={trigger} />
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Cobrança — {referenceLabel}</DialogTitle>
+          <DialogDescription>
+            Vencimento em {dueDateLabel} · <strong>{formatBRL(amount)}</strong>
+          </DialogDescription>
+        </DialogHeader>
+
+        {awaitingReview ? (
+          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+            <p className="font-medium">Comprovante em análise</p>
+            <p className="mt-0.5 text-xs opacity-80">
+              Enviado {receiptSubmittedAtLabel ? `em ${receiptSubmittedAtLabel}` : ""}. Assim que o
+              financeiro confirmar o recebimento, esta cobrança será marcada como paga.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {pixKey ? (
+              <div className="space-y-2 rounded-md border p-3">
+                <p className="text-sm font-medium">Pague com PIX</p>
+                {qrDataUrl && (
+                  <div className="flex justify-center py-1">
+                    <Image
+                      src={qrDataUrl}
+                      alt="QR Code PIX"
+                      width={180}
+                      height={180}
+                      className="rounded-md border"
+                      unoptimized
+                    />
+                  </div>
+                )}
+                <div className="flex items-center justify-between gap-2 rounded-md bg-muted px-2 py-1.5 text-xs">
+                  <span className="truncate">
+                    {PIX_KEY_TYPE_LABEL[pixKeyType ?? ""] ?? "Chave"}: {pixKey}
+                  </span>
+                  <Button type="button" size="sm" variant="outline" onClick={copyPix}>
+                    <Copy className="size-3.5" /> Copiar
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Dados de PIX ainda não configurados. Entre em contato com o financeiro.
+              </p>
+            )}
+
+            {hasBankInfo && (
+              <div className="space-y-1 rounded-md border p-3 text-sm">
+                <p className="font-medium">Transferência bancária</p>
+                {accountHolderName && <p className="text-muted-foreground">Titular: {accountHolderName}</p>}
+                {bankName && <p className="text-muted-foreground">Banco: {bankName}</p>}
+                {bankAgency && <p className="text-muted-foreground">Agência: {bankAgency}</p>}
+                {bankAccount && <p className="text-muted-foreground">Conta: {bankAccount}</p>}
+              </div>
+            )}
+
+            <div className="space-y-2 rounded-md border border-dashed p-3">
+              <p className="text-sm font-medium">Já pagou? Envie o comprovante</p>
+              <input
+                ref={inputRef}
+                type="file"
+                accept="image/jpeg,image/png,application/pdf"
+                className="hidden"
+                onChange={handleFile}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => inputRef.current?.click()}
+              >
+                <FileUp className="size-4" /> Selecionar arquivo
+              </Button>
+              {fileName && (
+                <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Paperclip className="size-3" /> {fileName}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        <DialogFooter>
+          <DialogClose render={<Button type="button" variant="outline" />}>
+            Fechar
+          </DialogClose>
+          {!awaitingReview && (
+            <Button onClick={handleSend} disabled={pending || !fileDataUri}>
+              {pending && <Loader2 className="size-4 animate-spin" />}
+              Enviar comprovante
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

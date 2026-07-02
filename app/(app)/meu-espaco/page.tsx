@@ -1,4 +1,5 @@
 import Link from "next/link";
+import QRCode from "qrcode";
 import {
   CreditCard,
   CalendarClock,
@@ -17,14 +18,18 @@ import {
   Calendar,
   MapPin,
   ChevronRight,
+  Receipt,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/authz";
 import { formatCpf } from "@/lib/cpf";
 import { formatBRL, monthName, toBrDate } from "@/lib/format";
 import { membershipNumber, membershipValidity } from "@/lib/membership";
+import { buildPixPayload } from "@/lib/pix";
+import { getSystemConfig } from "@/app/(app)/financeiro/actions";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { PaymentDialog } from "@/components/modules/meu-espaco/payment-dialog";
 import {
   Card,
   CardContent,
@@ -54,6 +59,14 @@ const PAYMENT_BADGE: Record<string, "default" | "secondary" | "destructive"> = {
   PAGO: "default",
   PENDENTE: "secondary",
   ATRASADO: "destructive",
+  AGUARDANDO_CONFIRMACAO: "secondary",
+};
+
+const PAYMENT_LABEL: Record<string, string> = {
+  PAGO: "PAGO",
+  PENDENTE: "PENDENTE",
+  ATRASADO: "ATRASADO",
+  AGUARDANDO_CONFIRMACAO: "EM ANÁLISE",
 };
 
 export default async function MeuEspacoPage() {
@@ -102,6 +115,8 @@ export default async function MeuEspacoPage() {
     );
   }
 
+  type PaymentRow = (typeof member.payments)[number];
+
   const initials = member.fullName
     .split(" ")
     .map((s) => s[0])
@@ -110,12 +125,66 @@ export default async function MeuEspacoPage() {
     .toUpperCase();
 
   const validity = member.cardValidUntil ?? membershipValidity();
-  const pending = member.payments.filter(
-    (p) => p.status === "PENDENTE" || p.status === "ATRASADO",
+  const unpaid = member.payments.filter(
+    (p) =>
+      p.status === "PENDENTE" ||
+      p.status === "ATRASADO" ||
+      p.status === "AGUARDANDO_CONFIRMACAO",
   );
-  const emDia = pending.length === 0;
-  const pendingTotal = pending.reduce((s, p) => s + p.amount, 0);
+  const emDia = unpaid.length === 0;
+  const unpaidTotal = unpaid.reduce((s, p) => s + p.amount, 0);
+  const awaitingReviewCount = unpaid.filter((p) => p.status === "AGUARDANDO_CONFIRMACAO").length;
+  const nextCharge = unpaid
+    .slice()
+    .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())[0];
   const eligibility = checkEligibility(member.createdAt, member.eventRegistrations);
+
+  const billingCfg = await getSystemConfig();
+  const paymentDialogData = new Map<
+    string,
+    { qrDataUrl: string | null; pixPayload: string | null }
+  >();
+  await Promise.all(
+    unpaid.map(async (p) => {
+      if (!billingCfg.pixKey) {
+        paymentDialogData.set(p.id, { qrDataUrl: null, pixPayload: null });
+        return;
+      }
+      const pixPayload = buildPixPayload({
+        key: billingCfg.pixKey,
+        merchantName: billingCfg.accountHolderName || "Clube Excursionista de Friburgo",
+        merchantCity: billingCfg.pixCity || "Nova Friburgo",
+        amount: p.amount,
+        txid: p.id,
+        description: `CEF ${monthName(p.referenceMonth)}/${p.referenceYear}`,
+      });
+      const qrDataUrl = await QRCode.toDataURL(pixPayload, { margin: 1, width: 220 });
+      paymentDialogData.set(p.id, { qrDataUrl, pixPayload });
+    }),
+  );
+
+  function renderPaymentDialog(p: PaymentRow, trigger: React.ReactElement) {
+    const data = paymentDialogData.get(p.id) ?? { qrDataUrl: null, pixPayload: null };
+    return (
+      <PaymentDialog
+        trigger={trigger}
+        paymentId={p.id}
+        amount={p.amount}
+        referenceLabel={`${monthName(p.referenceMonth)}/${p.referenceYear}`}
+        dueDateLabel={toBrDate(p.dueDate)}
+        status={p.status}
+        receiptSubmittedAtLabel={p.receiptSubmittedAt ? toBrDate(p.receiptSubmittedAt) : null}
+        pixKey={billingCfg.pixKey}
+        pixKeyType={billingCfg.pixKeyType}
+        pixPayload={data.pixPayload}
+        qrDataUrl={data.qrDataUrl}
+        bankName={billingCfg.bankName}
+        bankAgency={billingCfg.bankAgency}
+        bankAccount={billingCfg.bankAccount}
+        accountHolderName={billingCfg.accountHolderName}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -212,10 +281,22 @@ export default async function MeuEspacoPage() {
             <CardDescription>
               {emDia
                 ? "Você está em dia com o clube."
-                : `${pending.length} cobrança(s) em aberto · ${formatBRL(pendingTotal)}`}
+                : `${unpaid.length} cobrança(s) em aberto · ${formatBRL(unpaidTotal)}${
+                    awaitingReviewCount > 0
+                      ? ` (${awaitingReviewCount} em análise)`
+                      : ""
+                  }`}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-wrap gap-2">
+            {nextCharge &&
+              renderPaymentDialog(
+                nextCharge,
+                <Button variant="outline" size="sm">
+                  <Receipt className="size-4" />
+                  Ver cobrança
+                </Button>,
+              )}
             <Link
               href={`/carteirinha/${member.id}`}
               className={buttonVariants({ variant: "outline", size: "sm" })}
@@ -248,6 +329,7 @@ export default async function MeuEspacoPage() {
                   <TableHead>Valor</TableHead>
                   <TableHead>Vencimento</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -260,8 +342,20 @@ export default async function MeuEspacoPage() {
                     <TableCell>{toBrDate(p.dueDate)}</TableCell>
                     <TableCell>
                       <Badge variant={PAYMENT_BADGE[p.status] ?? "secondary"}>
-                        {p.status}
+                        {PAYMENT_LABEL[p.status] ?? p.status}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {(p.status === "PENDENTE" ||
+                        p.status === "ATRASADO" ||
+                        p.status === "AGUARDANDO_CONFIRMACAO") &&
+                        renderPaymentDialog(
+                          p,
+                          <Button variant="ghost" size="sm">
+                            <Receipt className="size-3.5" />
+                            {p.status === "AGUARDANDO_CONFIRMACAO" ? "Ver status" : "Pagar"}
+                          </Button>,
+                        )}
                     </TableCell>
                   </TableRow>
                 ))}

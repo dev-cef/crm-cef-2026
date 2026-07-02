@@ -234,12 +234,13 @@ model Payment {
   amount         Float
   referenceMonth Int // 1-12
   referenceYear  Int
-  status         String    @default("PENDENTE") // PAGO | PENDENTE | ATRASADO
+  status         String    @default("PENDENTE") // PAGO | PENDENTE | ATRASADO | AGUARDANDO_CONFIRMACAO
   dueDate        DateTime
   paidAt         DateTime?
   notes          String? // Observação da baixa
-  receiptPath    String? // Caminho do comprovante (arquivo local)
-  receiptNumber  String? // Número do recibo gerado (YYYY-NNNN)
+  receiptPath        String? // Comprovante enviado pelo associado (data URI base64)
+  receiptSubmittedAt DateTime? // Data/hora do envio do comprovante
+  receiptNumber      String? // Número do recibo gerado pelo financeiro (YYYY-NNNN)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -423,7 +424,18 @@ model BirthdayMessageConfig {
 model SystemConfig {
   id            String   @id @default(cuid())
   enrollmentFee Float    @default(50) // taxa de inscrição única para novos associados
-  updatedAt     DateTime @updatedAt
+
+  // Dados de cobrança exibidos ao associado (PIX / conta bancária)
+  pixKey             String? // chave PIX do clube
+  pixKeyType         String? // CPF | CNPJ | EMAIL | TELEFONE | ALEATORIA
+  pixCity            String? // cidade do titular da chave PIX (obrigatória no payload EMV do QR Code)
+  bankName           String?
+  bankAgency         String?
+  bankAccount        String?
+  accountHolderName  String? // titular da conta / da chave PIX
+  financeiroWhatsapp String? // número (com DDI/DDD) ou JID de grupo que recebe alertas de comprovante
+
+  updatedAt DateTime @updatedAt
 }
 
 model BirthdayMessageLog {

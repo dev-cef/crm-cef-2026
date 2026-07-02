@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Check, Download, ExternalLink } from "lucide-react";
+import { ArrowLeft, Check, Download, ExternalLink, Paperclip } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
 import { formatBRL, formatDate, monthName } from "@/lib/format";
@@ -28,19 +28,21 @@ import { toSessionUser } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
-const ALL_STATUSES = ["PAGO", "PENDENTE", "ATRASADO"] as const;
+const ALL_STATUSES = ["PAGO", "PENDENTE", "ATRASADO", "AGUARDANDO_CONFIRMACAO"] as const;
 type Status = (typeof ALL_STATUSES)[number];
 
 const BADGE: Record<string, "default" | "secondary" | "destructive"> = {
   PAGO: "default",
   PENDENTE: "secondary",
   ATRASADO: "destructive",
+  AGUARDANDO_CONFIRMACAO: "secondary",
 };
 
 const BADGE_LABEL: Record<string, string> = {
   PAGO: "Pago",
   PENDENTE: "Pendente",
   ATRASADO: "Atrasado",
+  AGUARDANDO_CONFIRMACAO: "Em análise",
 };
 
 export default async function PagamentosPage({
@@ -197,12 +199,13 @@ export default async function PagamentosPage({
       />
 
       {/* Stat cards */}
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {(
           [
             { status: "PAGO" as Status, label: "Recebido" },
             { status: "PENDENTE" as Status, label: "Pendente" },
             { status: "ATRASADO" as Status, label: "Atrasado" },
+            { status: "AGUARDANDO_CONFIRMACAO" as Status, label: "Em análise" },
           ] as const
         ).map(({ status, label }) => {
           const active = activeStatuses.includes(status);
@@ -310,9 +313,14 @@ export default async function PagamentosPage({
                 <TableCell className="text-sm">{formatDate(p.dueDate)}</TableCell>
                 <TableCell className="font-medium">{formatBRL(p.amount)}</TableCell>
                 <TableCell>
-                  <Badge variant={BADGE[p.status] ?? "secondary"}>
-                    {BADGE_LABEL[p.status] ?? p.status}
-                  </Badge>
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant={BADGE[p.status] ?? "secondary"}>
+                      {BADGE_LABEL[p.status] ?? p.status}
+                    </Badge>
+                    {p.receiptPath && (
+                      <Paperclip className="size-3.5 text-muted-foreground" aria-label="Comprovante anexado" />
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="hidden text-sm md:table-cell">
                   {p.paidAt ? formatDate(p.paidAt) : "—"}
@@ -332,6 +340,8 @@ export default async function PagamentosPage({
                     referenceMonth={p.referenceMonth}
                     referenceYear={p.referenceYear}
                     isAdmin={isAdmin}
+                    receiptPath={p.receiptPath ?? null}
+                    receiptSubmittedAt={p.receiptSubmittedAt?.toISOString() ?? null}
                   />
                 </TableCell>
               </TableRow>

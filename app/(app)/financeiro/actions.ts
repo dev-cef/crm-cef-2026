@@ -228,6 +228,34 @@ export async function markAsPaid(
   }
 }
 
+export async function rejectReceipt(id: string): Promise<Result> {
+  const session = await auth();
+  try {
+    const payment = await prisma.payment.findUnique({ where: { id } });
+    if (!payment) return { ok: false, error: "Pagamento não encontrado." };
+    await prisma.payment.update({
+      where: { id },
+      data: {
+        status: payment.dueDate < new Date() ? "ATRASADO" : "PENDENTE",
+        receiptPath: null,
+        receiptSubmittedAt: null,
+      },
+    });
+    await recordAudit({
+      userId: session?.user?.id,
+      action: "UPDATE",
+      entity: "Payment",
+      entityId: id,
+      metadata: { action: "receipt_rejected" },
+    });
+    revalidatePath("/financeiro/pagamentos");
+    revalidatePath("/meu-espaco");
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Erro ao rejeitar o comprovante." };
+  }
+}
+
 export async function editPayment(
   id: string,
   values: {
@@ -345,6 +373,51 @@ export async function saveEnrollmentFee(fee: number): Promise<Result> {
     return { ok: true };
   } catch {
     return { ok: false, error: "Erro ao salvar a taxa de inscrição." };
+  }
+}
+
+export type BillingConfigValues = {
+  pixKey: string;
+  pixKeyType: string;
+  pixCity: string;
+  bankName: string;
+  bankAgency: string;
+  bankAccount: string;
+  accountHolderName: string;
+  financeiroWhatsapp: string;
+};
+
+export async function saveBillingConfig(
+  values: BillingConfigValues,
+): Promise<Result> {
+  const session = await auth();
+  try {
+    const cfg = await getSystemConfig();
+    await prisma.systemConfig.update({
+      where: { id: cfg.id },
+      data: {
+        pixKey: values.pixKey.trim() || null,
+        pixKeyType: values.pixKeyType.trim() || null,
+        pixCity: values.pixCity.trim() || null,
+        bankName: values.bankName.trim() || null,
+        bankAgency: values.bankAgency.trim() || null,
+        bankAccount: values.bankAccount.trim() || null,
+        accountHolderName: values.accountHolderName.trim() || null,
+        financeiroWhatsapp: values.financeiroWhatsapp.trim() || null,
+      },
+    });
+    await recordAudit({
+      userId: session?.user?.id,
+      action: "UPDATE",
+      entity: "SystemConfig",
+      entityId: cfg.id,
+      metadata: { pixKey: values.pixKey },
+    });
+    revalidatePath("/configuracoes/cobranca");
+    revalidatePath("/meu-espaco");
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Erro ao salvar os dados de cobrança." };
   }
 }
 

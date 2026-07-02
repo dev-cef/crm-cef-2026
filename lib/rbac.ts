@@ -184,6 +184,7 @@ export const NAV_ITEMS: {
 export const CONFIG_NAV_ITEMS: { href: string; label: string }[] = [
   { href: "/configuracoes/seguranca",    label: "Usuários" },
   { href: "/configuracoes/departamentos", label: "Departamentos" },
+  { href: "/configuracoes/cobranca",     label: "Cobrança" },
   { href: "/configuracoes/aprovacoes",   label: "Aprovações" },
   { href: "/configuracoes/auditoria",    label: "Auditoria" },
   { href: "/configuracoes/backup",       label: "Backup" },

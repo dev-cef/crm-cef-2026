@@ -27,6 +27,7 @@ import {
   HardDriveDownload,
   Package,
   BookOpen,
+  QrCode,
 } from "lucide-react";
 import { CefLogo } from "@/components/layout/cef-logo";
 import { SessionBadge } from "@/components/layout/session-badge";
@@ -69,6 +70,7 @@ const ICONS: Record<string, typeof Users> = {
 const CONFIG_ICONS: Record<string, typeof Users> = {
   "/configuracoes/seguranca":     Users,
   "/configuracoes/departamentos": Building2,
+  "/configuracoes/cobranca":      QrCode,
   "/configuracoes/aprovacoes":    UserCheck,
   "/configuracoes/auditoria":     ScrollText,
   "/configuracoes/backup":        HardDriveDownload,
