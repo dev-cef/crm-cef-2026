@@ -12,7 +12,9 @@ import { formatBRL, monthName } from "@/lib/format";
 export type MessengerType =
   | "ANIVERSARIO"
   | "COMPROVANTE_RECEBIDO"
-  | "PAGAMENTO_CONFIRMADO";
+  | "PAGAMENTO_CONFIRMADO"
+  | "NOVO_ASSOCIADO"
+  | "CARTEIRINHA";
 export type MessengerChannel = "WHATSAPP" | "EMAIL";
 
 // Config singleton — mesmo padrão de getSystemConfig/getBirthdayConfig.
@@ -164,5 +166,69 @@ export async function notifyPaymentConfirmed(params: {
     });
   } catch (err) {
     console.error("Falha ao notificar pagamento confirmado:", err);
+  }
+}
+
+// Aviso à secretaria quando alguém se auto-cadastra (antes da aprovação).
+// Roteia pro grupo da Secretaria; fallback pro telefone padrão. Nunca lança.
+export async function notifyNewMember(params: {
+  memberId: string;
+  memberFullName: string;
+  registration: number;
+  phone: string;
+  email: string;
+}): Promise<void> {
+  try {
+    const cfg = await getMessengerConfig();
+    if (!cfg.newMemberEnabled) return;
+
+    const recipient = cfg.secretariaGroupJid ?? cfg.defaultPhone;
+    if (!recipient) return;
+
+    const message = renderTemplate(cfg.newMemberTemplate, {
+      associado: params.memberFullName,
+      matricula: String(params.registration),
+      telefone: params.phone,
+      email: params.email,
+    });
+
+    await sendMessengerNotification({
+      type: "NOVO_ASSOCIADO",
+      memberId: params.memberId,
+      recipient,
+      message,
+    });
+  } catch (err) {
+    console.error("Falha ao notificar novo associado:", err);
+  }
+}
+
+// Aviso à secretaria quando uma solicitação de carteirinha física é aberta.
+// Roteia pro grupo da Secretaria; fallback pro telefone padrão. Nunca lança.
+export async function notifyCardRequest(params: {
+  memberId: string;
+  memberFullName: string;
+  tipo: string; // "1ª via" | "2ª via"
+}): Promise<void> {
+  try {
+    const cfg = await getMessengerConfig();
+    if (!cfg.cardRequestEnabled) return;
+
+    const recipient = cfg.secretariaGroupJid ?? cfg.defaultPhone;
+    if (!recipient) return;
+
+    const message = renderTemplate(cfg.cardRequestTemplate, {
+      associado: params.memberFullName,
+      tipo: params.tipo,
+    });
+
+    await sendMessengerNotification({
+      type: "CARTEIRINHA",
+      memberId: params.memberId,
+      recipient,
+      message,
+    });
+  } catch (err) {
+    console.error("Falha ao notificar solicitação de carteirinha:", err);
   }
 }

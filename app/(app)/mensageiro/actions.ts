@@ -11,8 +11,8 @@ import { getMessengerConfig } from "@/lib/messenger";
 type Result = { ok: boolean; error?: string };
 
 async function saveTemplate(
-  field: "template" | "receiptTemplate" | "paymentTemplate",
-  enabledField: "enabled" | "receiptEnabled" | "paymentEnabled",
+  field: "template" | "receiptTemplate" | "paymentTemplate" | "newMemberTemplate" | "cardRequestTemplate",
+  enabledField: "enabled" | "receiptEnabled" | "paymentEnabled" | "newMemberEnabled" | "cardRequestEnabled",
   template: string,
   enabled: boolean,
 ): Promise<Result> {
@@ -52,6 +52,14 @@ export async function saveReceiptTemplate(template: string, enabled: boolean): P
 
 export async function savePaymentTemplate(template: string, enabled: boolean): Promise<Result> {
   return saveTemplate("paymentTemplate", "paymentEnabled", template, enabled);
+}
+
+export async function saveNewMemberTemplate(template: string, enabled: boolean): Promise<Result> {
+  return saveTemplate("newMemberTemplate", "newMemberEnabled", template, enabled);
+}
+
+export async function saveCardRequestTemplate(template: string, enabled: boolean): Promise<Result> {
+  return saveTemplate("cardRequestTemplate", "cardRequestEnabled", template, enabled);
 }
 
 // Destinatários: telefone padrão do clube + JIDs dos grupos por área.

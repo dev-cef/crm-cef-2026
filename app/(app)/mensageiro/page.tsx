@@ -28,6 +28,8 @@ import {
   saveBirthdayTemplate,
   saveReceiptTemplate,
   savePaymentTemplate,
+  saveNewMemberTemplate,
+  saveCardRequestTemplate,
   saveRecipients,
 } from "@/app/(app)/mensageiro/actions";
 
@@ -37,9 +39,17 @@ const TYPE_LABEL: Record<string, string> = {
   ANIVERSARIO: "Aniversário",
   COMPROVANTE_RECEBIDO: "Comprovante recebido",
   PAGAMENTO_CONFIRMADO: "Pagamento confirmado",
+  NOVO_ASSOCIADO: "Novo associado",
+  CARTEIRINHA: "Carteirinha",
 };
 
-const VALID_TYPES = ["ANIVERSARIO", "COMPROVANTE_RECEBIDO", "PAGAMENTO_CONFIRMADO"];
+const VALID_TYPES = [
+  "ANIVERSARIO",
+  "COMPROVANTE_RECEBIDO",
+  "PAGAMENTO_CONFIRMADO",
+  "NOVO_ASSOCIADO",
+  "CARTEIRINHA",
+];
 
 export default async function MensageiroPage({
   searchParams,
@@ -136,6 +146,33 @@ export default async function MensageiroPage({
             initialTemplate={cfg.paymentTemplate}
             initialEnabled={cfg.paymentEnabled}
             save={savePaymentTemplate}
+          />
+          <ConfigCard
+            title="Novo associado"
+            description="Aviso à secretaria quando alguém se auto-cadastra (antes da aprovação)."
+            enabledLabel="Aviso ativado"
+            placeholders={
+              <>
+                Use <code>{"{associado}"}</code>, <code>{"{matricula}"}</code>,{" "}
+                <code>{"{telefone}"}</code> e <code>{"{email}"}</code>.
+              </>
+            }
+            initialTemplate={cfg.newMemberTemplate}
+            initialEnabled={cfg.newMemberEnabled}
+            save={saveNewMemberTemplate}
+          />
+          <ConfigCard
+            title="Carteirinha"
+            description="Aviso à secretaria quando uma solicitação de carteirinha física é aberta."
+            enabledLabel="Aviso ativado"
+            placeholders={
+              <>
+                Use <code>{"{associado}"}</code> e <code>{"{tipo}"}</code> (1ª/2ª via).
+              </>
+            }
+            initialTemplate={cfg.cardRequestTemplate}
+            initialEnabled={cfg.cardRequestEnabled}
+            save={saveCardRequestTemplate}
           />
         </div>
       )}

@@ -3,6 +3,7 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/lib/audit";
+import { notifyNewMember } from "@/lib/messenger";
 import { normalizeMember, memberDbError } from "@/lib/member-data";
 import { passwordSchema } from "@/lib/validations/auth";
 import { type MemberFormValues } from "@/lib/validations/member";
@@ -85,6 +86,15 @@ export async function registrarAssociado(
         fullName: result.member.fullName,
         registration: result.member.registration,
       },
+    });
+
+    // Aviso à secretaria pelo Mensageiro (best-effort, nunca lança).
+    await notifyNewMember({
+      memberId: result.member.id,
+      memberFullName: result.member.fullName,
+      registration: result.member.registration,
+      phone: result.member.phone,
+      email: result.member.email,
     });
 
     return { ok: true };

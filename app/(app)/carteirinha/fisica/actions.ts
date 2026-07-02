@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/authz";
 import { recordAudit } from "@/lib/audit";
+import { notifyCardRequest } from "@/lib/messenger";
 import {
   checkEligibility,
   currentQuarter,
@@ -103,6 +104,13 @@ export async function createRequest(memberId: string) {
       entity: "PhysicalCardRequest",
       entityId: request.id,
       metadata: { memberId, quarter, year },
+    });
+
+    // Aviso à secretaria pelo Mensageiro (best-effort, nunca lança).
+    await notifyCardRequest({
+      memberId,
+      memberFullName: member.fullName,
+      tipo: "1ª via",
     });
 
     revalidatePath("/carteirinha/fisica");
@@ -488,6 +496,13 @@ export async function createSecondCopyRequest(memberId: string) {
       entity: "PhysicalCardRequest",
       entityId: request.id,
       metadata: { memberId, quarter, year, requestType: "SEGUNDA_VIA" },
+    });
+
+    // Aviso à secretaria pelo Mensageiro (best-effort, nunca lança).
+    await notifyCardRequest({
+      memberId,
+      memberFullName: member.fullName,
+      tipo: "2ª via",
     });
 
     revalidatePath("/carteirinha/fisica");
