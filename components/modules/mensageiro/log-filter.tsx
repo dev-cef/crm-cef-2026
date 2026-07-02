@@ -7,6 +7,8 @@ const OPTIONS = [
   { value: "ANIVERSARIO", label: "Aniversário" },
   { value: "COMPROVANTE_RECEBIDO", label: "Comprovante recebido" },
   { value: "PAGAMENTO_CONFIRMADO", label: "Pagamento confirmado" },
+  { value: "NOVO_ASSOCIADO", label: "Novo associado" },
+  { value: "CARTEIRINHA", label: "Carteirinha" },
 ];
 
 export function LogFilter({ type }: { type: string }) {

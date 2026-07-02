@@ -7,6 +7,7 @@ import { recordAudit } from "@/lib/audit";
 import { parseBrDate } from "@/lib/format";
 import { asaasConfigured, asaasCancelCharge } from "@/lib/asaas";
 import { notifyPaymentConfirmed } from "@/lib/messenger";
+import { generateReceiptNumber } from "@/lib/receipt";
 import { planSchema, type PlanFormValues, transactionSchema, type TransactionFormValues } from "@/lib/validations/finance";
 
 type Result = { ok: boolean; error?: string };
@@ -200,10 +201,7 @@ export async function markAsPaid(
     const year = resolvedDate.getFullYear();
 
     const updated = await prisma.$transaction(async (tx) => {
-      const count = await tx.payment.count({
-        where: { receiptNumber: { startsWith: `${year}-` } },
-      });
-      const receiptNumber = `${year}-${String(count + 1).padStart(4, "0")}`;
+      const receiptNumber = await generateReceiptNumber(tx, year);
       return tx.payment.update({
         where: { id },
         data: {
@@ -312,11 +310,7 @@ export async function editPayment(
       // Gera número de recibo se está virando PAGO e ainda não tem um.
       let receiptNumber = current.receiptNumber;
       if (becomingPaid && !receiptNumber) {
-        const year = new Date().getFullYear();
-        const count = await tx.payment.count({
-          where: { receiptNumber: { startsWith: `${year}-` } },
-        });
-        receiptNumber = `${year}-${String(count + 1).padStart(4, "0")}`;
+        receiptNumber = await generateReceiptNumber(tx, new Date().getFullYear());
       }
       return tx.payment.update({
         where: { id },

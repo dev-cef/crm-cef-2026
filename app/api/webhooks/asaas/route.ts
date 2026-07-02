@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { notifyPaymentConfirmed } from "@/lib/messenger";
+import { generateReceiptNumber } from "@/lib/receipt";
 
 const PAID_EVENTS = ["PAYMENT_RECEIVED", "PAYMENT_CONFIRMED"];
 
@@ -29,11 +30,7 @@ export async function POST(request: Request) {
     // Payment não existe (cancelado localmente) ou já baixado — no-op idempotente.
     if (!existing || existing.status === "PAGO") return null;
 
-    const year = new Date().getFullYear();
-    const count = await tx.payment.count({
-      where: { receiptNumber: { startsWith: `${year}-` } },
-    });
-    const receiptNumber = `${year}-${String(count + 1).padStart(4, "0")}`;
+    const receiptNumber = await generateReceiptNumber(tx, new Date().getFullYear());
 
     return tx.payment.update({
       where: { id: paymentId },
