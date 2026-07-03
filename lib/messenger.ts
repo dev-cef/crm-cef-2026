@@ -6,12 +6,15 @@ import { prisma } from "@/lib/prisma";
 import {
   sendWhatsAppMessage,
   sendWhatsAppGroupMessage,
+  sendWhatsAppMedia,
+  sendWhatsAppGroupMedia,
 } from "@/lib/whatsapp";
 import { formatBRL, monthName } from "@/lib/format";
 
 export type MessengerType =
   | "ANIVERSARIO"
   | "COMPROVANTE_RECEBIDO"
+  | "COMPROVANTE_RECUSADO"
   | "PAGAMENTO_CONFIRMADO"
   | "NOVO_ASSOCIADO"
   | "CARTEIRINHA";
@@ -65,11 +68,20 @@ export async function sendMessengerNotification(params: {
   memberId?: string | null;
   recipient: string;
   message: string;
+  mediaDataUri?: string | null; // se presente, envia como mídia com o texto de legenda
 }): Promise<{ ok: boolean; error?: string; messageId?: string | null }> {
   try {
-    const messageId = params.recipient.includes("@g.us")
-      ? await sendWhatsAppGroupMessage(params.recipient, params.message)
-      : await sendWhatsAppMessage(params.recipient, params.message);
+    const isGroup = params.recipient.includes("@g.us");
+    let messageId: string | null;
+    if (params.mediaDataUri) {
+      messageId = isGroup
+        ? await sendWhatsAppGroupMedia(params.recipient, params.mediaDataUri, params.message)
+        : await sendWhatsAppMedia(params.recipient, params.mediaDataUri, params.message);
+    } else {
+      messageId = isGroup
+        ? await sendWhatsAppGroupMessage(params.recipient, params.message)
+        : await sendWhatsAppMessage(params.recipient, params.message);
+    }
     await logMessengerAttempt({
       type: params.type,
       channel: "WHATSAPP",
@@ -103,6 +115,7 @@ export async function notifyReceiptReceived(params: {
   referenceMonth: number;
   referenceYear: number;
   financeiroWhatsapp: string | null;
+  receiptDataUri?: string | null; // imagem/PDF do comprovante enviado pelo associado
 }): Promise<void> {
   try {
     const cfg = await getMessengerConfig();
@@ -113,27 +126,71 @@ export async function notifyReceiptReceived(params: {
     const recipient = cfg.financeGroupJid ?? params.financeiroWhatsapp ?? cfg.defaultPhone;
     if (!recipient) return;
 
-    const message = renderTemplate(cfg.receiptTemplate, {
+    const isGroup = recipient.includes("@g.us");
+    let message = renderTemplate(cfg.receiptTemplate, {
       associado: params.memberFullName,
       referencia: `${monthName(params.referenceMonth)}/${params.referenceYear}`,
       valor: formatBRL(params.amount),
     });
+    // Dica de comandos quando a baixa por WhatsApp está ativa no grupo.
+    if (isGroup && cfg.whatsappBaixaEnabled) {
+      message += "\n\nResponda com *baixa* para aprovar ou *rejeitar* para recusar.";
+    }
 
-    const res = await sendMessengerNotification({
+    // Envia a imagem/PDF do comprovante como mídia (legenda = texto); se não houver
+    // comprovante ou falhar como mídia, cai no texto puro.
+    const media = params.receiptDataUri?.startsWith("data:") ? params.receiptDataUri : null;
+    let res = await sendMessengerNotification({
       type: "COMPROVANTE_RECEBIDO",
       memberId: params.memberId,
       recipient,
       message,
+      mediaDataUri: media,
     });
+    if (!res.ok && media) {
+      res = await sendMessengerNotification({
+        type: "COMPROVANTE_RECEBIDO",
+        memberId: params.memberId,
+        recipient,
+        message,
+      });
+    }
 
     // Guarda o ID da msg no grupo → permite baixa respondendo (reply) essa msg.
-    if (res.ok && res.messageId && recipient.includes("@g.us")) {
+    if (res.ok && res.messageId && isGroup) {
       await prisma.payment
         .update({ where: { id: params.paymentId }, data: { receiptWhatsappMsgId: res.messageId } })
         .catch(() => {});
     }
   } catch (err) {
     console.error("Falha ao notificar comprovante recebido:", err);
+  }
+}
+
+// Aviso ao associado quando o comprovante é recusado (reenviar). Nunca lança.
+export async function notifyReceiptRejected(params: {
+  memberId: string;
+  memberFullName: string;
+  memberWhatsapp: string | null;
+  memberPhone: string;
+  referenceMonth: number;
+  referenceYear: number;
+}): Promise<void> {
+  try {
+    const recipient = params.memberWhatsapp ?? params.memberPhone;
+    if (!recipient) return;
+    const firstName = params.memberFullName.split(" ")[0] ?? params.memberFullName;
+    const message =
+      `Olá ${firstName}! Seu comprovante referente a ${monthName(params.referenceMonth)}/${params.referenceYear} ` +
+      `não foi aprovado. Por favor, envie um comprovante válido novamente pelo sistema. — CEF`;
+    await sendMessengerNotification({
+      type: "COMPROVANTE_RECUSADO",
+      memberId: params.memberId,
+      recipient,
+      message,
+    });
+  } catch (err) {
+    console.error("Falha ao notificar comprovante recusado:", err);
   }
 }
 

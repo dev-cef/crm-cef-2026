@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getMessengerConfig } from "@/lib/messenger";
-import { confirmPaymentPaid } from "@/lib/payments";
+import { confirmPaymentPaid, rejectPaymentReceipt } from "@/lib/payments";
 import { sendWhatsAppGroupMessage, resolveGroupParticipantPhone } from "@/lib/whatsapp";
 import { formatBRL, monthName } from "@/lib/format";
 
-// Comandos que disparam a baixa (o membro manda no grupo, opcionalmente com matrícula).
-const BAIXA_RE = /^\s*(baixa|baixar|pago|paga|confirmar|confirmado|confirmo)\b/i;
+// Comandos (o membro manda no grupo, opcionalmente com matrícula).
+const BAIXA_RE = /^\s*(baixa|baixar|pago|paga|confirmar|confirmado|confirmo|aprovar|aprovado|aprovo)\b/i;
+const REJEITAR_RE = /^\s*(rejeit|recus|nega|negar|reprov)/i;
 
 // Busca recursiva por um stanzaId (id da msg citada), tolerando variações de estrutura.
 function deepFindStanzaId(obj: unknown, depth = 0): string | null {
@@ -66,7 +67,12 @@ export async function POST(request: Request) {
   const text =
     (typeof message.conversation === "string" ? message.conversation : "") ||
     (typeof ext.text === "string" ? ext.text : "");
-  if (!BAIXA_RE.test(text)) return NextResponse.json({ ignored: "not-command" });
+  const action: "approve" | "reject" | null = BAIXA_RE.test(text)
+    ? "approve"
+    : REJEITAR_RE.test(text)
+      ? "reject"
+      : null;
+  if (!action) return NextResponse.json({ ignored: "not-command" });
 
   const reply = (msg: string) => sendWhatsAppGroupMessage(cfg.financeGroupJid!, msg).catch(() => {});
 
@@ -108,34 +114,47 @@ export async function POST(request: Request) {
     : null;
 
   if (!payment) {
-    const arg = text.replace(BAIXA_RE, "").trim();
+    const arg = text.replace(BAIXA_RE, "").replace(REJEITAR_RE, "").trim();
     const matricula = arg.match(/\d{2,6}/)?.[0];
     const pendentes = await prisma.payment.findMany({
       where: { status: "AGUARDANDO_CONFIRMACAO", ...(matricula ? { member: { registration: Number(matricula) } } : {}) },
       include: { member: { select: { fullName: true, registration: true } } },
       orderBy: { receiptSubmittedAt: "desc" },
     });
-
+    const verbo = action === "reject" ? "recusar" : "baixar";
     if (pendentes.length === 0) {
       await reply(matricula ? `⚠️ Nenhum comprovante pendente para a matrícula ${matricula}.` : "⚠️ Nenhum comprovante pendente no momento.");
       return NextResponse.json({ ignored: "no-pending" });
     }
     if (pendentes.length > 1) {
       const lista = pendentes.map((p) => `• ${p.member.fullName} (mat. ${p.member.registration}) — ${monthName(p.referenceMonth)}/${p.referenceYear}`).join("\n");
-      await reply(`Há ${pendentes.length} comprovantes pendentes. Responda com *baixa <matrícula>*:\n${lista}`);
+      await reply(`Há ${pendentes.length} comprovantes pendentes. Para ${verbo}, responda com *${action === "reject" ? "rejeitar" : "baixa"} <matrícula>*:\n${lista}`);
       return NextResponse.json({ ignored: "ambiguous" });
     }
     payment = pendentes[0];
   }
 
-  // 4) Confirma (idempotente).
-  const res = await confirmPaymentPaid(payment.id, { via: "WHATSAPP", byLabel: `whatsapp:${senderPhone || participant}` });
+  const ref = `${monthName(payment.referenceMonth)}/${payment.referenceYear}`;
+  const byLabel = `whatsapp:${senderPhone || participant}`;
+
+  // 4) Executa a ação (idempotente).
+  if (action === "reject") {
+    const rej = await rejectPaymentReceipt(payment.id, { byLabel });
+    if (!rej.ok) {
+      await reply(`⚠️ Erro ao recusar: ${rej.error}`);
+      return NextResponse.json({ error: rej.error }, { status: 200 });
+    }
+    await reply(`🚫 Comprovante recusado — ${payment.member.fullName}, ${ref}. O associado foi avisado para reenviar.`);
+    revalidatePath("/financeiro/pagamentos");
+    revalidatePath("/meu-espaco");
+    return NextResponse.json({ ok: true, action: "reject" });
+  }
+
+  const res = await confirmPaymentPaid(payment.id, { via: "WHATSAPP", byLabel });
   if (!res.ok) {
     await reply(`⚠️ Erro ao dar baixa: ${res.error}`);
     return NextResponse.json({ error: res.error }, { status: 200 });
   }
-
-  const ref = `${monthName(payment.referenceMonth)}/${payment.referenceYear}`;
   await reply(
     res.alreadyPaid
       ? `ℹ️ ${payment.member.fullName} — ${ref} já estava confirmado (recibo ${res.receiptNumber}).`

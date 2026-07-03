@@ -37,6 +37,42 @@ export async function sendWhatsAppGroupMessage(groupJid: string, message: string
   return sendText(groupJid, message);
 }
 
+// Envia mídia (imagem/PDF a partir de um data URI base64) com legenda. Retorna key.id.
+async function sendMedia(number: string, dataUri: string, caption: string): Promise<string | null> {
+  if (!BASE_URL || !API_KEY || !INSTANCE) {
+    throw new Error("Evolution API não configurada.");
+  }
+  const comma = dataUri.indexOf(",");
+  const meta = comma >= 0 ? dataUri.slice(0, comma) : "";
+  const base64 = comma >= 0 ? dataUri.slice(comma + 1) : dataUri;
+  const mimetype = meta.match(/data:([^;]+)/)?.[1] ?? "application/octet-stream";
+  const isImage = mimetype.startsWith("image/");
+  const mediatype = isImage ? "image" : "document";
+  const ext = isImage ? mimetype.split("/")[1] || "jpg" : "pdf";
+
+  const res = await fetch(`${BASE_URL}/message/sendMedia/${INSTANCE}`, {
+    method: "POST",
+    headers: { apikey: API_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ number, mediatype, mimetype, media: base64, caption, fileName: `comprovante.${ext}` }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Evolution API ${res.status}: ${body}`);
+  }
+  const data = await res.json().catch(() => null);
+  return data?.key?.id ?? null;
+}
+
+export async function sendWhatsAppMedia(phone: string, dataUri: string, caption: string): Promise<string | null> {
+  const digits = phone.replace(/\D/g, "");
+  const number = digits.startsWith("55") ? digits : `55${digits}`;
+  return sendMedia(number, dataUri, caption);
+}
+
+export async function sendWhatsAppGroupMedia(groupJid: string, dataUri: string, caption: string): Promise<string | null> {
+  return sendMedia(groupJid, dataUri, caption);
+}
+
 export function evolutionConfigured(): boolean {
   return !!(BASE_URL && API_KEY && INSTANCE);
 }

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/lib/audit";
 import { generateReceiptNumber } from "@/lib/receipt";
-import { notifyPaymentConfirmed } from "@/lib/messenger";
+import { notifyPaymentConfirmed, notifyReceiptRejected } from "@/lib/messenger";
 
 export type ConfirmPaidResult =
   | {
@@ -90,5 +90,58 @@ export async function confirmPaymentPaid(
     };
   } catch {
     return { ok: false, error: "Erro ao confirmar o pagamento." };
+  }
+}
+
+export type RejectReceiptResult =
+  | { ok: true; memberFullName: string; referenceMonth: number; referenceYear: number }
+  | { ok: false; error: string };
+
+// Recusa o comprovante: volta o pagamento para PENDENTE/ATRASADO, limpa o
+// comprovante e avisa o associado. Reusável por CRM e baixa via WhatsApp.
+export async function rejectPaymentReceipt(
+  paymentId: string,
+  opts: { userId?: string; byLabel?: string },
+): Promise<RejectReceiptResult> {
+  try {
+    const payment = await prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: { member: { select: { id: true, fullName: true, whatsapp: true, phone: true } } },
+    });
+    if (!payment) return { ok: false, error: "Pagamento não encontrado." };
+    if (payment.status === "PAGO") return { ok: false, error: "Pagamento já está pago." };
+
+    await prisma.payment.update({
+      where: { id: paymentId },
+      data: {
+        status: payment.dueDate < new Date() ? "ATRASADO" : "PENDENTE",
+        receiptPath: null,
+        receiptSubmittedAt: null,
+        receiptWhatsappMsgId: null,
+      },
+    });
+    await recordAudit({
+      userId: opts.userId,
+      action: "UPDATE",
+      entity: "Payment",
+      entityId: paymentId,
+      metadata: { action: "receipt_rejected", by: opts.byLabel },
+    });
+    await notifyReceiptRejected({
+      memberId: payment.member.id,
+      memberFullName: payment.member.fullName,
+      memberWhatsapp: payment.member.whatsapp,
+      memberPhone: payment.member.phone,
+      referenceMonth: payment.referenceMonth,
+      referenceYear: payment.referenceYear,
+    });
+    return {
+      ok: true,
+      memberFullName: payment.member.fullName,
+      referenceMonth: payment.referenceMonth,
+      referenceYear: payment.referenceYear,
+    };
+  } catch {
+    return { ok: false, error: "Erro ao recusar o comprovante." };
   }
 }

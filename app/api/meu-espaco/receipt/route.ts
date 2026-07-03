@@ -72,6 +72,7 @@ export async function POST(request: Request) {
       referenceMonth: payment.referenceMonth,
       referenceYear: payment.referenceYear,
       financeiroWhatsapp: cfg.financeiroWhatsapp,
+      receiptDataUri: fileDataUri,
     });
 
     revalidatePath("/meu-espaco");
