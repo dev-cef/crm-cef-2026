@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getMessengerConfig } from "@/lib/messenger";
 import { confirmPaymentPaid, rejectPaymentReceipt } from "@/lib/payments";
+import { waSafeReceipt } from "@/lib/messenger";
 import { sendWhatsAppGroupMessage, resolveGroupParticipantPhone } from "@/lib/whatsapp";
 import { formatBRL, monthName } from "@/lib/format";
 
@@ -157,8 +158,8 @@ export async function POST(request: Request) {
   }
   await reply(
     res.alreadyPaid
-      ? `ℹ️ ${payment.member.fullName} — ${ref} já estava confirmado (recibo ${res.receiptNumber}).`
-      : `✅ Baixa registrada — ${payment.member.fullName}, ${ref}, ${formatBRL(payment.amount)}. Recibo ${res.receiptNumber}. O associado foi avisado.`,
+      ? `ℹ️ ${payment.member.fullName} — ${ref} já estava confirmado (recibo ${waSafeReceipt(res.receiptNumber)}).`
+      : `✅ Baixa registrada — ${payment.member.fullName}, ${ref}, ${formatBRL(payment.amount)}. Recibo ${waSafeReceipt(res.receiptNumber)}. O associado foi avisado.`,
   );
 
   revalidatePath("/financeiro/pagamentos");

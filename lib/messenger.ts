@@ -27,6 +27,12 @@ export async function getMessengerConfig() {
   return cfg;
 }
 
+// O WhatsApp auto-linka "NNNN-NNNN" (acha que é telefone). Trocar o hífen normal
+// por um hífen não-quebrável (U+2011) mantém o visual e evita o link.
+export function waSafeReceipt(receipt: string): string {
+  return receipt.replace(/-/g, "‑");
+}
+
 // Substitui {chave} pelos valores. Usado pelos tipos novos; o aniversário
 // mantém buildBirthdayMessage (lib/birthday.ts), que tem lógica de primeiro nome.
 export function renderTemplate(template: string, vars: Record<string, string>): string {
@@ -218,7 +224,7 @@ export async function notifyPaymentConfirmed(params: {
       nome: firstName,
       referencia: `${monthName(params.referenceMonth)}/${params.referenceYear}`,
       valor: formatBRL(params.amount),
-      recibo: params.receiptNumber,
+      recibo: waSafeReceipt(params.receiptNumber),
     });
 
     await sendMessengerNotification({
