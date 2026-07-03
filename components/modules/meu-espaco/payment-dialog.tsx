@@ -28,6 +28,53 @@ const PIX_KEY_TYPE_LABEL: Record<string, string> = {
 
 type AsaasData = { pixPayload: string; qrDataUrl: string; expiresAt: string };
 
+function readAsDataURL(file: File | Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+// Fotos de celular chegam a 3–8 MB e estouram o limite de corpo da requisição.
+// Redimensiona (máx 1600px) e recomprime como JPEG até caber (~2 MB). PDFs seguem como estão.
+async function fileToUploadDataUri(file: File): Promise<string> {
+  if (file.type === "application/pdf") return readAsDataURL(file);
+
+  const dataUrl = await readAsDataURL(file);
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new window.Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => reject(new Error("imagem inválida"));
+    el.src = dataUrl;
+  });
+
+  const maxDim = 1600;
+  let w = img.naturalWidth || img.width;
+  let h = img.naturalHeight || img.height;
+  if (Math.max(w, h) > maxDim) {
+    const scale = maxDim / Math.max(w, h);
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return dataUrl;
+  ctx.drawImage(img, 0, 0, w, h);
+
+  const maxBase64 = 2 * 1024 * 1024; // alvo ~2 MB
+  let quality = 0.8;
+  let out = canvas.toDataURL("image/jpeg", quality);
+  while (out.length > maxBase64 && quality > 0.3) {
+    quality -= 0.15;
+    out = canvas.toDataURL("image/jpeg", quality);
+  }
+  return out;
+}
+
 type Props = {
   trigger: React.ReactElement;
   paymentId: string;
@@ -118,23 +165,30 @@ export function PaymentDialog(props: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isAsaasMode, awaitingReview]);
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+  const [processingFile, setProcessingFile] = useState(false);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!["image/jpeg", "image/png", "application/pdf"].includes(file.type)) {
       toast.error("Use uma imagem (JPG/PNG) ou PDF.");
       return;
     }
-    if (file.size > 3 * 1024 * 1024) {
-      toast.error("O arquivo deve ter no máximo 3MB.");
+    // Só PDF fica limitado (não dá pra comprimir no navegador); imagens são comprimidas.
+    if (file.type === "application/pdf" && file.size > 4 * 1024 * 1024) {
+      toast.error("PDF muito grande (máx. 4MB). Envie uma foto do comprovante.");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setFileDataUri(String(reader.result));
+    setProcessingFile(true);
+    try {
+      const dataUri = await fileToUploadDataUri(file);
+      setFileDataUri(dataUri);
       setFileName(file.name);
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      toast.error("Não foi possível processar o arquivo. Tente outra imagem.");
+    } finally {
+      setProcessingFile(false);
+    }
   }
 
   async function copyToClipboard(text: string | null) {
@@ -313,11 +367,13 @@ export function PaymentDialog(props: Props) {
                 type="button"
                 variant="outline"
                 size="sm"
+                disabled={processingFile}
                 onClick={() => inputRef.current?.click()}
               >
-                <FileUp className="size-4" /> Selecionar arquivo
+                {processingFile ? <Loader2 className="size-4 animate-spin" /> : <FileUp className="size-4" />}
+                {processingFile ? "Processando..." : "Selecionar arquivo"}
               </Button>
-              {fileName && (
+              {fileName && !processingFile && (
                 <p className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Paperclip className="size-3" /> {fileName}
                 </p>
@@ -336,7 +392,7 @@ export function PaymentDialog(props: Props) {
             </Button>
           )}
           {showUploadForm && (
-            <Button onClick={handleSend} disabled={pending || !fileDataUri}>
+            <Button onClick={handleSend} disabled={pending || processingFile || !fileDataUri}>
               {pending && <Loader2 className="size-4 animate-spin" />}
               Enviar comprovante
             </Button>
