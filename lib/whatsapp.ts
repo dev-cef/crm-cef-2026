@@ -41,6 +41,33 @@ export function evolutionConfigured(): boolean {
   return !!(BASE_URL && API_KEY && INSTANCE);
 }
 
+// Lista participantes de um grupo como pares { lid, phone } (só dígitos).
+export async function fetchGroupParticipants(
+  groupJid: string,
+): Promise<{ lid: string; phone: string }[]> {
+  if (!BASE_URL || !API_KEY || !INSTANCE || !groupJid) return [];
+  try {
+    const res = await fetch(
+      `${BASE_URL}/group/participants/${INSTANCE}?groupJid=${encodeURIComponent(groupJid)}`,
+      { headers: { apikey: API_KEY } },
+    );
+    if (!res.ok) return [];
+    const data = await res.json().catch(() => null);
+    const arr: unknown[] = data?.participants ?? data ?? [];
+    return arr
+      .map((p) => {
+        const rec = p as Record<string, unknown>;
+        return {
+          lid: String(rec.id ?? "").split("@")[0],
+          phone: String(rec.jid ?? "").replace(/\D/g, ""),
+        };
+      })
+      .filter((x) => x.lid && x.phone);
+  } catch {
+    return [];
+  }
+}
+
 // Cache lid→telefone por grupo (TTL curto) pra não buscar participantes a cada webhook.
 const participantCache = new Map<string, { at: number; map: Map<string, string> }>();
 

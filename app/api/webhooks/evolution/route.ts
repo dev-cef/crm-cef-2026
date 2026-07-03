@@ -70,21 +70,29 @@ export async function POST(request: Request) {
 
   const reply = (msg: string) => sendWhatsAppGroupMessage(cfg.financeGroupJid!, msg).catch(() => {});
 
-  // 2) Autorização do remetente (resolve lid → telefone via participantes do grupo).
-  let allowlist: string[] = [];
-  try {
-    const parsed = JSON.parse(cfg.whatsappBaixaAllowlist);
-    if (Array.isArray(parsed)) allowlist = parsed.map(String);
-  } catch {
-    /* allowlist inválida → ninguém autorizado */
-  }
+  // 2) Autorização do remetente. Match primário: lid do remetente ∈ lids salvos
+  // (resolvidos na config, confiável). Fallbacks: telefone (participantPn/senderPn
+  // ou resolução em runtime) contra a allowlist de telefones.
+  const parse = (s: string): string[] => {
+    try {
+      const p = JSON.parse(s);
+      return Array.isArray(p) ? p.map(String) : [];
+    } catch {
+      return [];
+    }
+  };
+  const allowlist = parse(cfg.whatsappBaixaAllowlist);
+  const allowLids = parse(cfg.whatsappBaixaLids);
   const participant = String(key.participant ?? "");
-  const senderPhone =
-    String(key.participantPn ?? key.senderPn ?? "").replace(/\D/g, "") ||
-    (await resolveGroupParticipantPhone(cfg.financeGroupJid, participant)) ||
-    "";
-  const candidates = [senderPhone, participant.split("@")[0], String(key.participantPn ?? "")];
-  if (!isAllowed(candidates, allowlist)) {
+  const participantLid = participant.split("@")[0];
+  let senderPhone = String(key.participantPn ?? key.senderPn ?? "").replace(/\D/g, "");
+
+  let authorized = allowLids.includes(participantLid);
+  if (!authorized) {
+    if (!senderPhone) senderPhone = (await resolveGroupParticipantPhone(cfg.financeGroupJid, participant)) ?? "";
+    authorized = isAllowed([senderPhone, participantLid], allowlist);
+  }
+  if (!authorized) {
     console.warn("[evolution] baixa negada — não autorizado:", JSON.stringify({ participant, senderPhone }));
     await reply(`❌ ${typeof data.pushName === "string" ? data.pushName : "Você"}, você não está autorizado a dar baixa por aqui.`);
     return NextResponse.json({ ignored: "not-authorized" });

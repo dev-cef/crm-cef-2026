@@ -7,6 +7,7 @@ import { recordAudit } from "@/lib/audit";
 import { toSessionUser } from "@/lib/rbac";
 import { can } from "@/lib/permissions";
 import { getMessengerConfig } from "@/lib/messenger";
+import { fetchGroupParticipants } from "@/lib/whatsapp";
 
 type Result = { ok: boolean; error?: string };
 
@@ -113,9 +114,26 @@ export async function saveWhatsappBaixa(enabled: boolean, allowlistRaw: string):
     return { ok: false, error: "Adicione ao menos um número autorizado antes de ativar a baixa por WhatsApp." };
   }
   const cfg = await getMessengerConfig();
+
+  // Grupos usam addressingMode "lid": o remetente chega como lid, não telefone,
+  // e resolver isso a cada webhook é instável. Resolvemos aqui (1x) telefone→lid
+  // pelos participantes do grupo Financeiro e guardamos os lids num campo à parte.
+  const lids: string[] = [];
+  if (cfg.financeGroupJid && numbers.length > 0) {
+    const parts = await fetchGroupParticipants(cfg.financeGroupJid);
+    for (const num of numbers) {
+      const match = parts.find((p) => p.phone.endsWith(num) || num.endsWith(p.phone));
+      if (match) lids.push(match.lid);
+    }
+  }
+
   await prisma.messengerConfig.update({
     where: { id: cfg.id },
-    data: { whatsappBaixaEnabled: enabled, whatsappBaixaAllowlist: JSON.stringify(numbers) },
+    data: {
+      whatsappBaixaEnabled: enabled,
+      whatsappBaixaAllowlist: JSON.stringify(numbers),
+      whatsappBaixaLids: JSON.stringify(Array.from(new Set(lids))),
+    },
   });
   await recordAudit({
     userId: session?.user?.id,

@@ -457,7 +457,8 @@ model MessengerConfig {
   // Baixa via WhatsApp: membro autorizado responde a notificação de comprovante
   // no grupo Financeiro com "baixa" e o pagamento é confirmado. Desligado por padrão.
   whatsappBaixaEnabled   Boolean @default(false)
-  whatsappBaixaAllowlist String  @default("[]") // JSON: telefones (só dígitos) autorizados a dar baixa
+  whatsappBaixaAllowlist String  @default("[]") // JSON: telefones (só dígitos) autorizados — exibidos na UI
+  whatsappBaixaLids      String  @default("[]") // JSON: lids resolvidos dos telefones (grupos usam addressingMode lid)
 
   updatedAt DateTime @updatedAt
 
