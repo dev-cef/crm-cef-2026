@@ -51,15 +51,6 @@ export async function POST(request: Request) {
 
   const data = (body.data ?? {}) as Record<string, unknown>;
   const key = (data.key ?? {}) as Record<string, unknown>;
-  {
-    const m = (data.message ?? {}) as Record<string, unknown>;
-    const t =
-      (typeof m.conversation === "string" ? m.conversation : "") ||
-      (typeof (m.extendedTextMessage as Record<string, unknown>)?.text === "string"
-        ? String((m.extendedTextMessage as Record<string, unknown>).text)
-        : "");
-    console.log("[evolution] in", JSON.stringify({ fromMe: key.fromMe, participant: key.participant, remoteJid: key.remoteJid, text: t }));
-  }
   if (key.fromMe === true) return NextResponse.json({ ignored: "fromMe" });
 
   const cfg = await getMessengerConfig();
