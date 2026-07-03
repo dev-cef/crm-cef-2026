@@ -214,6 +214,7 @@ model Member {
   caronasOferecidas    EventCarona[]         @relation("CaronaDriver")
   caronasPassageiro    EventCaronaPassenger[] @relation("CaronaPassenger")
   messageLogs          MessageLog[]
+  whatsappComprovantes WhatsappComprovante[]
   physicalCardRequests PhysicalCardRequest[]
   patrimonioBens          PatrimonioBem[]          @relation("BemResponsavel")
   patrimonioMovimentacoes PatrimonioMovimentacao[] @relation("MovResponsavel")
@@ -250,6 +251,8 @@ model Payment {
   asaasPixPayload   String? // código PIX copia-e-cola dinâmico
   asaasPixQrCode    String? // QR Code (data URI base64)
   asaasPixExpiresAt DateTime?
+
+  whatsappComprovantes WhatsappComprovante[]
 
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -460,6 +463,11 @@ model MessengerConfig {
   whatsappBaixaAllowlist String  @default("[]") // JSON: telefones (só dígitos) autorizados — exibidos na UI
   whatsappBaixaLids      String  @default("[]") // JSON: lids resolvidos dos telefones (grupos usam addressingMode lid)
 
+  // Baixa automática por IA: associado manda a foto do comprovante direto no
+  // WhatsApp do clube; a IA extrai os dados e valida contra as pendências.
+  // false = modo sombra (IA valida, mas a baixa continua exigindo "baixa" humano no grupo).
+  autoBaixaEnabled Boolean @default(false)
+
   updatedAt DateTime @updatedAt
 
   @@map("BirthdayMessageConfig")
@@ -498,6 +506,48 @@ model MessageLog {
   @@map("BirthdayMessageLog")
   @@index([type])
   @@index([sentAt])
+}
+
+// Comprovante recebido pelo WhatsApp do clube (baixa automática por IA).
+// Guarda a imagem, a extração da IA e a decisão do pipeline; alimenta a fila
+// de revisão manual em Financeiro > Comprovantes.
+model WhatsappComprovante {
+  id                String  @id @default(cuid())
+  whatsappMessageId String  @unique // idempotência: reentrega da Evolution não duplica
+  senderJid         String // remetente (ex: 5522...@s.whatsapp.net)
+  senderPhone       String // só dígitos, normalizado
+  pushName          String?
+
+  memberId String?
+  member   Member? @relation(fields: [memberId], references: [id], onDelete: SetNull)
+
+  paymentId String?
+  payment   Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  imageDataUri String // data URI base64 da imagem
+  imageSha256  String // dedupe de reenvio do mesmo print
+
+  // Extração via IA (visão)
+  extracaoRaw   String? // JSON bruto retornado pela IA (auditoria/reprocesso)
+  valor         Float?
+  dataHora      String?
+  idTransacao   String?
+  nomePagador   String?
+  instituicao   String?
+  confianca     Float? // 0..1 estimado pela IA
+
+  // RECEBIDO | AGUARDANDO_REVISAO | ENCAMINHADO_GRUPO | VALIDADO_AUTO | VALIDADO_MANUAL | REJEITADO
+  status        String  @default("RECEBIDO")
+  motivoRevisao String? // socio_nao_identificado | extracao_indisponivel | baixa_confianca | sem_pendencia | valor_divergente | multiplas_pendencias | comprovante_duplicado | transacao_duplicada
+  revisadoPor   String? // userId/label de quem resolveu na fila
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([senderPhone])
+  @@index([imageSha256])
+  @@index([createdAt])
 }
 
 model AuditLog {

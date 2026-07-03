@@ -77,6 +77,30 @@ export function evolutionConfigured(): boolean {
   return !!(BASE_URL && API_KEY && INSTANCE);
 }
 
+// Baixa a mídia de uma mensagem recebida (webhook não traz o binário) e
+// devolve como data URI. `messageData` é o objeto `data` do webhook (contém key+message).
+export async function fetchWhatsAppMediaBase64(messageData: unknown): Promise<string | null> {
+  if (!BASE_URL || !API_KEY || !INSTANCE) return null;
+  try {
+    const res = await fetch(`${BASE_URL}/chat/getBase64FromMediaMessage/${INSTANCE}`, {
+      method: "POST",
+      headers: { apikey: API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ message: messageData, convertToMp4: false }),
+    });
+    if (!res.ok) {
+      console.error("[whatsapp] getBase64FromMediaMessage falhou:", res.status, await res.text().catch(() => ""));
+      return null;
+    }
+    const data = await res.json().catch(() => null);
+    if (!data?.base64) return null;
+    const mimetype = data.mimetype ?? "image/jpeg";
+    return `data:${mimetype};base64,${data.base64}`;
+  } catch (err) {
+    console.error("[whatsapp] erro ao baixar mídia:", err);
+    return null;
+  }
+}
+
 // Lista participantes de um grupo como pares { lid, phone } (só dígitos).
 export async function fetchGroupParticipants(
   groupJid: string,

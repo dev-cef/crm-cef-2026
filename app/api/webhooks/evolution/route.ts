@@ -4,8 +4,16 @@ import { prisma } from "@/lib/prisma";
 import { getMessengerConfig } from "@/lib/messenger";
 import { confirmPaymentPaid, rejectPaymentReceipt } from "@/lib/payments";
 import { waSafeReceipt } from "@/lib/messenger";
-import { sendWhatsAppGroupMessage, resolveGroupParticipantPhone } from "@/lib/whatsapp";
+import {
+  sendWhatsAppGroupMessage,
+  resolveGroupParticipantPhone,
+  fetchWhatsAppMediaBase64,
+} from "@/lib/whatsapp";
+import { processarComprovanteWhatsapp } from "@/lib/baixa-automatica";
 import { formatBRL, monthName } from "@/lib/format";
+
+// Pipeline de comprovante (download de mídia + IA) pode levar dezenas de segundos.
+export const maxDuration = 120;
 
 // Comandos (o membro manda no grupo, opcionalmente com matrícula).
 const BAIXA_RE = /^\s*(baixa|baixar|pago|paga|confirmar|confirmado|confirmo|aprovar|aprovado|aprovo)\b/i;
@@ -56,9 +64,37 @@ export async function POST(request: Request) {
   if (key.fromMe === true) return NextResponse.json({ ignored: "fromMe" });
 
   const cfg = await getMessengerConfig();
-  if (!cfg.whatsappBaixaEnabled) return NextResponse.json({ ignored: "disabled" });
-
   const remoteJid = typeof key.remoteJid === "string" ? key.remoteJid : "";
+
+  // ── Comprovante por mensagem privada (imagem no chat direto com o clube) ──
+  const isDm = !remoteJid.endsWith("@g.us");
+  const msgObj = (data.message ?? {}) as Record<string, unknown>;
+  if (isDm && msgObj.imageMessage) {
+    const senderPhone =
+      (remoteJid.endsWith("@s.whatsapp.net") ? remoteJid.split("@")[0] : "").replace(/\D/g, "") ||
+      String(key.senderPn ?? key.participantPn ?? "").replace(/\D/g, "");
+    if (!senderPhone) return NextResponse.json({ ignored: "dm-sem-telefone" });
+
+    const imageDataUri = await fetchWhatsAppMediaBase64(data);
+    if (!imageDataUri) {
+      console.error("[evolution] falha ao baixar mídia do comprovante", key.id);
+      return NextResponse.json({ error: "media-download-failed" }, { status: 200 });
+    }
+
+    const res = await processarComprovanteWhatsapp({
+      whatsappMessageId: String(key.id ?? ""),
+      senderJid: remoteJid,
+      senderPhone,
+      pushName: typeof data.pushName === "string" ? data.pushName : null,
+      messageData: data,
+      imageDataUri,
+    });
+    revalidatePath("/financeiro/pagamentos");
+    return NextResponse.json(res);
+  }
+
+  // ── Comandos de baixa no grupo do Financeiro ──
+  if (!cfg.whatsappBaixaEnabled) return NextResponse.json({ ignored: "disabled" });
   if (!cfg.financeGroupJid || remoteJid !== cfg.financeGroupJid) {
     return NextResponse.json({ ignored: "not-finance-group" });
   }

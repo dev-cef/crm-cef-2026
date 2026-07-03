@@ -146,6 +146,7 @@ export const NAV_ITEMS: {
     children: [
       { href: "/financeiro/caixa",        label: "Caixa" },
       { href: "/financeiro/pagamentos",   label: "Pagamentos" },
+      { href: "/financeiro/comprovantes", label: "Comprovantes" },
       { href: "/financeiro/planos",       label: "Planos" },
       { href: "/financeiro/categorias",   label: "Categorias" },
     ],
