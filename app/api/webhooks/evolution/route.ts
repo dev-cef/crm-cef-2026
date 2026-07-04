@@ -66,10 +66,12 @@ export async function POST(request: Request) {
   const cfg = await getMessengerConfig();
   const remoteJid = typeof key.remoteJid === "string" ? key.remoteJid : "";
 
-  // ── Comprovante por mensagem privada (imagem no chat direto com o clube) ──
+  // ── Comprovante por mensagem privada (imagem ou PDF no chat direto com o clube) ──
   const isDm = !remoteJid.endsWith("@g.us");
   const msgObj = (data.message ?? {}) as Record<string, unknown>;
-  if (isDm && msgObj.imageMessage) {
+  const docMime = String((msgObj.documentMessage as Record<string, unknown>)?.mimetype ?? "");
+  const isPdfDoc = docMime === "application/pdf";
+  if (isDm && (msgObj.imageMessage || isPdfDoc)) {
     const senderPhone =
       (remoteJid.endsWith("@s.whatsapp.net") ? remoteJid.split("@")[0] : "").replace(/\D/g, "") ||
       String(key.senderPn ?? key.participantPn ?? "").replace(/\D/g, "");

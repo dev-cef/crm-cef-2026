@@ -59,13 +59,26 @@ export function ComprovanteReviewCard({
         </div>
       </CardHeader>
       <CardContent className="grid gap-4 sm:grid-cols-[200px_1fr]">
-        <a href={imageDataUri} target="_blank" rel="noreferrer" title="Abrir em tamanho real">
-          <img
-            src={imageDataUri}
-            alt="Comprovante"
-            className="max-h-64 w-full rounded-md border object-contain"
-          />
-        </a>
+        {imageDataUri.startsWith("data:application/pdf") ? (
+          <object
+            data={imageDataUri}
+            type="application/pdf"
+            className="h-64 w-full rounded-md border"
+            aria-label="Comprovante em PDF"
+          >
+            <p className="p-3 text-xs text-muted-foreground">
+              Comprovante em PDF — visualize pelo leitor do navegador.
+            </p>
+          </object>
+        ) : (
+          <a href={imageDataUri} target="_blank" rel="noreferrer" title="Abrir em tamanho real">
+            <img
+              src={imageDataUri}
+              alt="Comprovante"
+              className="max-h-64 w-full rounded-md border object-contain"
+            />
+          </a>
+        )}
         <div className="space-y-3 text-sm">
           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
             <span className="text-muted-foreground">Remetente</span>

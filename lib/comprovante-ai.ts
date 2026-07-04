@@ -47,7 +47,23 @@ export async function extrairComprovante(
   const meta = comma >= 0 ? imageDataUri.slice(0, comma) : "";
   const data = comma >= 0 ? imageDataUri.slice(comma + 1) : imageDataUri;
   const mediaType = meta.match(/data:([^;]+)/)?.[1] ?? "image/jpeg";
-  if (!mediaType.startsWith("image/")) return null; // PDFs etc. vão pra revisão manual
+
+  const isPdf = mediaType === "application/pdf";
+  if (!isPdf && !mediaType.startsWith("image/")) return null; // outros formatos → revisão manual
+
+  const mediaBlock = isPdf
+    ? ({
+        type: "document" as const,
+        source: { type: "base64" as const, media_type: "application/pdf" as const, data },
+      } as const)
+    : ({
+        type: "image" as const,
+        source: {
+          type: "base64" as const,
+          media_type: mediaType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+          data,
+        },
+      } as const);
 
   try {
     const client = new Anthropic();
@@ -59,19 +75,12 @@ export async function extrairComprovante(
         {
           role: "user",
           content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: mediaType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
-                data,
-              },
-            },
+            mediaBlock,
             {
               type: "text",
               text:
-                "Esta imagem foi enviada como comprovante de pagamento de mensalidade de um clube. " +
-                "Extraia os dados da transação. Se a imagem não for um comprovante de pagamento, " +
+                `Este ${isPdf ? "PDF" : "imagem"} foi enviado como comprovante de pagamento de mensalidade de um clube. ` +
+                "Extraia os dados da transação. Se não for um comprovante de pagamento, " +
                 "marque ehComprovante=false. Estime a confiança com base na legibilidade.",
             },
           ],
