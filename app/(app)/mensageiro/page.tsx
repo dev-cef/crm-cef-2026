@@ -24,6 +24,7 @@ import {
 import { ConfigCard } from "@/components/modules/mensageiro/config-card";
 import { RecipientsCard } from "@/components/modules/mensageiro/recipients-card";
 import { WhatsappBaixaCard } from "@/components/modules/mensageiro/whatsapp-baixa-card";
+import { AutoBaixaCard } from "@/components/modules/mensageiro/auto-baixa-card";
 import { LogFilter } from "@/components/modules/mensageiro/log-filter";
 import {
   saveBirthdayTemplate,
@@ -33,6 +34,7 @@ import {
   saveCardRequestTemplate,
   saveRecipients,
   saveWhatsappBaixa,
+  saveAutoBaixa,
 } from "@/app/(app)/mensageiro/actions";
 
 function parseAllowlist(json: string): string {
@@ -121,6 +123,8 @@ export default async function MensageiroPage({
           save={saveWhatsappBaixa}
         />
       )}
+
+      {canEdit && <AutoBaixaCard initialEnabled={cfg.autoBaixaEnabled} save={saveAutoBaixa} />}
 
       {canEdit && (
         <div className="grid gap-4 lg:grid-cols-3">

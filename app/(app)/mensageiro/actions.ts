@@ -145,3 +145,27 @@ export async function saveWhatsappBaixa(enabled: boolean, allowlistRaw: string):
   revalidatePath("/mensageiro");
   return { ok: true };
 }
+
+// Baixa automática por IA: liga (comprovante validado baixa direto, sem
+// confirmação humana) ou desliga (modo sombra — sempre passa por baixa/rejeitar).
+export async function saveAutoBaixa(enabled: boolean): Promise<Result> {
+  const session = await auth();
+  const sessionUser = toSessionUser(session?.user ?? {});
+  if (!(await can(sessionUser, "mensageiro", "edit"))) {
+    return { ok: false, error: "Você não tem permissão para editar o Mensageiro." };
+  }
+  const cfg = await getMessengerConfig();
+  await prisma.messengerConfig.update({
+    where: { id: cfg.id },
+    data: { autoBaixaEnabled: enabled },
+  });
+  await recordAudit({
+    userId: session?.user?.id,
+    action: "UPDATE",
+    entity: "MessengerConfig",
+    entityId: cfg.id,
+    metadata: { field: "autoBaixaEnabled", enabled },
+  });
+  revalidatePath("/mensageiro");
+  return { ok: true };
+}
