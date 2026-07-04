@@ -242,7 +242,7 @@ model Payment {
   notes          String? // Observação da baixa
   receiptPath        String? // Comprovante enviado pelo associado (data URI base64)
   receiptSubmittedAt DateTime? // Data/hora do envio do comprovante
-  receiptNumber      String? // Número do recibo gerado pelo financeiro (YYYY-NNNN)
+  receiptNumber      String? @unique // Número do recibo gerado pelo financeiro (YYYY-NNNN)
   confirmedVia       String? // MANUAL | ASAAS | WHATSAPP — como a baixa aconteceu
   receiptWhatsappMsgId String? // ID da msg da notificação de comprovante no grupo (p/ baixa via reply no WhatsApp)
 

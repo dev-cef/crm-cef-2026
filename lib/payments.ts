@@ -26,24 +26,39 @@ export async function confirmPaymentPaid(
     const resolvedDate = opts.paidAt ?? new Date();
     const year = resolvedDate.getFullYear();
 
-    const result = await prisma.$transaction(async (tx) => {
-      const existing = await tx.payment.findUnique({ where: { id: paymentId } });
-      if (!existing) return { kind: "notfound" as const };
-      if (existing.status === "PAGO") return { kind: "already" as const, payment: existing };
+    const runOnce = () =>
+      prisma.$transaction(async (tx) => {
+        const existing = await tx.payment.findUnique({ where: { id: paymentId } });
+        if (!existing) return { kind: "notfound" as const };
+        if (existing.status === "PAGO") return { kind: "already" as const, payment: existing };
 
-      const receiptNumber = existing.receiptNumber ?? (await generateReceiptNumber(tx, year));
-      const payment = await tx.payment.update({
-        where: { id: paymentId },
-        data: {
-          status: "PAGO",
-          paidAt: existing.paidAt ?? resolvedDate,
-          receiptNumber,
-          confirmedVia: opts.via,
-        },
-        include: { member: { select: { id: true, fullName: true, whatsapp: true, phone: true } } },
+        const receiptNumber = existing.receiptNumber ?? (await generateReceiptNumber(tx, year));
+        const payment = await tx.payment.update({
+          where: { id: paymentId },
+          data: {
+            status: "PAGO",
+            paidAt: existing.paidAt ?? resolvedDate,
+            receiptNumber,
+            confirmedVia: opts.via,
+          },
+          include: { member: { select: { id: true, fullName: true, whatsapp: true, phone: true } } },
+        });
+        return { kind: "updated" as const, payment };
       });
-      return { kind: "updated" as const, payment };
-    });
+
+    // receiptNumber é @unique: se duas baixas concorrentes calcularem o mesmo
+    // MAX+1, uma falha com P2002 — tenta de novo com o MAX já atualizado.
+    let result: Awaited<ReturnType<typeof runOnce>>;
+    let attempt = 0;
+    for (;;) {
+      try {
+        result = await runOnce();
+        break;
+      } catch (e) {
+        const isUnique = (e as { code?: string })?.code === "P2002";
+        if (!isUnique || ++attempt >= 3) throw e;
+      }
+    }
 
     if (result.kind === "notfound") return { ok: false, error: "Pagamento não encontrado." };
 
