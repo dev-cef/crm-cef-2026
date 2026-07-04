@@ -468,6 +468,11 @@ model MessengerConfig {
   // false = modo sombra (IA valida, mas a baixa continua exigindo "baixa" humano no grupo).
   autoBaixaEnabled Boolean @default(false)
 
+  // Provedor/modelo de IA usado na extração do comprovante. Configurável no painel
+  // sem tocar em código. A chave de API de cada provedor fica em variável de ambiente.
+  aiProvider String @default("anthropic") // anthropic | openai | google
+  aiModel    String @default("claude-opus-4-8")
+
   updatedAt DateTime @updatedAt
 
   @@map("BirthdayMessageConfig")

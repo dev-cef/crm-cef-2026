@@ -147,8 +147,8 @@ export async function processarComprovanteWhatsapp(params: {
     return { ok: true, resultado: "revisao:comprovante_duplicado" };
   }
 
-  // 3) Extração via IA.
-  const resultado = await extrairComprovante(params.imageDataUri);
+  // 3) Extração via IA (provedor/modelo escolhidos no painel).
+  const resultado = await extrairComprovante(params.imageDataUri, cfg.aiProvider, cfg.aiModel);
   const extracao = resultado?.extracao ?? null;
   if (resultado) {
     await setStatus({

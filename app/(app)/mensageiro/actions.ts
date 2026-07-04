@@ -8,6 +8,7 @@ import { toSessionUser } from "@/lib/rbac";
 import { can } from "@/lib/permissions";
 import { getMessengerConfig } from "@/lib/messenger";
 import { fetchGroupParticipants } from "@/lib/whatsapp";
+import { isValidProviderModel } from "@/lib/comprovante-ai";
 
 type Result = { ok: boolean; error?: string };
 
@@ -165,6 +166,33 @@ export async function saveAutoBaixa(enabled: boolean): Promise<Result> {
     entity: "MessengerConfig",
     entityId: cfg.id,
     metadata: { field: "autoBaixaEnabled", enabled },
+  });
+  revalidatePath("/mensageiro");
+  return { ok: true };
+}
+
+// Modelo de IA usado na extração do comprovante: provedor + modelo escolhidos
+// no painel. Valida o par contra o registro em lib/comprovante-ai.
+export async function saveAiModel(provider: string, model: string): Promise<Result> {
+  const session = await auth();
+  const sessionUser = toSessionUser(session?.user ?? {});
+  if (!(await can(sessionUser, "mensageiro", "edit"))) {
+    return { ok: false, error: "Você não tem permissão para editar o Mensageiro." };
+  }
+  if (!isValidProviderModel(provider, model)) {
+    return { ok: false, error: "Provedor ou modelo inválido." };
+  }
+  const cfg = await getMessengerConfig();
+  await prisma.messengerConfig.update({
+    where: { id: cfg.id },
+    data: { aiProvider: provider, aiModel: model },
+  });
+  await recordAudit({
+    userId: session?.user?.id,
+    action: "UPDATE",
+    entity: "MessengerConfig",
+    entityId: cfg.id,
+    metadata: { field: "aiModel", provider, model },
   });
   revalidatePath("/mensageiro");
   return { ok: true };

@@ -25,7 +25,9 @@ import { ConfigCard } from "@/components/modules/mensageiro/config-card";
 import { RecipientsCard } from "@/components/modules/mensageiro/recipients-card";
 import { WhatsappBaixaCard } from "@/components/modules/mensageiro/whatsapp-baixa-card";
 import { AutoBaixaCard } from "@/components/modules/mensageiro/auto-baixa-card";
+import { AiModelCard } from "@/components/modules/mensageiro/ai-model-card";
 import { LogFilter } from "@/components/modules/mensageiro/log-filter";
+import { AI_PROVIDERS, configuredProviders } from "@/lib/comprovante-ai";
 import {
   saveBirthdayTemplate,
   saveReceiptTemplate,
@@ -35,6 +37,7 @@ import {
   saveRecipients,
   saveWhatsappBaixa,
   saveAutoBaixa,
+  saveAiModel,
 } from "@/app/(app)/mensageiro/actions";
 
 function parseAllowlist(json: string): string {
@@ -88,6 +91,15 @@ export default async function MensageiroPage({
 
   const whatsappOk = evolutionConfigured();
 
+  // Registro de provedores + quais têm chave configurada (serializável p/ o client).
+  const configured = new Set(configuredProviders());
+  const aiProviders = AI_PROVIDERS.map((p) => ({
+    id: p.id,
+    label: p.label,
+    configured: configured.has(p.id),
+    models: p.models.map((m) => ({ id: m.id, label: m.label, note: m.note })),
+  }));
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -125,6 +137,15 @@ export default async function MensageiroPage({
       )}
 
       {canEdit && <AutoBaixaCard initialEnabled={cfg.autoBaixaEnabled} save={saveAutoBaixa} />}
+
+      {canEdit && (
+        <AiModelCard
+          initialProvider={cfg.aiProvider}
+          initialModel={cfg.aiModel}
+          providers={aiProviders}
+          save={saveAiModel}
+        />
+      )}
 
       {canEdit && (
         <div className="grid gap-4 lg:grid-cols-3">
