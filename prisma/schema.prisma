@@ -859,6 +859,70 @@ model BibliotecaEmprestimo {
   @@index([prazoDevolucao])
 }
 
+// ─── Módulo de Documentos ────────────────────────────────────────────────────
+// Os arquivos ficam no Google Drive institucional do CEF; o sistema guarda
+// apenas o link, os metadados e o controle de acesso/versões.
+
+model DocumentoCategoria {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  descricao String?
+  ordem     Int      @default(0)
+  criadoEm  DateTime @default(now())
+
+  documentos Documento[]
+
+  @@index([ordem])
+}
+
+model Documento {
+  id          String  @id @default(cuid())
+  titulo      String
+  descricao   String?
+  categoriaId String?
+  categoria   DocumentoCategoria? @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
+
+  driveUrl String // link do arquivo no Google Drive institucional
+
+  publicadoEm DateTime
+  validadeEm  DateTime?
+  versao      String    @default("1.0")
+
+  status      String @default("ATIVO") // ATIVO | ARQUIVADO | EM_REVISAO
+  nivelAcesso String @default("ASSOCIADOS") // ASSOCIADOS | DIRETORIA | ADMIN
+
+  permitirDownload Boolean @default(true)
+  tags             String  @default("[]") // JSON string[]
+
+  criadoPorId     String? // userId do responsável pelo cadastro
+  atualizadoPorId String? // userId da última alteração
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  versoes DocumentoVersao[]
+
+  @@index([status])
+  @@index([nivelAcesso])
+  @@index([categoriaId])
+  @@index([publicadoEm(sort: Desc)])
+}
+
+// Snapshot da versão anterior sempre que versão/link mudam — histórico de versões.
+model DocumentoVersao {
+  id          String    @id @default(cuid())
+  documentoId String
+  documento   Documento @relation(fields: [documentoId], references: [id], onDelete: Cascade)
+
+  versao      String
+  driveUrl    String
+  observacao  String?
+  criadoPorId String?
+  criadoEm    DateTime @default(now())
+
+  @@index([documentoId])
+}
+
 model BibliotecaReserva {
   id       String          @id @default(cuid())
   livroId  String

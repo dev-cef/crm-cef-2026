@@ -99,6 +99,7 @@ export const ROUTE_ACCESS: { prefix: string; roles: Role[] }[] = [
   { prefix: "/dashboard",     roles: ["ADMIN", "DEPARTAMENTO"] },
   { prefix: "/patrimonio",    roles: ["ADMIN", "DEPARTAMENTO"] },
   { prefix: "/biblioteca",    roles: ["ADMIN", "DEPARTAMENTO"] },
+  { prefix: "/documentos",    roles: ["ADMIN", "DEPARTAMENTO"] },
 ];
 
 export function isRouteAllowed(pathname: string, role: Role): boolean {
@@ -125,7 +126,14 @@ export const NAV_ITEMS: {
   children?: { href: string; label: string; visibleTo?: Role[] }[];
 }[] = [
   { href: "/dashboard",       label: "Dashboard",       visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "dashboard" },
-  { href: "/meu-espaco",       label: "Meu Espaço",       visibleTo: ["ASSOCIADO"] },
+  {
+    href: "/meu-espaco",
+    label: "Meu Espaço",
+    visibleTo: ["ASSOCIADO"],
+    children: [
+      { href: "/meu-espaco/documentos", label: "Documentos" },
+    ],
+  },
   { href: "/eventos",          label: "Meus Eventos",     visibleTo: ["ASSOCIADO"] },
   { href: "/associados",       label: "Associados",       visibleTo: ["ADMIN", "DEPARTAMENTO"], moduleSlug: "associados" },
   {
@@ -179,6 +187,15 @@ export const NAV_ITEMS: {
     children: [
       { href: "/biblioteca/emprestimos", label: "Empréstimos",  visibleTo: ["ADMIN", "DEPARTAMENTO"] },
       { href: "/biblioteca/categorias",  label: "Categorias",   visibleTo: ["ADMIN"] },
+    ],
+  },
+  {
+    href: "/documentos",
+    label: "Documentos",
+    visibleTo: ["ADMIN", "DEPARTAMENTO"],
+    moduleSlug: "documentos",
+    children: [
+      { href: "/documentos/categorias", label: "Categorias", visibleTo: ["ADMIN"] },
     ],
   },
   { href: "/relatorios",      label: "Relatórios",           visibleTo: ["ADMIN", "DEPARTAMENTO"] },

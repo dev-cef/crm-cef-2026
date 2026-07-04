@@ -19,6 +19,7 @@ import {
   MapPin,
   ChevronRight,
   Receipt,
+  FileText,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/authz";
@@ -672,6 +673,30 @@ export default async function MeuEspacoPage() {
           </div>
         );
       })()}
+
+      {/* Documentos oficiais do clube */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <FileText className="size-5" />
+            Documentos do CEF
+          </CardTitle>
+          <CardDescription>
+            Estatuto, regimento interno, regras do grupo, comunicados e outros
+            documentos oficiais do clube.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link
+            href="/meu-espaco/documentos"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            <FileText className="size-4" />
+            Ver documentos
+            <ChevronRight className="size-4" />
+          </Link>
+        </CardContent>
+      </Card>
 
       {/* LGPD — direito de acesso aos próprios dados */}
       <Card>

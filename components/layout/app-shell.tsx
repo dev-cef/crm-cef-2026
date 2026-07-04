@@ -27,6 +27,7 @@ import {
   HardDriveDownload,
   Package,
   BookOpen,
+  FileText,
   QrCode,
   MessagesSquare,
 } from "lucide-react";
@@ -66,6 +67,7 @@ const ICONS: Record<string, typeof Users> = {
   "/eventos": CalendarDays,
   "/patrimonio": Package,
   "/biblioteca": BookOpen,
+  "/documentos": FileText,
   "/relatorios": BarChart3,
 };
 
