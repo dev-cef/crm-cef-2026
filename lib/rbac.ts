@@ -43,6 +43,18 @@ export type SessionUser = {
   departmentIds: string[];
 };
 
+// Identidade original do admin guardada durante a impersonação ("entrar como").
+// Presença (não-null) na sessão indica que se está impersonando um associado.
+export type Impersonator = {
+  id: string;
+  role: string;
+  memberId: string | null;
+  departmentIds: string[];
+  totpEnabled: boolean;
+  name?: string | null;
+  email?: string | null;
+};
+
 export function toSessionUser(user: {
   id?: string;
   role?: string;

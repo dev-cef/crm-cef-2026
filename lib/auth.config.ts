@@ -92,6 +92,8 @@ export const authConfig = {
         session.user.departmentIds = (token.departmentIds as string[]) ?? [];
         session.user.totpEnabled = (token.totpEnabled as boolean) ?? false;
         session.user.expiresAt = (token.expiresAt as number) ?? 0;
+        session.user.impersonator =
+          (token.impersonator as import("@/lib/rbac").Impersonator | null | undefined) ?? null;
       }
       return session;
     },

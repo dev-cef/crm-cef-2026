@@ -2,9 +2,11 @@
 
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { isAdmin } from "@/lib/rbac";
+import { auth, unstable_update } from "@/lib/auth";
+import { isAdmin, normalizeRole } from "@/lib/rbac";
+import { requireAdmin } from "@/lib/authz";
 import { recordAudit } from "@/lib/audit";
 import { parseBrDate } from "@/lib/format";
 import { type MemberFormValues } from "@/lib/validations/member";
@@ -340,4 +342,70 @@ export async function changeMemberPassword(
   });
 
   return { ok: true };
+}
+
+// ── Impersonação: "Entrar como associado" ────────────────────────────────────
+// Admin passa a navegar como o associado (troca de identidade no JWT, com a
+// identidade original guardada para restauração exata). Auditado com IP/hora.
+
+export async function startImpersonation(memberId: string): Promise<void> {
+  const admin = await requireAdmin(); // barra não-admins (defesa em profundidade)
+
+  // Não permite aninhar impersonação.
+  const session = await auth();
+  if (session?.user?.impersonator) redirect("/meu-espaco");
+
+  const member = await prisma.member.findUnique({
+    where: { id: memberId },
+    select: {
+      id: true,
+      fullName: true,
+      deletedAt: true,
+      user: { select: { id: true, role: true, email: true } },
+    },
+  });
+  if (
+    !member ||
+    member.deletedAt ||
+    !member.user ||
+    normalizeRole(member.user.role) !== "ASSOCIADO"
+  ) {
+    redirect("/associados");
+  }
+
+  await recordAudit({
+    userId: admin.id,
+    action: "IMPERSONATE_START",
+    entity: "Impersonation",
+    entityId: member.user.id,
+    metadata: {
+      targetMemberId: member.id,
+      targetName: member.fullName,
+      targetEmail: member.user.email,
+    },
+  });
+
+  await unstable_update({
+    impersonate: { action: "start", targetUserId: member.user.id },
+  } as never);
+
+  redirect("/meu-espaco");
+}
+
+export async function stopImpersonation(): Promise<void> {
+  const session = await auth();
+  const imp = session?.user?.impersonator;
+  if (!imp) redirect("/dashboard");
+
+  await recordAudit({
+    userId: imp!.id,
+    action: "IMPERSONATE_STOP",
+    entity: "Impersonation",
+    entityId: session!.user.id,
+    metadata: { targetName: session!.user.name, targetEmail: session!.user.email },
+  });
+
+  await unstable_update({ impersonate: { action: "stop" } } as never);
+
+  redirect("/dashboard");
 }

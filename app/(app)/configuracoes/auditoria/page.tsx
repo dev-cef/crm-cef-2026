@@ -20,7 +20,14 @@ export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 30;
 
-const SECURITY = ["LOGIN_SUCCESS", "LOGIN_FAILED", "LOCKOUT", "LOGIN_OFFHOURS"];
+const SECURITY = [
+  "LOGIN_SUCCESS",
+  "LOGIN_FAILED",
+  "LOCKOUT",
+  "LOGIN_OFFHOURS",
+  "IMPERSONATE_START",
+  "IMPERSONATE_STOP",
+];
 const CHANGES = ["CREATE", "UPDATE", "DELETE", "EXPORT"];
 
 const FILTERS = [
@@ -32,7 +39,12 @@ const FILTERS = [
 function actionBadge(action: string) {
   if (action === "LOGIN_FAILED" || action === "LOCKOUT")
     return "destructive" as const;
-  if (action === "LOGIN_OFFHOURS") return "secondary" as const;
+  if (
+    action === "LOGIN_OFFHOURS" ||
+    action === "IMPERSONATE_START" ||
+    action === "IMPERSONATE_STOP"
+  )
+    return "secondary" as const;
   return "default" as const;
 }
 

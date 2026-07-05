@@ -16,10 +16,12 @@ import {
   CalendarClock,
   Clock,
   ArrowRight,
+  VenetianMask,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/authz";
-import { scopedMemberWhere, toSessionUser } from "@/lib/rbac";
+import { scopedMemberWhere, toSessionUser, normalizeRole } from "@/lib/rbac";
+import { startImpersonation } from "@/app/(app)/associados/actions";
 import { auth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
@@ -184,7 +186,7 @@ export default async function AssociadosPage({
             status: true,
           },
         },
-        user: { select: { approved: true } },
+        user: { select: { id: true, approved: true, role: true } },
         physicalCardRequests: {
           select: { currentStage: true, requestType: true, quarter: true, year: true },
           where: { quarter: cq, year: cy },
@@ -677,6 +679,20 @@ export default async function AssociadosPage({
                         >
                           <Pencil className="size-4" />
                         </Link>
+                      )}
+                      {isAdmin && m.user && normalizeRole(m.user.role) === "ASSOCIADO" && (
+                        <form action={startImpersonation.bind(null, m.id)}>
+                          <Button
+                            type="submit"
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Entrar como este associado"
+                            title="Entrar como este associado"
+                            className="text-amber-600 hover:bg-amber-500/10 hover:text-amber-700 dark:text-amber-400"
+                          >
+                            <VenetianMask className="size-4" />
+                          </Button>
+                        </form>
                       )}
                       {canDelete && (
                         <DeleteMemberDialog

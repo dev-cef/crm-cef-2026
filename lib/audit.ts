@@ -9,7 +9,9 @@ export type AuditAction =
   | "LOGIN_SUCCESS"
   | "LOGIN_FAILED"
   | "LOCKOUT"
-  | "LOGIN_OFFHOURS";
+  | "LOGIN_OFFHOURS"
+  | "IMPERSONATE_START"
+  | "IMPERSONATE_STOP";
 
 // IP/user-agent da requisição (LGPD). Seguro fora de escopo de request.
 async function requestMeta(): Promise<{

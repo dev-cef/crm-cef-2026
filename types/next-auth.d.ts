@@ -1,4 +1,5 @@
 import type { DefaultSession } from "next-auth";
+import type { Impersonator } from "@/lib/rbac";
 
 declare module "next-auth" {
   interface Session {
@@ -9,6 +10,7 @@ declare module "next-auth" {
       departmentIds: string[];
       totpEnabled: boolean;
       expiresAt: number; // epoch (s) — expiração absoluta por papel
+      impersonator?: Impersonator | null;
     } & DefaultSession["user"];
   }
 
@@ -28,5 +30,6 @@ declare module "next-auth/jwt" {
     departmentIds?: string[];
     totpEnabled?: boolean;
     expiresAt?: number;
+    impersonator?: Impersonator | null;
   }
 }

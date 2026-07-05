@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validations/auth";
 import { normalizeRecoveryCode, verifyTotp } from "@/lib/totp";
 import { isOffHours, recordSecurityEvent } from "@/lib/audit";
-import { normalizeRole, SESSION_MAX_AGE_SECONDS } from "@/lib/rbac";
+import { normalizeRole, SESSION_MAX_AGE_SECONDS, type Impersonator } from "@/lib/rbac";
 
 const MAX_FAILED_ATTEMPTS = 5;
 const BASE_LOCKOUT_MINUTES = 15;
@@ -35,7 +35,7 @@ export class AccountPendingError extends CredentialsSignin {
   code = "account_pending";
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
   ...authConfig,
   providers: [
     Google({
@@ -190,8 +190,59 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return true;
     },
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger, session }) {
       const nowS = Math.floor(Date.now() / 1000);
+
+      // Impersonação (admin "entra como" associado). Disparado por
+      // unstable_update. A revalidação de papel AQUI é a autoridade — o
+      // endpoint de update é forjável, então a server action não basta.
+      if (trigger === "update" && session && typeof session === "object") {
+        const data = (session as { impersonate?: { action?: string; targetUserId?: string } })
+          .impersonate;
+
+        if (data?.action === "start" && normalizeRole(token.role) === "ADMIN" && !token.impersonator) {
+          const target = await prisma.user.findUnique({
+            where: { id: data.targetUserId ?? "" },
+            include: { member: { select: { id: true } } },
+          });
+          if (target && normalizeRole(target.role) === "ASSOCIADO" && target.approved && target.member) {
+            token.impersonator = {
+              id: token.id as string,
+              role: token.role as string,
+              memberId: (token.memberId as string | null) ?? null,
+              departmentIds: (token.departmentIds as string[]) ?? [],
+              totpEnabled: (token.totpEnabled as boolean) ?? false,
+              name: token.name,
+              email: token.email,
+            };
+            token.id = target.id;
+            token.role = "ASSOCIADO";
+            token.memberId = target.member.id;
+            token.departmentIds = [];
+            token.totpEnabled = false;
+            token.name = target.name;
+            token.email = target.email;
+            token.expiresAt = nowS + SESSION_MAX_AGE_SECONDS.ASSOCIADO;
+          }
+          return token;
+        }
+
+        if (data?.action === "stop" && token.impersonator) {
+          const imp = token.impersonator as Impersonator;
+          token.id = imp.id;
+          token.role = imp.role;
+          token.memberId = imp.memberId;
+          token.departmentIds = imp.departmentIds;
+          token.totpEnabled = imp.totpEnabled;
+          token.name = imp.name;
+          token.email = imp.email;
+          token.impersonator = null;
+          token.expiresAt = nowS + SESSION_MAX_AGE_SECONDS[normalizeRole(imp.role)];
+          return token;
+        }
+
+        return token;
+      }
 
       if (user) {
         if (account?.provider === "google") {
