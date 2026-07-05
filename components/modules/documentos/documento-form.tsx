@@ -90,6 +90,8 @@ export function DocumentoForm({
             <Select
               defaultValue={defaultValues?.categoriaId ?? ""}
               onValueChange={(v) => setValue("categoriaId", String(v))}
+              // items faz o SelectValue exibir o nome em vez do ID cru
+              items={categorias.map((c) => ({ value: c.id, label: c.nome }))}
             >
               <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
               <SelectContent>
@@ -182,6 +184,7 @@ export function DocumentoForm({
             <Select
               defaultValue={defaultValues?.status ?? "ATIVO"}
               onValueChange={(v) => setValue("status", String(v) as DocumentoFormValues["status"])}
+              items={DOC_STATUS.map((s) => ({ value: s, label: DOC_STATUS_LABELS[s] }))}
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -196,6 +199,7 @@ export function DocumentoForm({
             <Select
               defaultValue={defaultValues?.nivelAcesso ?? "ASSOCIADOS"}
               onValueChange={(v) => setValue("nivelAcesso", String(v) as DocumentoFormValues["nivelAcesso"])}
+              items={niveis.map((n) => ({ value: n, label: DOC_NIVEL_LABELS[n] }))}
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>

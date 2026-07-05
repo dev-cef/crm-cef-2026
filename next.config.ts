@@ -8,7 +8,8 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://covers.openlibrary.org https://books.google.com",
   "font-src 'self'",
-  "connect-src 'self' https://viacep.com.br",
+  // googleapis.com: upload resumable de documentos direto do navegador pro Drive
+  "connect-src 'self' https://viacep.com.br https://www.googleapis.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
