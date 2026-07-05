@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { requirePermission, requireSessionUser, isStaff, SEM_PERMISSAO } from "@/lib/guard";
 import { recordAudit } from "@/lib/audit";
 import { eventSchema, type EventFormValues } from "@/lib/validations/event";
 import {
@@ -47,7 +47,8 @@ export async function saveEvent(
   values: EventFormValues,
   id?: string,
 ): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("eventos", id ? "edit" : "create");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   const parsed = eventSchema.safeParse(values);
   if (!parsed.success) {
     const issues = parsed.error.issues;
@@ -137,7 +138,7 @@ export async function saveEvent(
     }
 
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: id ? "UPDATE" : "CREATE",
       entity: "Event",
       entityId: ev.id,
@@ -158,11 +159,12 @@ export async function saveEvent(
 }
 
 export async function deleteEvent(id: string): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("eventos", "delete");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   try {
     await prisma.event.delete({ where: { id } });
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: "DELETE",
       entity: "Event",
       entityId: id,
@@ -179,6 +181,10 @@ export async function addRegistration(
   eventId: string,
   memberId: string,
 ): Promise<Result & { waitlisted?: boolean; position?: number }> {
+  const user = await requireSessionUser();
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
+  // Associado só inscreve a si mesmo; staff inscreve qualquer um.
+  if (!isStaff(user) && user.memberId !== memberId) return { ok: false, error: SEM_PERMISSAO };
   try {
     const ev = await prisma.event.findUnique({
       where: { id: eventId },
@@ -220,11 +226,17 @@ export async function removeRegistration(
   registrationId: string,
   eventId: string,
 ): Promise<Result> {
+  const user = await requireSessionUser();
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   try {
     const registration = await prisma.eventRegistration.findUnique({
       where: { id: registrationId },
       select: { memberId: true },
     });
+    // Associado só remove a própria inscrição; staff remove qualquer uma.
+    if (!isStaff(user) && registration?.memberId !== user.memberId) {
+      return { ok: false, error: SEM_PERMISSAO };
+    }
 
     await prisma.eventRegistration.delete({ where: { id: registrationId } });
 
@@ -271,11 +283,16 @@ export async function removeWaitlist(
   waitlistId: string,
   eventId: string,
 ): Promise<Result> {
+  const user = await requireSessionUser();
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   try {
     const waitlist = await prisma.eventWaitlist.findUnique({
       where: { id: waitlistId },
       select: { memberId: true },
     });
+    if (!isStaff(user) && waitlist?.memberId !== user.memberId) {
+      return { ok: false, error: SEM_PERMISSAO };
+    }
 
     await prisma.eventWaitlist.delete({ where: { id: waitlistId } });
 
@@ -304,6 +321,9 @@ export async function offerCarona(
   seats: number,
   note?: string,
 ): Promise<Result> {
+  const user = await requireSessionUser();
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
+  if (!isStaff(user) && user.memberId !== driverId) return { ok: false, error: SEM_PERMISSAO };
   try {
     await prisma.eventCarona.upsert({
       where: { eventId_driverId: { eventId, driverId } },
@@ -321,6 +341,15 @@ export async function cancelCaronaOffer(
   caronaId: string,
   eventId: string,
 ): Promise<Result> {
+  const user = await requireSessionUser();
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
+  const carona = await prisma.eventCarona.findUnique({
+    where: { id: caronaId },
+    select: { driverId: true },
+  });
+  if (!isStaff(user) && carona?.driverId !== user.memberId) {
+    return { ok: false, error: SEM_PERMISSAO };
+  }
   try {
     await prisma.eventCarona.delete({ where: { id: caronaId } });
     revalidatePath(`/eventos/${eventId}`);
@@ -335,6 +364,9 @@ export async function claimSeat(
   memberId: string,
   eventId: string,
 ): Promise<Result> {
+  const user = await requireSessionUser();
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
+  if (!isStaff(user) && user.memberId !== memberId) return { ok: false, error: SEM_PERMISSAO };
   try {
     const carona = await prisma.eventCarona.findUnique({
       where: { id: caronaId },
@@ -357,6 +389,15 @@ export async function releaseSeat(
   passengerId: string,
   eventId: string,
 ): Promise<Result> {
+  const user = await requireSessionUser();
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
+  const passenger = await prisma.eventCaronaPassenger.findUnique({
+    where: { id: passengerId },
+    select: { memberId: true },
+  });
+  if (!isStaff(user) && passenger?.memberId !== user.memberId) {
+    return { ok: false, error: SEM_PERMISSAO };
+  }
   try {
     await prisma.eventCaronaPassenger.delete({ where: { id: passengerId } });
     revalidatePath(`/eventos/${eventId}`);
@@ -370,6 +411,7 @@ export async function addPhotos(
   eventId: string,
   dataUrls: string[],
 ): Promise<Result> {
+  if (!(await requirePermission("eventos", "edit"))) return { ok: false, error: SEM_PERMISSAO };
   try {
     const valid = dataUrls
       .filter((u) => u.startsWith("data:image/"))
@@ -390,6 +432,7 @@ export async function removePhoto(
   photoId: string,
   eventId: string,
 ): Promise<Result> {
+  if (!(await requirePermission("eventos", "edit"))) return { ok: false, error: SEM_PERMISSAO };
   try {
     await prisma.eventPhoto.delete({ where: { id: photoId } });
     revalidatePath(`/eventos/${eventId}`);
@@ -403,14 +446,15 @@ export async function saveRelatorio(
   eventId: string,
   relatorio: string,
 ): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("eventos", "edit");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   try {
     await prisma.event.update({
       where: { id: eventId },
       data: { relatorioExcursao: relatorio.trim() || null },
     });
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: "UPDATE",
       entity: "Event",
       entityId: eventId,
@@ -436,15 +480,15 @@ export async function projetarMuroDoMes(
   ano: number,
   mes: number,
 ): Promise<ProjetarMuroResult> {
-  const session = await auth();
-  if (!session?.user)
+  const user = await requirePermission("eventos", "create");
+  if (!user)
     return {
       ok: false,
       criados: 0,
       pulados: 0,
       ignoradosQuinta: 0,
       jaExistentes: 0,
-      error: "Não autenticado",
+      error: SEM_PERMISSAO,
     };
 
   try {
@@ -516,7 +560,7 @@ export async function projetarMuroDoMes(
     });
 
     await recordAudit({
-      userId: session.user.id,
+      userId: user.id,
       action: "CREATE",
       entity: "Event",
       entityId: `muro:${ano}-${String(mes).padStart(2, "0")}`,

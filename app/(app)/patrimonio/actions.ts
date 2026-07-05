@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { requirePermission, SEM_PERMISSAO } from "@/lib/guard";
 import { recordAudit } from "@/lib/audit";
 import { gerarCodigoBem } from "@/lib/patrimonio/utils";
 import { getBens } from "@/lib/patrimonio/queries";
@@ -37,7 +37,8 @@ const bemSchema = z.object({
 export type BemFormValues = z.infer<typeof bemSchema>;
 
 export async function createBem(values: BemFormValues): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("patrimonio", "create");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   const parsed = bemSchema.safeParse(values);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
 
@@ -68,7 +69,7 @@ export async function createBem(values: BemFormValues): Promise<Result> {
         valorResidual: d.valorResidual ?? null,
         observacoes: d.observacoes || null,
         fotoUrl: d.fotoUrl || null,
-        createdById: session?.user?.id ?? null,
+        createdById: user.id,
       },
     });
 
@@ -81,12 +82,12 @@ export async function createBem(values: BemFormValues): Promise<Result> {
         localDestinoId: d.localId || null,
         responsavelId: d.responsavelId || null,
         observacoes: "Cadastro inicial do bem.",
-        createdById: session?.user?.id ?? null,
+        createdById: user.id,
       },
     });
 
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: "CREATE",
       entity: "PatrimonioBem",
       entityId: bem.id,
@@ -101,7 +102,8 @@ export async function createBem(values: BemFormValues): Promise<Result> {
 }
 
 export async function updateBem(id: string, values: BemFormValues): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("patrimonio", "edit");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   const parsed = bemSchema.safeParse(values);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
 
@@ -130,12 +132,12 @@ export async function updateBem(id: string, values: BemFormValues): Promise<Resu
         valorResidual: d.valorResidual ?? null,
         observacoes: d.observacoes || null,
         fotoUrl: d.fotoUrl || null,
-        updatedById: session?.user?.id ?? null,
+        updatedById: user.id,
       },
     });
 
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: "UPDATE",
       entity: "PatrimonioBem",
       entityId: id,
@@ -163,7 +165,8 @@ const movSchema = z.object({
 export type MovimentacaoFormValues = z.infer<typeof movSchema>;
 
 export async function registrarMovimentacao(values: MovimentacaoFormValues): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("patrimonio", "edit");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   const parsed = movSchema.safeParse(values);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
 
@@ -197,7 +200,7 @@ export async function registrarMovimentacao(values: MovimentacaoFormValues): Pro
           responsavelId: d.responsavelId || null,
           dataDevolucaoPrevista: d.dataDevolucaoPrevista ? new Date(d.dataDevolucaoPrevista) : null,
           observacoes: d.observacoes || null,
-          createdById: session?.user?.id ?? null,
+          createdById: user.id,
         },
       });
 
@@ -228,7 +231,8 @@ export async function registrarMovimentacao(values: MovimentacaoFormValues): Pro
 }
 
 export async function baixarBem(id: string, observacoes: string): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("patrimonio", "delete");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   try {
     await prisma.$transaction([
       prisma.patrimonioMovimentacao.create({
@@ -237,17 +241,17 @@ export async function baixarBem(id: string, observacoes: string): Promise<Result
           tipo: "baixa",
           data: new Date(),
           observacoes: observacoes || "Bem baixado.",
-          createdById: session?.user?.id ?? null,
+          createdById: user.id,
         },
       }),
       prisma.patrimonioBem.update({
         where: { id },
-        data: { status: "baixado", updatedById: session?.user?.id ?? null },
+        data: { status: "baixado", updatedById: user.id },
       }),
     ]);
 
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: "UPDATE",
       entity: "PatrimonioBem",
       entityId: id,
@@ -263,6 +267,8 @@ export async function baixarBem(id: string, observacoes: string): Promise<Result
 }
 
 export async function exportarBensCSV(filters: BemFilters): Promise<string> {
+  const user = await requirePermission("patrimonio", "export");
+  if (!user) return "";
   const { bens } = await getBens({ ...filters, page: 1 });
   // Busca todos sem paginação
   const todos = await prisma.patrimonioBem.findMany({
@@ -294,6 +300,8 @@ export async function exportarBensCSV(filters: BemFilters): Promise<string> {
 }
 
 export async function criarLocal(nome: string, descricao: string): Promise<Result> {
+  const user = await requirePermission("patrimonio", "create");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   if (!nome.trim()) return { ok: false, error: "Nome obrigatório." };
   try {
     await prisma.patrimonioLocal.create({ data: { nome: nome.trim(), descricao: descricao.trim() || null } });
@@ -305,6 +313,8 @@ export async function criarLocal(nome: string, descricao: string): Promise<Resul
 }
 
 export async function editarLocal(id: string, nome: string, descricao: string): Promise<Result> {
+  const user = await requirePermission("patrimonio", "edit");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   if (!nome.trim()) return { ok: false, error: "Nome obrigatório." };
   try {
     await prisma.patrimonioLocal.update({
@@ -320,6 +330,8 @@ export async function editarLocal(id: string, nome: string, descricao: string): 
 }
 
 export async function excluirLocal(id: string): Promise<Result> {
+  const user = await requirePermission("patrimonio", "delete");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   try {
     const emUso = await prisma.patrimonioBem.count({ where: { localId: id } });
     if (emUso > 0) return { ok: false, error: `Não é possível excluir: ${emUso} bem(ns) neste local.` };

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { requirePermission, SEM_PERMISSAO } from "@/lib/guard";
 import { recordAudit } from "@/lib/audit";
 import { gerarNumeroTombo } from "@/lib/biblioteca/queries";
 
@@ -31,7 +31,8 @@ const livroSchema = z.object({
 export type LivroFormValues = z.infer<typeof livroSchema>;
 
 export async function criarLivro(values: LivroFormValues): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("biblioteca", "create");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   const parsed = livroSchema.safeParse(values);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
 
@@ -58,7 +59,7 @@ export async function criarLivro(values: LivroFormValues): Promise<Result> {
       },
     });
 
-    await recordAudit({ userId: session?.user?.id, action: "CREATE", entity: "BibliotecaLivro", entityId: livro.id });
+    await recordAudit({ userId: user.id, action: "CREATE", entity: "BibliotecaLivro", entityId: livro.id });
     revalidatePath("/biblioteca");
     return { ok: true, id: livro.id };
   } catch (e: unknown) {
@@ -69,7 +70,8 @@ export async function criarLivro(values: LivroFormValues): Promise<Result> {
 }
 
 export async function atualizarLivro(id: string, values: LivroFormValues): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("biblioteca", "edit");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   const parsed = livroSchema.safeParse(values);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
 
@@ -95,7 +97,7 @@ export async function atualizarLivro(id: string, values: LivroFormValues): Promi
       },
     });
 
-    await recordAudit({ userId: session?.user?.id, action: "UPDATE", entity: "BibliotecaLivro", entityId: id });
+    await recordAudit({ userId: user.id, action: "UPDATE", entity: "BibliotecaLivro", entityId: id });
     revalidatePath("/biblioteca");
     revalidatePath(`/biblioteca/${id}`);
     return { ok: true };
@@ -105,7 +107,8 @@ export async function atualizarLivro(id: string, values: LivroFormValues): Promi
 }
 
 export async function excluirLivro(id: string): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("biblioteca", "delete");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   const ativo = await prisma.bibliotecaEmprestimo.findFirst({
     where: { livroId: id, status: { in: ["ativo", "atrasado"] } },
   });
@@ -113,7 +116,7 @@ export async function excluirLivro(id: string): Promise<Result> {
 
   try {
     await prisma.bibliotecaLivro.delete({ where: { id } });
-    await recordAudit({ userId: session?.user?.id, action: "DELETE", entity: "BibliotecaLivro", entityId: id });
+    await recordAudit({ userId: user.id, action: "DELETE", entity: "BibliotecaLivro", entityId: id });
     revalidatePath("/biblioteca");
     return { ok: true };
   } catch {
@@ -135,7 +138,8 @@ const emprestimoSchema = z.object({
 export type EmprestimoFormValues = z.infer<typeof emprestimoSchema>;
 
 export async function registrarEmprestimo(values: EmprestimoFormValues): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("biblioteca", "edit");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   const parsed = emprestimoSchema.safeParse(values);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
 
@@ -154,7 +158,7 @@ export async function registrarEmprestimo(values: EmprestimoFormValues): Promise
           prazoDevolucao: new Date(d.prazoDevolucao),
           estadoRetirada: d.estadoRetirada,
           observacoes: d.observacoes || null,
-          registradoPorId: session?.user?.id ?? null,
+          registradoPorId: user.id,
         },
       });
       await tx.bibliotecaLivro.update({ where: { id: d.livroId }, data: { disponivel: false } });
@@ -165,7 +169,7 @@ export async function registrarEmprestimo(values: EmprestimoFormValues): Promise
       return e;
     });
 
-    await recordAudit({ userId: session?.user?.id, action: "CREATE", entity: "BibliotecaEmprestimo", entityId: emprestimo.id });
+    await recordAudit({ userId: user.id, action: "CREATE", entity: "BibliotecaEmprestimo", entityId: emprestimo.id });
     revalidatePath("/biblioteca");
     revalidatePath("/biblioteca/emprestimos");
     return { ok: true, id: emprestimo.id };
@@ -185,7 +189,8 @@ const devolucaoSchema = z.object({
 export type DevolucaoFormValues = z.infer<typeof devolucaoSchema>;
 
 export async function registrarDevolucao(values: DevolucaoFormValues): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("biblioteca", "edit");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   const parsed = devolucaoSchema.safeParse(values);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
 
@@ -212,7 +217,7 @@ export async function registrarDevolucao(values: DevolucaoFormValues): Promise<R
       });
     });
 
-    await recordAudit({ userId: session?.user?.id, action: "UPDATE", entity: "BibliotecaEmprestimo", entityId: d.emprestimoId });
+    await recordAudit({ userId: user.id, action: "UPDATE", entity: "BibliotecaEmprestimo", entityId: d.emprestimoId });
     revalidatePath("/biblioteca");
     revalidatePath("/biblioteca/emprestimos");
     return { ok: true };
@@ -224,6 +229,8 @@ export async function registrarDevolucao(values: DevolucaoFormValues): Promise<R
 // ── Categorias ───────────────────────────────────────────────────────────────
 
 export async function criarCategoria(nome: string, descricao?: string): Promise<Result> {
+  const user = await requirePermission("biblioteca", "create");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   try {
     const cat = await prisma.bibliotecaCategoria.create({ data: { nome, descricao: descricao || null } });
     revalidatePath("/biblioteca/categorias");
@@ -234,6 +241,8 @@ export async function criarCategoria(nome: string, descricao?: string): Promise<
 }
 
 export async function excluirCategoria(id: string): Promise<Result> {
+  const user = await requirePermission("biblioteca", "delete");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   try {
     await prisma.bibliotecaCategoria.delete({ where: { id } });
     revalidatePath("/biblioteca/categorias");
@@ -246,6 +255,8 @@ export async function excluirCategoria(id: string): Promise<Result> {
 // ── CSV ───────────────────────────────────────────────────────────────────────
 
 export async function exportarCatalogoCsv(): Promise<string> {
+  const user = await requirePermission("biblioteca", "export");
+  if (!user) return "";
   const livros = await prisma.bibliotecaLivro.findMany({
     orderBy: { titulo: "asc" },
     include: { categoria: true },

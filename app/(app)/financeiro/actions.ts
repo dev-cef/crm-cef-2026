@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { requirePermission, SEM_PERMISSAO } from "@/lib/guard";
 import { recordAudit } from "@/lib/audit";
 import { parseBrDate } from "@/lib/format";
 import { asaasConfigured, asaasCancelCharge } from "@/lib/asaas";
@@ -16,7 +16,8 @@ export async function savePlan(
   values: PlanFormValues,
   id?: string,
 ): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("financeiro", id ? "edit" : "create");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   const parsed = planSchema.safeParse(values);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Inválido" };
@@ -35,7 +36,7 @@ export async function savePlan(
       ? await prisma.plan.update({ where: { id }, data })
       : await prisma.plan.create({ data });
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: id ? "UPDATE" : "CREATE",
       entity: "Plan",
       entityId: plan.id,
@@ -48,6 +49,8 @@ export async function savePlan(
 }
 
 export async function togglePlan(id: string): Promise<Result> {
+  const user = await requirePermission("financeiro", "edit");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   const plan = await prisma.plan.findUnique({ where: { id } });
   if (!plan) return { ok: false, error: "Plano não encontrado." };
   await prisma.plan.update({
@@ -59,7 +62,8 @@ export async function togglePlan(id: string): Promise<Result> {
 }
 
 export async function deletePlan(id: string): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("financeiro", "delete");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   const usage = await prisma.member.count({ where: { planId: id } });
   if (usage > 0) {
     return {
@@ -71,7 +75,7 @@ export async function deletePlan(id: string): Promise<Result> {
     await prisma.payment.deleteMany({ where: { planId: id } });
     await prisma.plan.delete({ where: { id } });
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: "DELETE",
       entity: "Plan",
       entityId: id,
@@ -91,7 +95,8 @@ export async function launchMemberMonthlyRange(
   toMonth: number,
   toYear: number,
 ): Promise<{ ok: boolean; created: number; skipped: number; error?: string }> {
-  const session = await auth();
+  const user = await requirePermission("financeiro", "create");
+  if (!user) return { ok: false, created: 0, skipped: 0, error: SEM_PERMISSAO };
 
   const member = await prisma.member.findUnique({
     where: { id: memberId, deletedAt: null },
@@ -130,7 +135,7 @@ export async function launchMemberMonthlyRange(
   }
 
   await recordAudit({
-    userId: session?.user?.id,
+    userId: user.id,
     action: "CREATE",
     entity: "Payment",
     entityId: `range-${memberId}-${fromMonth}/${fromYear}-${toMonth}/${toYear}`,
@@ -146,7 +151,8 @@ export async function launchMonthly(
   month: number,
   year: number,
 ): Promise<{ ok: boolean; created: number; error?: string }> {
-  const session = await auth();
+  const user = await requirePermission("financeiro", "create");
+  if (!user) return { ok: false, created: 0, error: SEM_PERMISSAO };
   const members = await prisma.member.findMany({
     where: { deletedAt: null, status: "ACTIVE", planId: { not: null } },
     include: { plan: true },
@@ -179,7 +185,7 @@ export async function launchMonthly(
   }
 
   await recordAudit({
-    userId: session?.user?.id,
+    userId: user.id,
     action: "CREATE",
     entity: "Payment",
     entityId: `batch-${month}-${year}`,
@@ -195,7 +201,8 @@ export async function markAsPaid(
   paidAt?: Date,
   notes?: string,
 ): Promise<{ ok: true; receiptNumber: string } | { ok: false; error: string }> {
-  const session = await auth();
+  const user = await requirePermission("financeiro", "edit");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   try {
     const resolvedDate = paidAt ?? new Date();
     const year = resolvedDate.getFullYear();
@@ -218,7 +225,7 @@ export async function markAsPaid(
     });
 
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: "UPDATE",
       entity: "Payment",
       entityId: id,
@@ -246,7 +253,8 @@ export async function markAsPaid(
 }
 
 export async function rejectReceipt(id: string): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("financeiro", "edit");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   try {
     const payment = await prisma.payment.findUnique({ where: { id } });
     if (!payment) return { ok: false, error: "Pagamento não encontrado." };
@@ -259,7 +267,7 @@ export async function rejectReceipt(id: string): Promise<Result> {
       },
     });
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: "UPDATE",
       entity: "Payment",
       entityId: id,
@@ -284,7 +292,8 @@ export async function editPayment(
     notes?: string;
   },
 ): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("financeiro", "edit");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   if (!values.amount || values.amount <= 0) return { ok: false, error: "Valor inválido." };
   const due = parseBrDate(values.dueDate);
   if (!due) return { ok: false, error: "Data de vencimento inválida." };
@@ -336,7 +345,7 @@ export async function editPayment(
       });
     });
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: "UPDATE",
       entity: "Payment",
       entityId: id,
@@ -366,7 +375,8 @@ export async function editPayment(
 }
 
 export async function cancelPayment(id: string): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("financeiro", "delete");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   try {
     const payment = await prisma.payment.findUnique({ where: { id }, select: { asaasChargeId: true } });
     if (payment?.asaasChargeId) {
@@ -374,7 +384,7 @@ export async function cancelPayment(id: string): Promise<Result> {
     }
     await prisma.payment.delete({ where: { id } });
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: "DELETE",
       entity: "Payment",
       entityId: id,
@@ -391,7 +401,8 @@ export async function setPaymentStatus(
   id: string,
   status: "PAGO" | "PENDENTE" | "ATRASADO",
 ): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("financeiro", "edit");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   try {
     await prisma.payment.update({
       where: { id },
@@ -401,7 +412,7 @@ export async function setPaymentStatus(
       },
     });
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: "UPDATE",
       entity: "Payment",
       entityId: id,
@@ -424,7 +435,8 @@ export async function getSystemConfig() {
 }
 
 export async function saveEnrollmentFee(fee: number): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("financeiro", "edit");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   if (fee < 0) return { ok: false, error: "O valor não pode ser negativo." };
   try {
     const cfg = await getSystemConfig();
@@ -433,7 +445,7 @@ export async function saveEnrollmentFee(fee: number): Promise<Result> {
       data: { enrollmentFee: fee },
     });
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: "UPDATE",
       entity: "SystemConfig",
       entityId: cfg.id,
@@ -461,7 +473,8 @@ export type BillingConfigValues = {
 export async function saveBillingConfig(
   values: BillingConfigValues,
 ): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("financeiro", "edit");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   if (values.billingMode === "ASAAS" && !asaasConfigured()) {
     return {
       ok: false,
@@ -485,7 +498,7 @@ export async function saveBillingConfig(
       },
     });
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: "UPDATE",
       entity: "SystemConfig",
       entityId: cfg.id,
@@ -505,7 +518,8 @@ export async function saveTransaction(
   values: TransactionFormValues,
   id?: string,
 ): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("financeiro", id ? "edit" : "create");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   const parsed = transactionSchema.safeParse(values);
   if (!parsed.success)
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Inválido" };
@@ -539,7 +553,7 @@ export async function saveTransaction(
       : await prisma.transaction.create({ data });
 
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: id ? "UPDATE" : "CREATE",
       entity: "Transaction",
       entityId: tx.id,
@@ -555,11 +569,12 @@ export async function saveTransaction(
 }
 
 export async function deleteTransaction(id: string): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("financeiro", "delete");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   try {
     await prisma.transaction.delete({ where: { id } });
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: "DELETE",
       entity: "Transaction",
       entityId: id,
@@ -635,14 +650,15 @@ export async function createTransactionCategory(
   type: "ENTRADA" | "SAIDA",
   name: string,
 ): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("financeiro", "create");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   const trimmed = name.trim();
   if (!trimmed) return { ok: false, error: "Informe o nome da categoria." };
   try {
     const count = await prisma.transactionCategory.count({ where: { type } });
     await prisma.transactionCategory.create({ data: { type, name: trimmed, order: count } });
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: "CREATE",
       entity: "TransactionCategory",
       entityId: trimmed,
@@ -655,13 +671,14 @@ export async function createTransactionCategory(
 }
 
 export async function deleteTransactionCategory(id: string): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("financeiro", "delete");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   try {
     const cat = await prisma.transactionCategory.findUnique({ where: { id } });
     if (!cat) return { ok: false, error: "Categoria não encontrada." };
     await prisma.transactionCategory.delete({ where: { id } });
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: "DELETE",
       entity: "TransactionCategory",
       entityId: id,
@@ -678,14 +695,15 @@ export async function createTransactionSubcategory(
   categoryId: string,
   name: string,
 ): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("financeiro", "create");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   const trimmed = name.trim();
   if (!trimmed) return { ok: false, error: "Informe o nome da subcategoria." };
   try {
     const count = await prisma.transactionSubcategory.count({ where: { categoryId } });
     await prisma.transactionSubcategory.create({ data: { categoryId, name: trimmed, order: count } });
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: "CREATE",
       entity: "TransactionSubcategory",
       entityId: trimmed,
@@ -698,13 +716,14 @@ export async function createTransactionSubcategory(
 }
 
 export async function deleteTransactionSubcategory(id: string): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("financeiro", "delete");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   try {
     const sub = await prisma.transactionSubcategory.findUnique({ where: { id } });
     if (!sub) return { ok: false, error: "Subcategoria não encontrada." };
     await prisma.transactionSubcategory.delete({ where: { id } });
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: "DELETE",
       entity: "TransactionSubcategory",
       entityId: id,
@@ -718,13 +737,14 @@ export async function deleteTransactionSubcategory(id: string): Promise<Result> 
 }
 
 export async function renameTransactionCategory(id: string, name: string): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("financeiro", "edit");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   const trimmed = name.trim();
   if (!trimmed) return { ok: false, error: "Informe o nome da categoria." };
   try {
     await prisma.transactionCategory.update({ where: { id }, data: { name: trimmed } });
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: "UPDATE",
       entity: "TransactionCategory",
       entityId: id,
@@ -738,13 +758,14 @@ export async function renameTransactionCategory(id: string, name: string): Promi
 }
 
 export async function renameTransactionSubcategory(id: string, name: string): Promise<Result> {
-  const session = await auth();
+  const user = await requirePermission("financeiro", "edit");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   const trimmed = name.trim();
   if (!trimmed) return { ok: false, error: "Informe o nome da subcategoria." };
   try {
     await prisma.transactionSubcategory.update({ where: { id }, data: { name: trimmed } });
     await recordAudit({
-      userId: session?.user?.id,
+      userId: user.id,
       action: "UPDATE",
       entity: "TransactionSubcategory",
       entityId: id,
@@ -761,6 +782,8 @@ export async function reorderTransactionCategories(
   type: "ENTRADA" | "SAIDA",
   orderedIds: string[],
 ): Promise<Result> {
+  const user = await requirePermission("financeiro", "edit");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   try {
     await prisma.$transaction(
       orderedIds.map((id, i) =>
@@ -778,6 +801,8 @@ export async function reorderTransactionSubcategories(
   categoryId: string,
   orderedIds: string[],
 ): Promise<Result> {
+  const user = await requirePermission("financeiro", "edit");
+  if (!user) return { ok: false, error: SEM_PERMISSAO };
   try {
     await prisma.$transaction(
       orderedIds.map((id, i) =>

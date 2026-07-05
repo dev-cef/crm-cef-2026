@@ -33,7 +33,9 @@ export const MAX_SESSION_AGE_SECONDS = Math.max(
 
 export function normalizeRole(value: unknown): Role {
   const parsed = roleSchema.safeParse(value);
-  return parsed.success ? parsed.data : "ADMIN";
+  // Fail-closed: role ausente/corrompida/desconhecida cai no menor privilégio,
+  // nunca em ADMIN. Um token adulterado não deve virar administrador.
+  return parsed.success ? parsed.data : "ASSOCIADO";
 }
 
 export type SessionUser = {
