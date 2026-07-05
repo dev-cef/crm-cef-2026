@@ -12,19 +12,22 @@ test.describe("financeiro — pagamentos", () => {
     await expect(page.getByRole("button", { name: /Lançar mensalidade/ })).toBeVisible();
   });
 
-  // Fluxo de escrita — lança as mensalidades do mês. Cria Payments no banco;
-  // rode contra banco de teste. Marcado fixme até validar os seletores do
-  // diálogo de confirmação contra o seu ambiente.
-  test.fixme("admin lança as mensalidades do mês", async ({ page }) => {
+  // Fluxo de escrita — lança as mensalidades do mês (cria/pula Payments).
+  // Idempotente: rodar duas vezes resulta em "Nenhuma nova mensalidade".
+  test("admin lança as mensalidades do mês", async ({ page }) => {
     await login(page, SEED.adminEmail, SEED.password);
     await page.goto("/financeiro/pagamentos");
 
-    await page.getByRole("button", { name: /Lançar mensalidade/ }).click();
-    // Diálogo "Lançar mensalidade" abre — confirma.
-    await expect(page.getByRole("dialog")).toBeVisible();
-    await page.getByRole("dialog").getByRole("button", { name: /Lançar|Confirmar/ }).click();
+    await page.getByRole("button", { name: /Lançar mensalidade/ }).first().click();
 
-    // Toast de sucesso (sonner).
-    await expect(page.getByText(/mensalidade\(s\) lançada|Nenhuma nova mensalidade/)).toBeVisible();
+    // Diálogo "Lançar mensalidade" abre — confirma.
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Confirmar" }).click();
+
+    // Toast de sucesso (sonner): N lançadas OU nenhuma nova (já lançadas).
+    await expect(
+      page.getByText(/mensalidade\(s\) lançada|Nenhuma nova mensalidade/),
+    ).toBeVisible();
   });
 });

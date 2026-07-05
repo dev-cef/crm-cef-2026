@@ -31,8 +31,12 @@ já no ar, defina `E2E_BASE_URL` (aí o servidor local não é iniciado).
 
 ## Estado dos testes
 
-- **Rodam por padrão**: proteção de rotas, login (render + inválido + admin),
-  presença dos controles de pagamento, render/validação da etapa 1 do cadastro.
-- **`test.fixme`** (prontos, mas desligados até validar seletores no seu
-  ambiente): cadastro completo (5 etapas) e lançamento efetivo da mensalidade.
-  Remova o `.fixme` após confirmar os seletores contra o banco de teste.
+Todos os 15 testes estão ativos (nenhum `test.fixme`):
+proteção de rotas, login (render + inválido + admin), cadastro completo das
+5 etapas, e lançamento de mensalidade (idempotente).
+
+> Nota: os fluxos de escrita (cadastro completo, lançamento) foram escritos e
+> type-checados, mas **não foram executados contra um banco ao vivo** durante o
+> desenvolvimento (não havia branch de teste do Neon disponível). Na primeira
+> execução real, algum seletor pode precisar de ajuste fino — rode
+> `npm run test:e2e` contra o banco de teste e ajuste se necessário.
