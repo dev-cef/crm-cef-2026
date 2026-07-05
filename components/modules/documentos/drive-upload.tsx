@@ -4,16 +4,23 @@
 // 1) pede a sessão ao servidor (só metadados), 2) PUT do arquivo na URL do
 // Google com progresso, 3) confirma no servidor (libera leitura por link) e
 // devolve o driveUrl pro formulário.
+//
+// Fluxo em etapas: solta/seleciona o arquivo → fica "staged" (dá pra remover)
+// → "Enviar arquivo" inicia o upload (dá pra cancelar) → concluído.
 
 import { useRef, useState } from "react";
-import { CheckCircle2, CloudUpload, Loader2 } from "lucide-react";
+import { CheckCircle2, CloudUpload, File as FileIcon, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import {
+  DRIVE_ACCEPT,
+  DRIVE_ALLOWED_MIME,
+  DRIVE_MAX_BYTES,
+  formatBytes,
+} from "@/lib/documentos/upload-constants";
 
-const ACCEPT =
-  ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.jpg,.jpeg,.png,.webp";
-
-type Phase = "idle" | "uploading" | "done";
+type Phase = "idle" | "staged" | "uploading" | "done";
 
 export function DriveUpload({
   driveReady,
@@ -25,18 +32,54 @@ export function DriveUpload({
   onUploaded: (r: { driveUrl: string; fileId: string; fileName: string }) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [progress, setProgress] = useState(0);
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [staged, setStaged] = useState<File | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  async function handleFile(file: File) {
+  // Validação client-side antes de qualquer request — o servidor revalida.
+  function stageFiles(files: FileList | File[]) {
+    setError(null);
+    const list = Array.from(files);
+    if (list.length === 0) return;
+    if (list.length > 1) {
+      fail("Envie um arquivo por vez — cada documento tem um único arquivo.");
+      return;
+    }
+    const file = list[0];
+    if (!DRIVE_ALLOWED_MIME.has(file.type)) {
+      fail(`Formato não aceito (${file.type || "desconhecido"}). Use PDF, Office ou imagem.`);
+      return;
+    }
+    if (file.size === 0) {
+      fail("O arquivo está vazio.");
+      return;
+    }
+    if (file.size > DRIVE_MAX_BYTES) {
+      fail(`Arquivo de ${formatBytes(file.size)} excede o limite de ${formatBytes(DRIVE_MAX_BYTES)}.`);
+      return;
+    }
+    setStaged(file);
+    setPhase("staged");
+  }
+
+  function fail(msg: string) {
+    setError(msg);
+    toast.error(msg);
+  }
+
+  async function handleUpload() {
+    const file = staged;
+    if (!file) return;
     if (!categoria) {
-      toast.error("Selecione a categoria antes de enviar — ela define a pasta no Drive.");
+      fail("Selecione a categoria antes de enviar — ela define a pasta no Drive.");
       return;
     }
     setPhase("uploading");
     setProgress(0);
-    setFileName(file.name);
+    setError(null);
     try {
       // 1) Sessão resumable (o servidor valida tipo/tamanho/permissão).
       const start = await fetch("/api/documentos/upload", {
@@ -56,6 +99,7 @@ export function DriveUpload({
       // 2) PUT direto pro Google com progresso (XHR — fetch não expõe progresso de upload).
       const fileId = await new Promise<string>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
+        xhrRef.current = xhr;
         xhr.open("PUT", startJson.uploadUrl);
         xhr.setRequestHeader("Content-Type", file.type);
         xhr.upload.onprogress = (e) => {
@@ -73,6 +117,7 @@ export function DriveUpload({
           }
         };
         xhr.onerror = () => reject(new Error("Falha de rede durante o upload."));
+        xhr.onabort = () => reject(new DOMException("cancelado", "AbortError"));
         xhr.send(file);
       });
 
@@ -93,10 +138,25 @@ export function DriveUpload({
       });
       toast.success("Arquivo enviado pro Drive do CEF!");
     } catch (err) {
-      setPhase("idle");
-      setFileName(null);
-      toast.error(err instanceof Error ? err.message : "Erro no upload.");
+      if (err instanceof DOMException && err.name === "AbortError") {
+        // Cancelado pelo usuário: volta pro staged, arquivo pronto pra reenviar.
+        // A sessão resumable abandonada expira sozinha no Google.
+        setPhase("staged");
+        toast.info("Upload cancelado.");
+      } else {
+        setPhase("staged");
+        fail(err instanceof Error ? err.message : "Erro no upload.");
+      }
+    } finally {
+      xhrRef.current = null;
     }
+  }
+
+  function reset() {
+    setStaged(null);
+    setProgress(0);
+    setError(null);
+    setPhase("idle");
   }
 
   if (!driveReady) {
@@ -113,50 +173,127 @@ export function DriveUpload({
       <input
         ref={inputRef}
         type="file"
-        accept={ACCEPT}
+        accept={DRIVE_ACCEPT}
         className="hidden"
         onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) handleFile(f);
-          e.target.value = ""; // permite reenviar o mesmo arquivo
+          if (e.target.files) stageFiles(e.target.files);
+          e.target.value = ""; // permite re-selecionar o mesmo arquivo
         }}
       />
-      <div className="flex items-center gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={phase === "uploading"}
-          onClick={() => inputRef.current?.click()}
-        >
-          {phase === "uploading" ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <CloudUpload className="size-4" />
-          )}
-          {phase === "done" ? "Enviar outro arquivo" : "Enviar arquivo"}
-        </Button>
-        {phase === "uploading" && (
-          <span className="text-xs text-muted-foreground">
-            {fileName} — {progress}%
-          </span>
+
+      {/* Zona de drop — também clicável pra abrir o seletor */}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label="Enviar arquivo — arraste e solte ou clique para selecionar"
+        onClick={() => phase !== "uploading" && inputRef.current?.click()}
+        onKeyDown={(e) => {
+          if ((e.key === "Enter" || e.key === " ") && phase !== "uploading") {
+            e.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          if (phase !== "uploading") setDragActive(true);
+        }}
+        onDragEnter={(e) => {
+          e.preventDefault();
+          if (phase !== "uploading") setDragActive(true);
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          setDragActive(false);
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragActive(false);
+          if (phase !== "uploading") stageFiles(e.dataTransfer.files);
+        }}
+        className={cn(
+          "flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed p-4 text-center transition-colors",
+          dragActive
+            ? "border-primary bg-primary/5"
+            : "border-muted-foreground/25 hover:border-muted-foreground/40",
+          phase === "uploading" && "cursor-default opacity-80",
         )}
-        {phase === "done" && fileName && (
-          <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2 className="size-3.5" /> {fileName}
-          </span>
+      >
+        {phase === "idle" && (
+          <>
+            <CloudUpload className={cn("size-6", dragActive ? "text-primary" : "text-muted-foreground")} />
+            <p className="text-sm">
+              {dragActive ? (
+                <span className="font-medium text-primary">Solte o arquivo aqui</span>
+              ) : (
+                <>
+                  <span className="font-medium">Arraste e solte</span> o arquivo aqui, ou{" "}
+                  <span className="underline underline-offset-2">clique para selecionar</span>
+                </>
+              )}
+            </p>
+          </>
+        )}
+
+        {(phase === "staged" || phase === "uploading") && staged && (
+          <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-center gap-2 text-sm">
+              <FileIcon className="size-4 shrink-0 text-muted-foreground" />
+              <span className="max-w-[60%] truncate font-medium">{staged.name}</span>
+              <span className="text-xs text-muted-foreground">{formatBytes(staged.size)}</span>
+              {phase === "staged" && (
+                <button
+                  type="button"
+                  title="Remover arquivo"
+                  onClick={reset}
+                  className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                  <X className="size-4" />
+                </button>
+              )}
+            </div>
+
+            {phase === "staged" ? (
+              <Button type="button" size="sm" onClick={handleUpload}>
+                <CloudUpload className="size-4" /> Enviar arquivo
+              </Button>
+            ) : (
+              <div className="space-y-2">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-center gap-3">
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Loader2 className="size-3.5 animate-spin" /> Enviando… {progress}%
+                  </span>
+                  <Button type="button" size="sm" variant="outline" onClick={() => xhrRef.current?.abort()}>
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {phase === "done" && staged && (
+          <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
+            <p className="flex items-center justify-center gap-1 text-sm text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="size-4" /> {staged.name} enviado!
+            </p>
+            <Button type="button" size="sm" variant="outline" onClick={reset}>
+              Enviar outro arquivo
+            </Button>
+          </div>
         )}
       </div>
-      {phase === "uploading" && (
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-          <div
-            className="h-full rounded-full bg-primary transition-all"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      )}
+
+      {error && <p className="text-xs text-destructive">{error}</p>}
+
       <p className="text-xs text-muted-foreground">
-        PDF, Office ou imagem, até 100 MB. O arquivo vai pra pasta da categoria
+        PDF, Office ou imagem, até {formatBytes(DRIVE_MAX_BYTES)}. O arquivo vai pra pasta da
+        categoria
         {categoria ? (
           <>
             {" "}

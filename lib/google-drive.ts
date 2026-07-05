@@ -15,22 +15,8 @@ import { prisma } from "@/lib/prisma";
 export const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 export const DRIVE_FOLDER_NAME = "CRM CEF — Documentos";
 
-// Tipos aceitos no upload de documentos (PDF, Office, LibreOffice, imagens).
-export const DRIVE_ALLOWED_MIME = new Set([
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/vnd.ms-powerpoint",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  "application/vnd.oasis.opendocument.text",
-  "application/vnd.oasis.opendocument.spreadsheet",
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-]);
-export const DRIVE_MAX_BYTES = 100 * 1024 * 1024; // 100 MB
+// Limites/tipos vivem em módulo client-safe (compartilhados com o uploader).
+export { DRIVE_ALLOWED_MIME, DRIVE_MAX_BYTES } from "@/lib/documentos/upload-constants";
 
 export function driveOauthConfigured(): boolean {
   return !!process.env.AUTH_GOOGLE_ID && !!process.env.AUTH_GOOGLE_SECRET;
