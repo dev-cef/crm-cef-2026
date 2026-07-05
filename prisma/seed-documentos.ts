@@ -23,6 +23,9 @@ const CATEGORIAS: { nome: string; descricao: string }[] = [
   { nome: "Políticas",             descricao: "Políticas institucionais" },
   { nome: "Manuais",               descricao: "Manuais e procedimentos" },
   { nome: "Comunicados",           descricao: "Comunicados oficiais aos associados" },
+  { nome: "Contratos",             descricao: "Contratos e convênios do clube" },
+  { nome: "Financeiro",            descricao: "Documentos financeiros e prestações de contas" },
+  { nome: "Relatórios",            descricao: "Relatórios administrativos e de atividades" },
   { nome: "Outros",                descricao: "Documentos diversos" },
 ];
 

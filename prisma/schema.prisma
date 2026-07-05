@@ -892,6 +892,12 @@ model Documento {
 
   driveUrl String // link do arquivo no Google Drive institucional
 
+  // Rastreio do upload feito pelo CRM (null quando o link foi colado manualmente).
+  driveFileId String? // ID do arquivo no Drive — permite mover entre pastas de categoria
+  arquivoNome String? // nome original do arquivo enviado
+  uploadEm    DateTime?
+  uploadPorId String? // userId de quem enviou o arquivo
+
   publicadoEm DateTime
   validadeEm  DateTime?
   versao      String    @default("1.0")

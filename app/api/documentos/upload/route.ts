@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
     mimeType?: string;
     size?: number;
     fileId?: string;
+    categoria?: string;
   };
   try {
     body = await req.json();
@@ -66,6 +67,7 @@ export async function POST(req: NextRequest) {
         mimeType,
         size,
         origin: req.nextUrl.origin,
+        categoryName: (body.categoria ?? "").trim().slice(0, 100) || "Outros",
       });
       return NextResponse.json({ uploadUrl });
     }
@@ -84,7 +86,7 @@ export async function POST(req: NextRequest) {
         entityId: fileId,
         metadata: { name: file.name, mimeType: file.mimeType, size: file.size },
       });
-      return NextResponse.json({ driveUrl: file.webViewLink, name: file.name });
+      return NextResponse.json({ driveUrl: file.webViewLink, name: file.name, fileId });
     }
 
     return NextResponse.json({ error: "phase inválida." }, { status: 400 });

@@ -148,17 +148,53 @@ export async function ensureDriveFolder(accessToken: string): Promise<string> {
   return ((await created.json()) as { id: string }).id;
 }
 
+// Busca/cria uma subpasta de categoria dentro da pasta raiz do CRM.
+// A árvore no Drive fica: CRM CEF — Documentos / <Categoria> / arquivos.
+export async function ensureCategoryFolder(
+  accessToken: string,
+  rootFolderId: string,
+  categoryName: string,
+): Promise<string> {
+  const safeName = categoryName.replace(/['\\]/g, "").trim() || "Outros";
+  const q = encodeURIComponent(
+    `name='${safeName}' and '${rootFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+  );
+  const found = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (found.ok) {
+    const json = (await found.json()) as { files?: { id: string }[] };
+    if (json.files?.[0]?.id) return json.files[0].id;
+  }
+
+  const created = await fetch("https://www.googleapis.com/drive/v3/files?fields=id", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: safeName,
+      mimeType: "application/vnd.google-apps.folder",
+      parents: [rootFolderId],
+    }),
+  });
+  if (!created.ok) throw new Error(`criação da pasta da categoria falhou: ${created.status}`);
+  return ((await created.json()) as { id: string }).id;
+}
+
 // Sessão de upload resumable. O navegador faz PUT do arquivo direto na URL
-// retornada (o Google libera CORS pro Origin informado aqui).
+// retornada (o Google libera CORS pro Origin informado aqui). O arquivo entra
+// na subpasta da categoria (criada sob demanda).
 export async function createResumableSession(params: {
   name: string;
   mimeType: string;
   size: number;
   origin: string;
+  categoryName: string;
 }): Promise<string> {
   const accessToken = await getDriveAccessToken();
   const cfg = await getDriveConfig();
   if (!cfg.driveFolderId) throw new Error("Pasta do Drive não configurada.");
+
+  const parentId = await ensureCategoryFolder(accessToken, cfg.driveFolderId, params.categoryName);
 
   const res = await fetch(
     "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id",
@@ -171,13 +207,38 @@ export async function createResumableSession(params: {
         "X-Upload-Content-Length": String(params.size),
         Origin: params.origin,
       },
-      body: JSON.stringify({ name: params.name, parents: [cfg.driveFolderId] }),
+      body: JSON.stringify({ name: params.name, parents: [parentId] }),
     },
   );
   if (!res.ok) throw new Error(`sessão de upload falhou: ${res.status} ${await res.text()}`);
   const location = res.headers.get("location");
   if (!location) throw new Error("Google não retornou a URL da sessão de upload.");
   return location;
+}
+
+// Move um arquivo (enviado pelo CRM) pra subpasta de outra categoria. Usado
+// quando o documento troca de categoria — mantém o Drive espelhando o CRM.
+export async function moveFileToCategory(fileId: string, categoryName: string): Promise<void> {
+  const accessToken = await getDriveAccessToken();
+  const cfg = await getDriveConfig();
+  if (!cfg.driveFolderId) throw new Error("Pasta do Drive não configurada.");
+
+  const newParent = await ensureCategoryFolder(accessToken, cfg.driveFolderId, categoryName);
+
+  // Descobre os pais atuais pra removê-los (senão o arquivo fica em duas pastas).
+  const meta = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=parents`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!meta.ok) throw new Error(`arquivo não encontrado: ${meta.status}`);
+  const parents = ((await meta.json()) as { parents?: string[] }).parents ?? [];
+  if (parents.includes(newParent)) return; // já está na pasta certa
+
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?addParents=${newParent}&removeParents=${parents.join(",")}&fields=id`,
+    { method: "PATCH", headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!res.ok) throw new Error(`mover arquivo falhou: ${res.status}`);
 }
 
 // Confirma um arquivo recém-enviado: verifica que existe (o token drive.file só

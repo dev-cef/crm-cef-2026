@@ -17,10 +17,12 @@ type Phase = "idle" | "uploading" | "done";
 
 export function DriveUpload({
   driveReady,
+  categoria,
   onUploaded,
 }: {
   driveReady: boolean;
-  onUploaded: (driveUrl: string, fileName: string) => void;
+  categoria: string | null; // nome da categoria selecionada → subpasta no Drive
+  onUploaded: (r: { driveUrl: string; fileId: string; fileName: string }) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [phase, setPhase] = useState<Phase>("idle");
@@ -28,6 +30,10 @@ export function DriveUpload({
   const [fileName, setFileName] = useState<string | null>(null);
 
   async function handleFile(file: File) {
+    if (!categoria) {
+      toast.error("Selecione a categoria antes de enviar — ela define a pasta no Drive.");
+      return;
+    }
     setPhase("uploading");
     setProgress(0);
     setFileName(file.name);
@@ -41,6 +47,7 @@ export function DriveUpload({
           name: file.name,
           mimeType: file.type,
           size: file.size,
+          categoria,
         }),
       });
       const startJson = await start.json();
@@ -79,7 +86,11 @@ export function DriveUpload({
       if (!finish.ok) throw new Error(finishJson.error ?? "Falha ao confirmar o upload.");
 
       setPhase("done");
-      onUploaded(finishJson.driveUrl as string, file.name);
+      onUploaded({
+        driveUrl: finishJson.driveUrl as string,
+        fileId: finishJson.fileId as string,
+        fileName: file.name,
+      });
       toast.success("Arquivo enviado pro Drive do CEF!");
     } catch (err) {
       setPhase("idle");
@@ -145,9 +156,16 @@ export function DriveUpload({
         </div>
       )}
       <p className="text-xs text-muted-foreground">
-        PDF, Office ou imagem, até 100 MB. O arquivo vai pra pasta{" "}
-        <span className="font-medium">CRM CEF — Documentos</span> no Drive do clube e o link é
-        preenchido automaticamente.
+        PDF, Office ou imagem, até 100 MB. O arquivo vai pra pasta da categoria
+        {categoria ? (
+          <>
+            {" "}
+            (<span className="font-medium">CRM CEF — Documentos / {categoria}</span>)
+          </>
+        ) : (
+          " selecionada"
+        )}{" "}
+        no Drive do clube e o link é preenchido automaticamente.
       </p>
     </div>
   );

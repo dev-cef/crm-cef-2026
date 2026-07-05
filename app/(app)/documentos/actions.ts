@@ -9,6 +9,7 @@ import { can } from "@/lib/permissions";
 import { toSessionUser, type SessionUser } from "@/lib/rbac";
 import type { PermissionAction } from "@/lib/modules";
 import { isValidDriveUrl } from "@/lib/documentos/types";
+import { moveFileToCategory } from "@/lib/google-drive";
 
 type Result = { ok: boolean; error?: string; id?: string };
 
@@ -39,6 +40,9 @@ const documentoSchema = z.object({
   nivelAcesso: z.enum(["ASSOCIADOS", "DIRETORIA", "ADMIN"]).default("ASSOCIADOS"),
   permitirDownload: z.boolean().default(true),
   tags: z.string().optional(), // separadas por vírgula
+  // Preenchidos automaticamente pelo uploader quando o arquivo veio pelo CRM.
+  driveFileId: z.string().optional(),
+  arquivoNome: z.string().optional(),
 });
 
 export type DocumentoFormValues = z.infer<typeof documentoSchema>;
@@ -79,6 +83,11 @@ export async function criarDocumento(values: DocumentoFormValues): Promise<Resul
         permitirDownload: d.permitirDownload,
         tags: tagsToJson(d.tags),
         criadoPorId: user.id,
+        // Rastreio do upload (só quando o arquivo foi enviado pelo CRM).
+        driveFileId: d.driveFileId || null,
+        arquivoNome: d.arquivoNome || null,
+        uploadEm: d.driveFileId ? new Date() : null,
+        uploadPorId: d.driveFileId ? user.id : null,
       },
     });
 
@@ -123,6 +132,9 @@ export async function atualizarDocumento(id: string, values: DocumentoFormValues
         });
       }
 
+      // Arquivo novo enviado pelo CRM → atualiza o rastreio do upload.
+      const novoUpload = !!d.driveFileId && d.driveFileId !== atual.driveFileId;
+
       await tx.documento.update({
         where: { id },
         data: {
@@ -138,9 +150,30 @@ export async function atualizarDocumento(id: string, values: DocumentoFormValues
           permitirDownload: d.permitirDownload,
           tags: tagsToJson(d.tags),
           atualizadoPorId: user.id,
+          ...(novoUpload && {
+            driveFileId: d.driveFileId,
+            arquivoNome: d.arquivoNome || null,
+            uploadEm: new Date(),
+            uploadPorId: user.id,
+          }),
         },
       });
     });
+
+    // Categoria mudou e o arquivo é gerenciado pelo CRM → move pra subpasta
+    // certa no Drive. Best-effort: falha aqui não desfaz a atualização.
+    const fileIdAtual = d.driveFileId || atual.driveFileId;
+    if (fileIdAtual && d.categoriaId !== atual.categoriaId) {
+      try {
+        const cat = await prisma.documentoCategoria.findUnique({
+          where: { id: d.categoriaId },
+          select: { nome: true },
+        });
+        if (cat) await moveFileToCategory(fileIdAtual, cat.nome);
+      } catch (err) {
+        console.error("[documentos] mover arquivo de categoria falhou:", err);
+      }
+    }
 
     await recordAudit({ userId: user.id, action: "UPDATE", entity: "Documento", entityId: id });
     revalidatePath("/documentos");

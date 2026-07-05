@@ -57,6 +57,8 @@ export function DocumentoForm({
   const permitirDownload = useWatch({ control, name: "permitirDownload" });
   const nivelAcesso = useWatch({ control, name: "nivelAcesso" });
   const driveUrl = useWatch({ control, name: "driveUrl" });
+  const categoriaId = useWatch({ control, name: "categoriaId" });
+  const categoriaNome = categorias.find((c) => c.id === categoriaId)?.nome ?? null;
 
   // DEPARTAMENTO não pode definir o nível confidencial (somente admins).
   const niveis = DOC_NIVEIS.filter((n) => isAdmin || n !== "ADMIN");
@@ -118,7 +120,12 @@ export function DocumentoForm({
         <h2 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Arquivo no Google Drive</h2>
         <DriveUpload
           driveReady={driveReady}
-          onUploaded={(url) => setValue("driveUrl", url, { shouldValidate: true })}
+          categoria={categoriaNome}
+          onUploaded={({ driveUrl: url, fileId, fileName }) => {
+            setValue("driveUrl", url, { shouldValidate: true });
+            setValue("driveFileId", fileId);
+            setValue("arquivoNome", fileName);
+          }}
         />
         <div className="space-y-1">
           <Label htmlFor="driveUrl">Link do Google Drive *</Label>
