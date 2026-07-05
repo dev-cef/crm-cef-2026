@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requirePermission, requireSessionUser, isStaff, SEM_PERMISSAO } from "@/lib/guard";
 import { recordAudit } from "@/lib/audit";
+import { persistImage } from "@/lib/blob";
 import { eventSchema, type EventFormValues } from "@/lib/validations/event";
 import {
   intervaloMes,
@@ -418,8 +419,10 @@ export async function addPhotos(
       .slice(0, 20);
     if (valid.length === 0)
       return { ok: false, error: "Nenhuma imagem válida." };
+    // Sobe cada foto pro Blob (se configurado); senão mantém base64 (fallback).
+    const urls = await Promise.all(valid.map((u) => persistImage(u, `eventos/${eventId}`)));
     await prisma.eventPhoto.createMany({
-      data: valid.map((url) => ({ eventId, url })),
+      data: urls.filter((u): u is string => !!u).map((url) => ({ eventId, url })),
     });
     revalidatePath(`/eventos/${eventId}`);
     return { ok: true };

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requirePermission, SEM_PERMISSAO } from "@/lib/guard";
 import { recordAudit } from "@/lib/audit";
+import { persistImage } from "@/lib/blob";
 import { gerarNumeroTombo } from "@/lib/biblioteca/queries";
 
 type Result = { ok: boolean; error?: string; id?: string };
@@ -39,6 +40,8 @@ export async function criarLivro(values: LivroFormValues): Promise<Result> {
   try {
     const d = parsed.data;
     const numeroTombo = d.numeroTombo || (await gerarNumeroTombo());
+    // Capa: sobe se for base64; URL do Open Library/Google passa direto.
+    const capaUrl = await persistImage(d.capaUrl, "biblioteca");
 
     const livro = await prisma.bibliotecaLivro.create({
       data: {
@@ -53,7 +56,7 @@ export async function criarLivro(values: LivroFormValues): Promise<Result> {
         doadorSocioId: d.doadorSocioId || null,
         estado: d.estado,
         descricao: d.descricao || null,
-        capaUrl: d.capaUrl || null,
+        capaUrl: capaUrl,
         observacoes: d.observacoes || null,
         numeroTombo,
       },
@@ -77,6 +80,7 @@ export async function atualizarLivro(id: string, values: LivroFormValues): Promi
 
   try {
     const d = parsed.data;
+    const capaUrl = await persistImage(d.capaUrl, "biblioteca");
     await prisma.bibliotecaLivro.update({
       where: { id },
       data: {
@@ -91,7 +95,7 @@ export async function atualizarLivro(id: string, values: LivroFormValues): Promi
         doadorSocioId: d.doadorSocioId || null,
         estado: d.estado,
         descricao: d.descricao || null,
-        capaUrl: d.capaUrl || null,
+        capaUrl: capaUrl,
         observacoes: d.observacoes || null,
         numeroTombo: d.numeroTombo || undefined,
       },

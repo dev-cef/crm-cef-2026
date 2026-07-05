@@ -6,7 +6,7 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://covers.openlibrary.org https://books.google.com",
+  "img-src 'self' data: blob: https://covers.openlibrary.org https://books.google.com https://*.public.blob.vercel-storage.com",
   "font-src 'self'",
   // googleapis.com: upload resumable de documentos direto do navegador pro Drive
   "connect-src 'self' https://viacep.com.br https://www.googleapis.com",
@@ -36,6 +36,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "covers.openlibrary.org" },
       { protocol: "https", hostname: "books.google.com" },
+      { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
     ],
   },
   serverExternalPackages: ["@neondatabase/serverless", "@prisma/adapter-neon", "@prisma/adapter-pg", "@prisma/client"],

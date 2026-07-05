@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/authz";
 import { recordAudit } from "@/lib/audit";
+import { persistImage } from "@/lib/blob";
 import {
   asaasConfigured,
   asaasFindCustomerByCpf,
@@ -96,9 +97,10 @@ export async function updateMemberPhoto(photoUrl: string | null) {
   }
 
   try {
+    const persisted = await persistImage(photoUrl, "associados");
     await prisma.member.update({
       where: { id: user.memberId },
-      data: { photoUrl },
+      data: { photoUrl: persisted },
     });
 
     await recordAudit({

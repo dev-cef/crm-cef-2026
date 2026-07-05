@@ -8,6 +8,7 @@ import { auth, unstable_update } from "@/lib/auth";
 import { isAdmin, normalizeRole } from "@/lib/rbac";
 import { requireAdmin } from "@/lib/authz";
 import { recordAudit } from "@/lib/audit";
+import { persistImage } from "@/lib/blob";
 import { parseBrDate } from "@/lib/format";
 import { type MemberFormValues } from "@/lib/validations/member";
 import {
@@ -28,13 +29,16 @@ export async function createMember(
   if (!n.ok) return { ok: false, error: n.error };
 
   try {
+    // Sobe a foto pro Blob (se for base64) antes de gravar — evita base64 no banco.
+    const photoUrl = await persistImage(n.data.photoUrl, "associados");
+
     const member = await prisma.$transaction(async (tx) => {
       const agg = await tx.member.aggregate({
         _max: { registration: true },
       });
       const nextReg = (agg._max.registration ?? 999) + 1;
       const created = await tx.member.create({
-        data: { ...n.data, registration: nextReg },
+        data: { ...n.data, photoUrl, registration: nextReg },
       });
 
       // Lançar taxa de inscrição automaticamente
@@ -111,9 +115,11 @@ export async function updateMember(
   if (!n.ok) return { ok: false, error: n.error };
 
   try {
+    const photoUrl = await persistImage(n.data.photoUrl, "associados");
+
     const member = await prisma.member.update({
       where: { id },
-      data: n.data,
+      data: { ...n.data, photoUrl },
     });
 
     await recordAudit({

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requirePermission, SEM_PERMISSAO } from "@/lib/guard";
 import { recordAudit } from "@/lib/audit";
+import { persistImage } from "@/lib/blob";
 import { gerarCodigoBem } from "@/lib/patrimonio/utils";
 import { getBens } from "@/lib/patrimonio/queries";
 import type { BemFilters, PatrimonioStatus, MovimentacaoTipo } from "@/lib/patrimonio/types";
@@ -45,6 +46,7 @@ export async function createBem(values: BemFormValues): Promise<Result> {
   try {
     const codigo = await gerarCodigoBem();
     const d = parsed.data;
+    const fotoUrl = await persistImage(d.fotoUrl, "patrimonio");
 
     const bem = await prisma.patrimonioBem.create({
       data: {
@@ -68,7 +70,7 @@ export async function createBem(values: BemFormValues): Promise<Result> {
         vidaUtilAnos: d.vidaUtilAnos ?? null,
         valorResidual: d.valorResidual ?? null,
         observacoes: d.observacoes || null,
-        fotoUrl: d.fotoUrl || null,
+        fotoUrl: fotoUrl,
         createdById: user.id,
       },
     });
@@ -109,6 +111,7 @@ export async function updateBem(id: string, values: BemFormValues): Promise<Resu
 
   try {
     const d = parsed.data;
+    const fotoUrl = await persistImage(d.fotoUrl, "patrimonio");
     await prisma.patrimonioBem.update({
       where: { id },
       data: {
@@ -131,7 +134,7 @@ export async function updateBem(id: string, values: BemFormValues): Promise<Resu
         vidaUtilAnos: d.vidaUtilAnos ?? null,
         valorResidual: d.valorResidual ?? null,
         observacoes: d.observacoes || null,
-        fotoUrl: d.fotoUrl || null,
+        fotoUrl: fotoUrl,
         updatedById: user.id,
       },
     });
