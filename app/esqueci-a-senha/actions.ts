@@ -3,6 +3,7 @@
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 
 const EXPIRY_MINUTES = 60;
 
@@ -70,6 +71,13 @@ async function sendResetEmail(to: string, name: string, resetUrl: string) {
 export async function requestPasswordReset(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   if (!email) return { ok: false, error: "Informe seu e-mail." };
+
+  // 5 pedidos por IP a cada 15 min — freia spam/enumeração sem punir o usuário legítimo.
+  const ip = await clientIp();
+  const rl = await checkRateLimit(`pwreset:ip:${ip}`, { limit: 5, windowMs: 15 * 60 * 1000 });
+  if (!rl.allowed) {
+    return { ok: false, error: "Muitas tentativas. Tente novamente em alguns minutos." };
+  }
 
   const user = await prisma.user.findUnique({ where: { email } });
 

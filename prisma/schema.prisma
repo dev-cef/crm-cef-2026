@@ -647,6 +647,16 @@ model Snapshot {
   @@index([createdAt])
 }
 
+// Rate limiting fixed-window (lib/rate-limit.ts). key = escopo + identificador,
+// ex.: "login:ip:1.2.3.4". windowStart marca o início da janela corrente.
+model RateLimit {
+  key         String   @id
+  count       Int      @default(0)
+  windowStart DateTime @default(now())
+
+  @@index([windowStart])
+}
+
 model TransactionCategory {
   id            String                   @id @default(cuid())
   type          String                   // ENTRADA | SAIDA

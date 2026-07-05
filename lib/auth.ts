@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validations/auth";
 import { normalizeRecoveryCode, verifyTotp } from "@/lib/totp";
 import { isOffHours, recordSecurityEvent } from "@/lib/audit";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { normalizeRole, SESSION_MAX_AGE_SECONDS, type Impersonator } from "@/lib/rbac";
 
 const MAX_FAILED_ATTEMPTS = 5;
@@ -49,9 +50,18 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
         token: { label: "Código 2FA", type: "text" },
       },
 
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         const parsed = loginSchema.safeParse(credentials);
         if (!parsed.success) return null;
+
+        // Rate limit por IP: complementa o lockout por conta, freando password
+        // spraying (muitas contas diferentes a partir de um mesmo IP).
+        const ip =
+          request?.headers?.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+          request?.headers?.get("x-real-ip")?.trim() ||
+          "unknown";
+        const rl = await checkRateLimit(`login:ip:${ip}`, { limit: 20, windowMs: 15 * 60 * 1000 });
+        if (!rl.allowed) return null;
 
         const { email, password } = parsed.data;
         const user = await prisma.user.findUnique({

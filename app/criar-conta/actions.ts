@@ -7,6 +7,7 @@ import { notifyNewMember } from "@/lib/messenger";
 import { normalizeMember, memberDbError } from "@/lib/member-data";
 import { passwordSchema } from "@/lib/validations/auth";
 import { type MemberFormValues } from "@/lib/validations/member";
+import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 
 export type SignupResult = { ok: true } | { ok: false; error: string };
 
@@ -16,6 +17,13 @@ export async function registrarAssociado(
   values: MemberFormValues,
   password: string,
 ): Promise<SignupResult> {
+  // 10 cadastros por IP por hora — trava criação de contas em massa.
+  const ip = await clientIp();
+  const rl = await checkRateLimit(`signup:ip:${ip}`, { limit: 10, windowMs: 60 * 60 * 1000 });
+  if (!rl.allowed) {
+    return { ok: false, error: "Muitas tentativas. Tente novamente mais tarde." };
+  }
+
   const pw = passwordSchema.safeParse(password);
   if (!pw.success) {
     return { ok: false, error: pw.error.issues[0]?.message ?? "Senha inválida" };
