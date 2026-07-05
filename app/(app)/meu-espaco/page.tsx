@@ -25,7 +25,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/authz";
 import { formatCpf } from "@/lib/cpf";
-import { formatBRL, monthName, toBrDate } from "@/lib/format";
+import { formatBRL, monthName, toBrDate, toNum } from "@/lib/format";
 import { membershipNumber, membershipValidity } from "@/lib/membership";
 import { buildPixPayload } from "@/lib/pix";
 import { getSystemConfig } from "@/app/(app)/financeiro/actions";
@@ -134,7 +134,7 @@ export default async function MeuEspacoPage() {
       p.status === "AGUARDANDO_CONFIRMACAO",
   );
   const emDia = unpaid.length === 0;
-  const unpaidTotal = unpaid.reduce((s, p) => s + p.amount, 0);
+  const unpaidTotal = unpaid.reduce((s, p) => s + toNum(p.amount), 0);
   const awaitingReviewCount = unpaid.filter((p) => p.status === "AGUARDANDO_CONFIRMACAO").length;
   const nextCharge = unpaid
     .slice()
@@ -156,7 +156,7 @@ export default async function MeuEspacoPage() {
         key: billingCfg.pixKey,
         merchantName: billingCfg.accountHolderName || "Clube Excursionista de Friburgo",
         merchantCity: billingCfg.pixCity || "Nova Friburgo",
-        amount: p.amount,
+        amount: toNum(p.amount),
         txid: p.id,
         description: `CEF ${monthName(p.referenceMonth)}/${p.referenceYear}`,
       });
@@ -173,7 +173,7 @@ export default async function MeuEspacoPage() {
       <PaymentDialog
         trigger={trigger}
         paymentId={p.id}
-        amount={p.amount}
+        amount={toNum(p.amount)}
         referenceLabel={`${monthName(p.referenceMonth)}/${p.referenceYear}`}
         dueDateLabel={toBrDate(p.dueDate)}
         status={p.status}

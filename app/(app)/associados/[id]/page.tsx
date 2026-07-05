@@ -24,6 +24,7 @@ import {
   formatDate,
   monthName,
   toBrDate,
+  toNum,
 } from "@/lib/format";
 import {
   BLOOD_TYPE_LABELS,
@@ -440,7 +441,7 @@ export default async function AssociadoPerfilPage({
                             memberName={member.fullName}
                             memberCpf={member.cpf}
                             planName={member.plan?.name ?? "—"}
-                            amount={p.amount}
+                            amount={toNum(p.amount)}
                             dueDate={p.dueDate.toISOString()}
                             paidAt={p.paidAt?.toISOString() ?? null}
                             receiptNumber={p.receiptNumber ?? null}

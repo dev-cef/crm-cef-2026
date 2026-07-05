@@ -5,6 +5,7 @@ import { recordAudit } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { getSystemConfig } from "@/app/(app)/financeiro/actions";
 import { notifyReceiptReceived } from "@/lib/messenger";
+import { toNum } from "@/lib/format";
 
 const RECEIPT_MIME_PREFIXES = ["data:image/jpeg", "data:image/png", "data:application/pdf"];
 
@@ -68,7 +69,7 @@ export async function POST(request: Request) {
       paymentId: payment.id,
       memberId: payment.memberId,
       memberFullName: payment.member.fullName,
-      amount: payment.amount,
+      amount: toNum(payment.amount),
       referenceMonth: payment.referenceMonth,
       referenceYear: payment.referenceYear,
       financeiroWhatsapp: cfg.financeiroWhatsapp,

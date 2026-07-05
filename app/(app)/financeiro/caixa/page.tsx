@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
-import { formatBRL, toBrDate, monthName } from "@/lib/format";
+import { formatBRL, toBrDate, monthName, toNum } from "@/lib/format";
 import { PageHeader } from "@/components/layout/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -87,10 +87,10 @@ export default async function CaixaPage({
 
   const totalEntradas = allTx
     .filter((t) => t.type === "ENTRADA")
-    .reduce((s, t) => s + t.amount, 0);
+    .reduce((s, t) => s + toNum(t.amount), 0);
   const totalSaidas = allTx
     .filter((t) => t.type === "SAIDA")
-    .reduce((s, t) => s + t.amount, 0);
+    .reduce((s, t) => s + toNum(t.amount), 0);
   const saldo = totalEntradas - totalSaidas;
 
   // Period options
@@ -314,7 +314,7 @@ export default async function CaixaPage({
                       category: t.category,
                       subcategory: t.subcategory ?? "",
                       description: t.description,
-                      amount: t.amount,
+                      amount: toNum(t.amount),
                       date: toBrDate(t.date),
                       competenceMonth: t.competenceMonth ?? null,
                       competenceYear: t.competenceYear ?? null,

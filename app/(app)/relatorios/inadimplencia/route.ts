@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { monthName } from "@/lib/format";
+import { monthName, toNum } from "@/lib/format";
 
 function csvCell(v: unknown): string {
   const s = String(v ?? "");
@@ -50,7 +50,7 @@ export async function GET() {
     }
     const entry = byMember.get(key)!;
     entry.months.push(`${monthName(p.referenceMonth)}/${p.referenceYear}`);
-    entry.total += p.amount;
+    entry.total += toNum(p.amount);
   }
 
   const header = [

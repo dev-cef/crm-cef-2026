@@ -13,7 +13,7 @@ import {
   asaasCreatePixCharge,
   asaasGetPixQrCode,
 } from "@/lib/asaas";
-import { monthName } from "@/lib/format";
+import { monthName, toNum } from "@/lib/format";
 
 const profileSchema = z.object({
   email: z.string().email("E-mail inválido"),
@@ -186,7 +186,7 @@ export async function getOrCreateAsaasCharge(paymentId: string): Promise<
       const asaasDueDate = payment.dueDate < new Date() ? new Date() : payment.dueDate;
       const charge = await asaasCreatePixCharge({
         customer: customerId,
-        value: payment.amount,
+        value: toNum(payment.amount),
         dueDate: asaasDueDate.toISOString().slice(0, 10),
         externalReference: payment.id,
         description: `CEF ${monthName(payment.referenceMonth)}/${payment.referenceYear}`,

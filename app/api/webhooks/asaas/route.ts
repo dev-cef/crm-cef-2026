@@ -4,6 +4,7 @@ import { recordAudit } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { notifyPaymentConfirmed } from "@/lib/messenger";
 import { generateReceiptNumber } from "@/lib/receipt";
+import { toNum } from "@/lib/format";
 
 const PAID_EVENTS = ["PAYMENT_RECEIVED", "PAYMENT_CONFIRMED"];
 
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
       memberFullName: updated.member.fullName,
       memberWhatsapp: updated.member.whatsapp,
       memberPhone: updated.member.phone,
-      amount: updated.amount,
+      amount: toNum(updated.amount),
       referenceMonth: updated.referenceMonth,
       referenceYear: updated.referenceYear,
       receiptNumber: updated.receiptNumber!,

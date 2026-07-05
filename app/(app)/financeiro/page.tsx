@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
-import { monthName } from "@/lib/format";
+import { monthName, toNum } from "@/lib/format";
 import { PageHeader } from "@/components/layout/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -109,16 +109,16 @@ export default async function FinanceiroPage() {
       (r) => r.referenceMonth === m && r.referenceYear === y,
     );
     const sum = (status: string) =>
-      rows.find((r) => r.status === status)?._sum?.amount ?? 0;
+      toNum(rows.find((r) => r.status === status)?._sum?.amount);
     return {
       label: `${monthName(m).slice(0, 3)}/${String(y).slice(2)}`,
       arrecadado: sum("PAGO"),
-      aReceber: (sum("PENDENTE") ?? 0) + (sum("ATRASADO") ?? 0),
+      aReceber: sum("PENDENTE") + sum("ATRASADO"),
     };
   });
 
-  const caixaEntradas = caixaTx.filter((t) => t.type === "ENTRADA").reduce((s, t) => s + t.amount, 0);
-  const caixaSaidas = caixaTx.filter((t) => t.type === "SAIDA").reduce((s, t) => s + t.amount, 0);
+  const caixaEntradas = caixaTx.filter((t) => t.type === "ENTRADA").reduce((s, t) => s + toNum(t.amount), 0);
+  const caixaSaidas = caixaTx.filter((t) => t.type === "SAIDA").reduce((s, t) => s + toNum(t.amount), 0);
   const caixaSaldo = caixaEntradas - caixaSaidas;
 
   const monthPayments = await prisma.payment.findMany({
@@ -131,10 +131,10 @@ export default async function FinanceiroPage() {
 
   const received = monthPayments
     .filter((p) => p.status === "PAGO")
-    .reduce((s, p) => s + p.amount, 0);
+    .reduce((s, p) => s + toNum(p.amount), 0);
   const toReceive = monthPayments
     .filter((p) => p.status !== "PAGO")
-    .reduce((s, p) => s + p.amount, 0);
+    .reduce((s, p) => s + toNum(p.amount), 0);
 
   const stats = [
     {

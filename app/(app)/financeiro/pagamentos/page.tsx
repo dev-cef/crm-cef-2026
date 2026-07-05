@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, Check, Download, ExternalLink, Paperclip, Zap } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
-import { formatBRL, formatDate, monthName } from "@/lib/format";
+import { formatBRL, formatDate, monthName, toNum } from "@/lib/format";
 import { PageHeader } from "@/components/layout/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -116,7 +116,7 @@ export default async function PagamentosPage({
   ]);
 
   const totalByStatus = (status: Status) =>
-    totals.find((t) => t.status === status)?._sum?.amount ?? 0;
+    toNum(totals.find((t) => t.status === status)?._sum?.amount);
 
   // Period options
   const periodOptions = [
@@ -335,7 +335,7 @@ export default async function PagamentosPage({
                     memberName={p.member.fullName}
                     memberCpf={p.member.cpf}
                     planName={p.plan?.name ?? "—"}
-                    amount={p.amount}
+                    amount={toNum(p.amount)}
                     dueDate={p.dueDate.toISOString()}
                     paidAt={p.paidAt?.toISOString() ?? null}
                     receiptNumber={p.receiptNumber ?? null}

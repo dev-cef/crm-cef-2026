@@ -12,7 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { toSessionUser } from "@/lib/rbac";
 import { can } from "@/lib/permissions";
-import { calculateAge, formatDateTime, monthName } from "@/lib/format";
+import { calculateAge, formatDateTime, monthName, toNum } from "@/lib/format";
 import { labelFrom } from "@/lib/constants";
 import { EVENT_DIFFICULTY } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -130,17 +130,17 @@ async function getData() {
 
   const received = monthPayments
     .filter((p) => p.status === "PAGO")
-    .reduce((s, p) => s + p.amount, 0);
+    .reduce((s, p) => s + toNum(p.amount), 0);
   const pending = monthPayments
     .filter((p) => p.status !== "PAGO")
-    .reduce((s, p) => s + p.amount, 0);
+    .reduce((s, p) => s + toNum(p.amount), 0);
 
   // Gráfico receita — últimos 6 meses
   const revenueBars = months6.map((m) => ({
     label: m.label,
     value: revenuePayments
       .filter((p) => p.referenceYear === m.year && p.referenceMonth === m.month)
-      .reduce((s, p) => s + p.amount, 0),
+      .reduce((s, p) => s + toNum(p.amount), 0),
   }));
 
   // Gráfico novos associados — últimos 6 meses

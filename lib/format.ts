@@ -1,8 +1,16 @@
-export function formatBRL(value: number): string {
+// Aceita number ou Prisma.Decimal (campos monetários). Decimal coage via Number().
+type Numeric = number | { toString(): string };
+
+// Normaliza um valor monetário (number | Decimal | null) para number.
+export function toNum(value: Numeric | null | undefined): number {
+  return value == null ? 0 : Number(value);
+}
+
+export function formatBRL(value: Numeric | null | undefined): string {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
-  }).format(value ?? 0);
+  }).format(toNum(value));
 }
 
 export function formatDate(date: Date | string | null | undefined): string {

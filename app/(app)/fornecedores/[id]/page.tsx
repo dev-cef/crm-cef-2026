@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowDownCircle, ArrowUpCircle, Wallet, Paperclip, Mail, Phone, Hash, QrCode } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
-import { formatBRL, toBrDate } from "@/lib/format";
+import { formatBRL, toBrDate, toNum } from "@/lib/format";
 import { PageHeader } from "@/components/layout/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,8 +39,8 @@ export default async function SupplierDetailPage({
 
   if (!supplier) notFound();
 
-  const totalSaidas   = supplier.transactions.filter(t => t.type === "SAIDA").reduce((s, t) => s + t.amount, 0);
-  const totalEntradas = supplier.transactions.filter(t => t.type === "ENTRADA").reduce((s, t) => s + t.amount, 0);
+  const totalSaidas   = supplier.transactions.filter(t => t.type === "SAIDA").reduce((s, t) => s + toNum(t.amount), 0);
+  const totalEntradas = supplier.transactions.filter(t => t.type === "ENTRADA").reduce((s, t) => s + toNum(t.amount), 0);
 
   const infoItems = [
     supplier.phone    && { icon: Phone,  label: "Telefone",   value: supplier.phone },

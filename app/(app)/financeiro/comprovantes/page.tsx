@@ -1,6 +1,6 @@
 import { Inbox } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { formatBRL, formatDateTime, monthName } from "@/lib/format";
+import { formatBRL, formatDateTime, monthName, toNum } from "@/lib/format";
 import { PageHeader } from "@/components/layout/page-header";
 import {
   ComprovanteReviewCard,
@@ -38,7 +38,7 @@ export default async function ComprovantesPage() {
   const options: (PaymentOption & { memberId: string; amount: number })[] = cobrancas.map((p) => ({
     id: p.id,
     memberId: p.member.id,
-    amount: p.amount,
+    amount: toNum(p.amount),
     label: `${p.member.fullName} — ${monthName(p.referenceMonth)}/${p.referenceYear} — ${formatBRL(p.amount)}`,
   }));
 
@@ -62,7 +62,7 @@ export default async function ComprovantesPage() {
           const doSocio = c.memberId ? options.filter((o) => o.memberId === c.memberId) : [];
           const sugestao =
             c.valor != null
-              ? (doSocio.find((o) => Math.abs(o.amount - c.valor!) < 0.005) ?? doSocio[0] ?? null)
+              ? (doSocio.find((o) => Math.abs(o.amount - toNum(c.valor)) < 0.005) ?? doSocio[0] ?? null)
               : (doSocio[0] ?? null);
           return (
             <ComprovanteReviewCard

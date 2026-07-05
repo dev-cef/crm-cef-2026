@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/lib/audit";
 import { generateReceiptNumber } from "@/lib/receipt";
+import { toNum } from "@/lib/format";
 import { notifyPaymentConfirmed, notifyReceiptRejected } from "@/lib/messenger";
 
 export type ConfirmPaidResult =
@@ -71,7 +72,7 @@ export async function confirmPaymentPaid(
         memberFullName: "",
         referenceMonth: p.referenceMonth,
         referenceYear: p.referenceYear,
-        amount: p.amount,
+        amount: toNum(p.amount),
       };
     }
 
@@ -88,7 +89,7 @@ export async function confirmPaymentPaid(
       memberFullName: p.member.fullName,
       memberWhatsapp: p.member.whatsapp,
       memberPhone: p.member.phone,
-      amount: p.amount,
+      amount: toNum(p.amount),
       referenceMonth: p.referenceMonth,
       referenceYear: p.referenceYear,
       receiptNumber: p.receiptNumber ?? "",
@@ -101,7 +102,7 @@ export async function confirmPaymentPaid(
       memberFullName: p.member.fullName,
       referenceMonth: p.referenceMonth,
       referenceYear: p.referenceYear,
-      amount: p.amount,
+      amount: toNum(p.amount),
     };
   } catch {
     return { ok: false, error: "Erro ao confirmar o pagamento." };

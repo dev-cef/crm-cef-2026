@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requirePermission, SEM_PERMISSAO } from "@/lib/guard";
 import { recordAudit } from "@/lib/audit";
-import { parseBrDate } from "@/lib/format";
+import { parseBrDate, toNum } from "@/lib/format";
 import { asaasConfigured, asaasCancelCharge } from "@/lib/asaas";
 import { notifyPaymentConfirmed } from "@/lib/messenger";
 import { generateReceiptNumber } from "@/lib/receipt";
@@ -238,7 +238,7 @@ export async function markAsPaid(
       memberFullName: updated.member.fullName,
       memberWhatsapp: updated.member.whatsapp,
       memberPhone: updated.member.phone,
-      amount: updated.amount,
+      amount: toNum(updated.amount),
       referenceMonth: updated.referenceMonth,
       referenceYear: updated.referenceYear,
       receiptNumber: updated.receiptNumber!,
@@ -310,7 +310,7 @@ export async function editPayment(
     // Valor ou vencimento mudou com uma cobrança Asaas já gerada: invalida o cache
     // (e tenta cancelar a cobrança antiga) pra próxima abertura gerar uma nova com os dados corretos.
     const amountOrDueChanged =
-      current.amount !== values.amount || current.dueDate.getTime() !== due.getTime();
+      toNum(current.amount) !== values.amount || current.dueDate.getTime() !== due.getTime();
     if (amountOrDueChanged && current.asaasChargeId) {
       await asaasCancelCharge(current.asaasChargeId).catch(() => {});
     }
@@ -359,7 +359,7 @@ export async function editPayment(
         memberFullName: current.member.fullName,
         memberWhatsapp: current.member.whatsapp,
         memberPhone: current.member.phone,
-        amount: updated.amount,
+        amount: toNum(updated.amount),
         referenceMonth: updated.referenceMonth,
         referenceYear: updated.referenceYear,
         receiptNumber: updated.receiptNumber ?? "",

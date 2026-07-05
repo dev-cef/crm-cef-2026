@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, BadgePercent, Calendar, Plus, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
-import { formatBRL } from "@/lib/format";
+import { formatBRL, toNum } from "@/lib/format";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,10 +32,15 @@ export default async function PlanosPage() {
     getSystemConfig(),
   ]);
 
-  const enrollmentFee = config.enrollmentFee;
+  const enrollmentFee = toNum(config.enrollmentFee);
 
-  const mensais = plans.filter((p) => p.billingPeriod === "MENSAL");
-  const anuais = plans.filter((p) => p.billingPeriod === "ANUAL");
+  // monthlyPrice vem como Prisma.Decimal — normaliza para number (PlanRow).
+  const toRow = <T extends { monthlyPrice: unknown }>(p: T) => ({
+    ...p,
+    monthlyPrice: toNum(p.monthlyPrice as number),
+  });
+  const mensais = plans.filter((p) => p.billingPeriod === "MENSAL").map(toRow);
+  const anuais = plans.filter((p) => p.billingPeriod === "ANUAL").map(toRow);
 
   return (
     <div>

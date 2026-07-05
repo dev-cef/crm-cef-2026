@@ -9,7 +9,7 @@ import { extrairComprovante, type ComprovanteExtraido } from "@/lib/comprovante-
 import { confirmPaymentPaid } from "@/lib/payments";
 import { getMessengerConfig, sendMessengerNotification } from "@/lib/messenger";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
-import { formatBRL, monthName } from "@/lib/format";
+import { formatBRL, monthName, toNum } from "@/lib/format";
 
 // Limiares de validação — ajustar após observar casos reais.
 export const CONFIANCA_MINIMA = 0.75;
@@ -192,11 +192,13 @@ export async function processarComprovanteWhatsapp(params: {
   }
 
   // 5) Valida contra as pendências do sócio.
-  const pendencias = await prisma.payment.findMany({
+  const pendenciasRaw = await prisma.payment.findMany({
     where: { memberId: socio.id, status: { in: ["PENDENTE", "ATRASADO"] } },
     select: { id: true, amount: true, referenceMonth: true, referenceYear: true },
     orderBy: [{ referenceYear: "asc" }, { referenceMonth: "asc" }],
   });
+  // amount vem como Prisma.Decimal — normaliza para number (PendingPayment.amount).
+  const pendencias = pendenciasRaw.map((p) => ({ ...p, amount: toNum(p.amount) }));
   const decisao = validarComprovante(extracao, pendencias);
   if (decisao.decisao === "revisar") return paraRevisao(decisao.motivo);
 
