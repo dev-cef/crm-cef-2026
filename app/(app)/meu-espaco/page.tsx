@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Receipt,
   FileText,
+  BookOpen,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/authz";
@@ -693,6 +694,30 @@ export default async function MeuEspacoPage() {
           >
             <FileText className="size-4" />
             Ver documentos
+            <ChevronRight className="size-4" />
+          </Link>
+        </CardContent>
+      </Card>
+
+      {/* Biblioteca do clube */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <BookOpen className="size-5" />
+            Biblioteca do CEF
+          </CardTitle>
+          <CardDescription>
+            Consulte o acervo do clube, veja a disponibilidade dos livros e
+            acompanhe os seus empréstimos.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link
+            href="/meu-espaco/biblioteca"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            <BookOpen className="size-4" />
+            Ver biblioteca
             <ChevronRight className="size-4" />
           </Link>
         </CardContent>

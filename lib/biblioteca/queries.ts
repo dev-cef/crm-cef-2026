@@ -111,6 +111,66 @@ export async function getCategorias() {
   return prisma.bibliotecaCategoria.findMany({ orderBy: { nome: "asc" } });
 }
 
+// ── Visão do associado (Meu Espaço) — somente leitura ────────────────────────
+
+const CATALOGO_PAGE_SIZE = 24;
+
+// Acervo para o associado: busca + categoria, com disponibilidade derivada do
+// empréstimo ativo (sem expor quem está com o livro).
+export async function getCatalogoParaAssociado(filters: {
+  search?: string;
+  categoriaId?: string;
+  page?: number;
+}) {
+  const page = Math.max(1, filters.page ?? 1);
+  const where: Record<string, unknown> = {};
+  if (filters.search) {
+    where.OR = [
+      { titulo: { contains: filters.search, mode: "insensitive" } },
+      { autor: { contains: filters.search, mode: "insensitive" } },
+      { isbn: { contains: filters.search, mode: "insensitive" } },
+    ];
+  }
+  if (filters.categoriaId) where.categoriaId = filters.categoriaId;
+
+  const [livros, total] = await Promise.all([
+    prisma.bibliotecaLivro.findMany({
+      where,
+      skip: (page - 1) * CATALOGO_PAGE_SIZE,
+      take: CATALOGO_PAGE_SIZE,
+      orderBy: { titulo: "asc" },
+      include: {
+        categoria: { select: { nome: true } },
+        emprestimos: {
+          where: { status: { in: ["ativo", "atrasado"] } },
+          select: { prazoDevolucao: true },
+          take: 1,
+        },
+      },
+    }),
+    prisma.bibliotecaLivro.count({ where }),
+  ]);
+
+  return { livros, total, page, totalPages: Math.ceil(total / CATALOGO_PAGE_SIZE) };
+}
+
+// Empréstimos do próprio associado (ativos, atrasados e histórico).
+export async function getEmprestimosDoSocio(socioId: string) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  await prisma.bibliotecaEmprestimo.updateMany({
+    where: { socioId, status: "ativo", prazoDevolucao: { lt: today } },
+    data: { status: "atrasado" },
+  });
+  return prisma.bibliotecaEmprestimo.findMany({
+    where: { socioId },
+    orderBy: [{ status: "asc" }, { retiradoEm: "desc" }],
+    include: {
+      livro: { select: { id: true, titulo: true, autor: true, numeroTombo: true } },
+    },
+  });
+}
+
 export async function getMembrosAtivos() {
   return prisma.member.findMany({
     where: { status: "ACTIVE", deletedAt: null },

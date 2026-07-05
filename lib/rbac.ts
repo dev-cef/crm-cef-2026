@@ -144,6 +144,7 @@ export const NAV_ITEMS: {
     visibleTo: ["ASSOCIADO"],
     children: [
       { href: "/meu-espaco/documentos", label: "Documentos" },
+      { href: "/meu-espaco/biblioteca", label: "Biblioteca" },
     ],
   },
   { href: "/eventos",          label: "Meus Eventos",     visibleTo: ["ASSOCIADO"] },
