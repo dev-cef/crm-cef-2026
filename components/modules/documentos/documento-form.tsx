@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import type { DocumentoFormValues } from "@/app/(app)/documentos/actions";
+import { DriveUpload } from "@/components/modules/documentos/drive-upload";
 import {
   DOC_NIVEIS,
   DOC_NIVEL_DESCRICOES,
@@ -23,6 +24,7 @@ interface Props {
   defaultValues?: Partial<DocumentoFormValues>;
   categorias: { id: string; nome: string }[];
   isAdmin: boolean;
+  driveReady: boolean; // Drive do CEF conectado → upload direto disponível
   onSubmit: (v: DocumentoFormValues) => Promise<{ ok: boolean; error?: string; id?: string }>;
   submitLabel?: string;
   documentoId?: string; // definido no modo edição
@@ -32,6 +34,7 @@ export function DocumentoForm({
   defaultValues,
   categorias,
   isAdmin,
+  driveReady,
   onSubmit,
   submitLabel = "Salvar",
   documentoId,
@@ -113,6 +116,10 @@ export function DocumentoForm({
       {/* Arquivo no Google Drive */}
       <section className="rounded-xl border bg-card p-5 space-y-4">
         <h2 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Arquivo no Google Drive</h2>
+        <DriveUpload
+          driveReady={driveReady}
+          onUploaded={(url) => setValue("driveUrl", url, { shouldValidate: true })}
+        />
         <div className="space-y-1">
           <Label htmlFor="driveUrl">Link do Google Drive *</Label>
           <div className="flex gap-2">

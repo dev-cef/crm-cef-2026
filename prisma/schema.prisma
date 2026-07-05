@@ -493,6 +493,14 @@ model SystemConfig {
   accountHolderName  String? // titular da conta / da chave PIX
   financeiroWhatsapp String? // número (com DDI/DDD) ou JID de grupo que recebe alertas de comprovante
 
+  // Conexão com o Google Drive do CEF (upload de documentos). O refresh token
+  // vem do consentimento OAuth (escopo drive.file — o app só enxerga arquivos
+  // criados por ele) e é trocado por access tokens sob demanda.
+  driveRefreshToken String? // null = Drive não conectado
+  driveFolderId     String? // pasta "CRM CEF — Documentos" no Drive do clube
+  driveAccountEmail String? // conta Google que autorizou (exibida na UI)
+  driveConnectedAt  DateTime?
+
   updatedAt DateTime @updatedAt
 }
 

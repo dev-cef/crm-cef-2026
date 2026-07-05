@@ -4,6 +4,7 @@ import { toSessionUser } from "@/lib/rbac";
 import { can } from "@/lib/permissions";
 import { getDocumentoById, getDocCategorias } from "@/lib/documentos/queries";
 import { parseTags } from "@/lib/documentos/types";
+import { driveConnected } from "@/lib/google-drive";
 import { PageHeader } from "@/components/layout/page-header";
 import { DocumentoForm } from "@/components/modules/documentos/documento-form";
 import { atualizarDocumento, type DocumentoFormValues } from "@/app/(app)/documentos/actions";
@@ -17,9 +18,10 @@ export default async function EditarDocumentoPage({ params }: { params: Promise<
   const user = toSessionUser(session!.user);
   if (!(await can(user, "documentos", "edit"))) redirect(`/documentos/${id}`);
 
-  const [documento, categorias] = await Promise.all([
+  const [documento, categorias, driveReady] = await Promise.all([
     getDocumentoById(id, user.role),
     getDocCategorias(),
+    driveConnected(),
   ]);
   if (!documento) notFound();
   if (documento.nivelAcesso === "ADMIN" && user.role !== "ADMIN") redirect("/documentos");
@@ -55,6 +57,7 @@ export default async function EditarDocumentoPage({ params }: { params: Promise<
         defaultValues={defaultValues}
         categorias={categorias}
         isAdmin={user.role === "ADMIN"}
+        driveReady={driveReady}
         onSubmit={onSubmit}
         submitLabel="Salvar alterações"
         documentoId={id}
