@@ -17,7 +17,8 @@
     "snapshot": "tsx scripts/snapshot.ts",
     "deploy:prod": "npm run snapshot && vercel --prod",
     "deploy:painel": "vercel --prod --project prj_jEMDtI6QnVcL2uzNzyOkShSygxMj",
-    "deploy:all": "npm run snapshot && vercel --prod && vercel --prod --project prj_jEMDtI6QnVcL2uzNzyOkShSygxMj"
+    "deploy:all": "npm run snapshot && vercel --prod && vercel --prod --project prj_jEMDtI6QnVcL2uzNzyOkShSygxMj",
+    "deploy:auditoria": "bash scripts/deploy-auditoria.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
