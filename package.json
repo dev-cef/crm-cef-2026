@@ -11,6 +11,8 @@
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "seed": "tsx prisma/seed.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "snapshot": "tsx scripts/snapshot.ts",
     "deploy:prod": "npm run snapshot && vercel --prod",
     "deploy:painel": "vercel --prod --project prj_jEMDtI6QnVcL2uzNzyOkShSygxMj",
@@ -71,6 +73,7 @@
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
     "tsx": "^4.22.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.9"
   }
 }
