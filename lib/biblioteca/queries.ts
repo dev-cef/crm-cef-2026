@@ -146,12 +146,39 @@ export async function getCatalogoParaAssociado(filters: {
           select: { prazoDevolucao: true },
           take: 1,
         },
+        reservas: {
+          where: { ativa: true },
+          select: { socioId: true },
+        },
       },
     }),
     prisma.bibliotecaLivro.count({ where }),
   ]);
 
   return { livros, total, page, totalPages: Math.ceil(total / CATALOGO_PAGE_SIZE) };
+}
+
+// Reservas ativas do próprio associado (fila de espera / a retirar).
+export async function getReservasDoSocio(socioId: string) {
+  return prisma.bibliotecaReserva.findMany({
+    where: { socioId, ativa: true },
+    orderBy: { reservadoEm: "desc" },
+    include: {
+      livro: {
+        select: {
+          id: true,
+          titulo: true,
+          autor: true,
+          disponivel: true,
+          emprestimos: {
+            where: { status: { in: ["ativo", "atrasado"] } },
+            select: { prazoDevolucao: true },
+            take: 1,
+          },
+        },
+      },
+    },
+  });
 }
 
 // Empréstimos do próprio associado (ativos, atrasados e histórico).

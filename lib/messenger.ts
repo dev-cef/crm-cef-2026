@@ -17,7 +17,8 @@ export type MessengerType =
   | "COMPROVANTE_RECUSADO"
   | "PAGAMENTO_CONFIRMADO"
   | "NOVO_ASSOCIADO"
-  | "CARTEIRINHA";
+  | "CARTEIRINHA"
+  | "RESERVA_BIBLIOTECA";
 export type MessengerChannel = "WHATSAPP" | "EMAIL";
 
 // Config singleton — mesmo padrão de getSystemConfig/getBirthdayConfig.
@@ -299,5 +300,34 @@ export async function notifyCardRequest(params: {
     });
   } catch (err) {
     console.error("Falha ao notificar solicitação de carteirinha:", err);
+  }
+}
+
+// Aviso à secretaria quando um associado reserva um livro pelo Meu Espaço.
+// Roteia pro grupo da Secretaria; fallback pro telefone padrão. Nunca lança.
+export async function notifyReservaBiblioteca(params: {
+  memberId: string;
+  memberFullName: string;
+  livroTitulo: string;
+}): Promise<void> {
+  try {
+    const cfg = await getMessengerConfig();
+    const recipient = cfg.secretariaGroupJid ?? cfg.defaultPhone;
+    if (!recipient) return;
+
+    const message =
+      `📚 Nova reserva de livro\n\n` +
+      `Associado: ${params.memberFullName}\n` +
+      `Livro: ${params.livroTitulo}\n\n` +
+      `Separe o exemplar e registre o empréstimo quando ele retirar na sede.`;
+
+    await sendMessengerNotification({
+      type: "RESERVA_BIBLIOTECA",
+      memberId: params.memberId,
+      recipient,
+      message,
+    });
+  } catch (err) {
+    console.error("Falha ao notificar reserva de livro:", err);
   }
 }

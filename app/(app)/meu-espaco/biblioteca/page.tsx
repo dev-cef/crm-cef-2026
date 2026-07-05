@@ -3,12 +3,17 @@ import { BookOpen, Search, BookMarked, Clock, CircleCheck, CircleAlert } from "l
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { requireUser } from "@/lib/authz";
-import { getCatalogoParaAssociado, getEmprestimosDoSocio } from "@/lib/biblioteca/queries";
+import {
+  getCatalogoParaAssociado,
+  getEmprestimosDoSocio,
+  getReservasDoSocio,
+} from "@/lib/biblioteca/queries";
 import { EMPRESTIMO_STATUS_LABELS, type EmprestimoStatus } from "@/lib/biblioteca/types";
 import { PageHeader } from "@/components/layout/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { ReservarButton, CancelarReservaButton } from "@/components/modules/biblioteca/reserva-actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Biblioteca — Meu Espaço CEF" };
@@ -29,9 +34,10 @@ export default async function MeuEspacoBibliotecaPage({
   const { search, page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam ?? "1") || 1);
 
-  const [{ livros, total, totalPages }, emprestimos] = await Promise.all([
+  const [{ livros, total, totalPages }, emprestimos, reservas] = await Promise.all([
     getCatalogoParaAssociado({ search, page }),
     user.memberId ? getEmprestimosDoSocio(user.memberId) : Promise.resolve([]),
+    user.memberId ? getReservasDoSocio(user.memberId) : Promise.resolve([]),
   ]);
 
   const ativos = emprestimos.filter((e) => e.status === "ativo" || e.status === "atrasado");
@@ -98,6 +104,37 @@ export default async function MeuEspacoBibliotecaPage({
         </section>
       )}
 
+      {/* ── Minhas reservas ── */}
+      {reservas.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="flex items-center gap-2 font-semibold">
+            <BookMarked className="size-4 text-primary" /> Minhas reservas
+            <span className="text-xs font-normal text-muted-foreground">({reservas.length})</span>
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {reservas.map((r) => {
+              const emprestado = r.livro.emprestimos.length > 0 || !r.livro.disponivel;
+              return (
+                <div key={r.id} className="flex flex-col gap-1 rounded-xl border bg-card p-4">
+                  <p className="text-sm font-medium leading-tight">{r.livro.titulo}</p>
+                  {r.livro.autor && (
+                    <p className="text-xs text-muted-foreground">{r.livro.autor}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {emprestado
+                      ? "Na fila — você será avisado quando estiver disponível."
+                      : "Reservado — retire na sede com a secretaria."}
+                  </p>
+                  <div className="pt-1">
+                    <CancelarReservaButton reservaId={r.id} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {historico.length > 0 && (
         <section className="space-y-2">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
@@ -156,6 +193,7 @@ export default async function MeuEspacoBibliotecaPage({
               const emprestado = livro.emprestimos.length > 0;
               const prazo = livro.emprestimos[0]?.prazoDevolucao;
               const indisponivel = emprestado || !livro.disponivel;
+              const jaReservado = livro.reservas.some((r) => r.socioId === user.memberId);
               return (
                 <div key={livro.id} className="flex flex-col rounded-xl border bg-card p-4">
                   <div className="flex items-start gap-2">
@@ -182,6 +220,15 @@ export default async function MeuEspacoBibliotecaPage({
                       <Badge className="gap-1 bg-emerald-600 text-[10px] hover:bg-emerald-600">
                         <CircleCheck className="size-3" /> Disponível
                       </Badge>
+                    )}
+                  </div>
+                  <div className="mt-3">
+                    {jaReservado ? (
+                      <Badge variant="outline" className="gap-1 text-[10px]">
+                        <BookMarked className="size-3" /> Você reservou
+                      </Badge>
+                    ) : (
+                      !indisponivel && <ReservarButton livroId={livro.id} />
                     )}
                   </div>
                 </div>

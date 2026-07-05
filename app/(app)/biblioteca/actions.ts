@@ -158,6 +158,10 @@ export async function registrarEmprestimo(values: EmprestimoFormValues): Promise
         },
       });
       await tx.bibliotecaLivro.update({ where: { id: d.livroId }, data: { disponivel: false } });
+      // Retirou o livro → encerra a reserva ativa desse sócio para ele (se houver).
+      await tx.bibliotecaReserva.deleteMany({
+        where: { livroId: d.livroId, socioId: d.socioId, ativa: true },
+      });
       return e;
     });
 
