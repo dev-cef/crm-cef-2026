@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import {
   ArrowLeft,
   CalendarDays,
+  Download,
   HeartPulse,
   LogOut,
   Mountain,
@@ -199,6 +200,16 @@ export default async function AssociadoPerfilPage({
                 </span>
               )}
             </div>
+            {member.photoUrl && (
+              <a
+                href={`/api/associados/${member.id}/foto`}
+                download
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+              >
+                <Download className="size-4" />
+                Baixar foto
+              </a>
+            )}
           </CardContent>
         </Card>
 

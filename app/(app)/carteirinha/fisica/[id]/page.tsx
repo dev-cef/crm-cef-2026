@@ -9,6 +9,7 @@ import {
   PackageCheck,
   Printer,
   CreditCard,
+  Download,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/authz";
@@ -21,7 +22,7 @@ import {
 } from "@/lib/physical-card";
 import { approveRequest, markAsReadyForPickup, confirmPayment } from "../actions";
 import { PageHeader } from "@/components/layout/page-header";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Card,
@@ -132,7 +133,7 @@ export default async function FisicaDetailPage({
               )}
               <AvatarFallback className="text-lg">{initials}</AvatarFallback>
             </Avatar>
-            <div className="space-y-1 text-sm">
+            <div className="flex-1 space-y-1 text-sm">
               <p className="font-semibold">{member.fullName}</p>
               <p className="text-muted-foreground">
                 {membershipNumber(member.registration)}
@@ -145,6 +146,16 @@ export default async function FisicaDetailPage({
                 <p className="text-muted-foreground">
                   Plano: {member.plan.name}
                 </p>
+              )}
+              {member.photoUrl && (
+                <a
+                  href={`/api/associados/${request.memberId}/foto`}
+                  download
+                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "mt-1")}
+                >
+                  <Download className="size-4" />
+                  Baixar foto
+                </a>
               )}
             </div>
           </CardContent>
