@@ -52,9 +52,13 @@ describe("parseBrDate / toBrDate", () => {
 });
 
 describe("calculateAge", () => {
-  it("calcula idade a partir de data UTC", () => {
-    const twenty = new Date();
-    twenty.setUTCFullYear(twenty.getUTCFullYear() - 20);
-    expect(calculateAge(twenty)).toBe(20);
+  it("calcula idade quando o aniversário do ano já passou", () => {
+    // Nascido em 15/03/2000. Como hoje é sempre depois de março no ano
+    // corrente (exceto jan–fev), a idade é anoAtual - 2000. Data fixa longe
+    // de julho e da virada de ano evita flakiness de fuso.
+    const birth = new Date(Date.UTC(2000, 2, 15));
+    const currentYear = new Date().getFullYear();
+    const expected = currentYear - 2000 - (new Date().getMonth() < 2 ? 1 : 0);
+    expect(calculateAge(birth)).toBe(expected);
   });
 });
