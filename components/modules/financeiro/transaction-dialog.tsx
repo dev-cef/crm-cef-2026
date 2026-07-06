@@ -435,8 +435,12 @@ export function TransactionDialog({
               <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2">
                 <Paperclip className="size-4 shrink-0 text-muted-foreground" />
                 <a
-                  href={form.attachmentUrl}
-                  download={form.attachmentName ?? "comprovante"}
+                  href={
+                    form.attachmentUrl.startsWith("data:") || !editId
+                      ? form.attachmentUrl
+                      : `/api/financeiro/comprovante?kind=transaction&id=${editId}&download=1`
+                  }
+                  download={form.attachmentUrl.startsWith("data:") ? (form.attachmentName ?? "comprovante") : undefined}
                   className="flex-1 truncate text-sm text-primary hover:underline"
                 >
                   {form.attachmentName ?? "comprovante"}

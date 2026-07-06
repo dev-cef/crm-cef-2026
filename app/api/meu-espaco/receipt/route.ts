@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { getSystemConfig } from "@/app/(app)/financeiro/actions";
 import { notifyReceiptReceived } from "@/lib/messenger";
 import { toNum } from "@/lib/format";
+import { persistComprovante } from "@/lib/blob";
 
 const RECEIPT_MIME_PREFIXES = ["data:image/jpeg", "data:image/png", "data:application/pdf"];
 
@@ -46,10 +47,11 @@ export async function POST(request: Request) {
   }
 
   try {
+    const receiptPath = await persistComprovante(fileDataUri, "comprovantes/pagamentos");
     await prisma.payment.update({
       where: { id: paymentId },
       data: {
-        receiptPath: fileDataUri,
+        receiptPath,
         receiptSubmittedAt: new Date(),
         status: "AGUARDANDO_CONFIRMACAO",
       },

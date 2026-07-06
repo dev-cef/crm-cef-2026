@@ -10,6 +10,7 @@ import { confirmPaymentPaid } from "@/lib/payments";
 import { getMessengerConfig, sendMessengerNotification } from "@/lib/messenger";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { formatBRL, monthName, toNum } from "@/lib/format";
+import { persistComprovante } from "@/lib/blob";
 
 // Limiares de validação — ajustar após observar casos reais.
 export const CONFIANCA_MINIMA = 0.75;
@@ -81,6 +82,11 @@ export async function processarComprovanteWhatsapp(params: {
     .update(params.imageDataUri.slice(params.imageDataUri.indexOf(",") + 1))
     .digest("base64");
 
+  // Upload pro Blob privado acontece uma única vez aqui, na ingestão, com os
+  // bytes ainda em memória — extração via IA e reenvio ao grupo continuam
+  // usando params.imageDataUri (base64) diretamente, nunca o pathname.
+  const comprovantePath = await persistComprovante(params.imageDataUri, "comprovantes/whatsapp");
+
   // Idempotência: reentrega do mesmo evento não cria outro registro.
   let comprovante;
   try {
@@ -90,7 +96,7 @@ export async function processarComprovanteWhatsapp(params: {
         senderJid: params.senderJid,
         senderPhone: params.senderPhone,
         pushName: params.pushName,
-        imageDataUri: params.imageDataUri,
+        imageDataUri: comprovantePath ?? params.imageDataUri,
         imageSha256: sha,
       },
     });
@@ -226,7 +232,9 @@ export async function processarComprovanteWhatsapp(params: {
   await prisma.payment.update({
     where: { id: pay.id },
     data: {
-      receiptPath: params.imageDataUri,
+      // Mesmo pathname já enviado ao Blob acima — Payment e WhatsappComprovante
+      // apontam pro mesmo objeto (upload único, duas referências).
+      receiptPath: comprovantePath ?? params.imageDataUri,
       receiptSubmittedAt: new Date(),
       status: "AGUARDANDO_CONFIRMACAO",
     },

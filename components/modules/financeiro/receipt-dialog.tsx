@@ -36,7 +36,8 @@ export function ReceiptDialog({
 }: Props) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
-  const isPdf = receiptPath.startsWith("data:application/pdf");
+  const isPdf = receiptPath.startsWith("data:application/pdf") || receiptPath.endsWith(".pdf");
+  const comprovanteUrl = `/api/financeiro/comprovante?kind=payment&id=${paymentId}`;
 
   function handleReject() {
     startTransition(async () => {
@@ -64,8 +65,7 @@ export function ReceiptDialog({
         <div className="flex justify-center rounded-md border bg-muted/30 p-2">
           {isPdf ? (
             <a
-              href={receiptPath}
-              download={`comprovante-${paymentId}.pdf`}
+              href={`${comprovanteUrl}&download=1`}
               className="text-sm font-medium text-primary underline"
             >
               Abrir PDF do comprovante
@@ -73,7 +73,7 @@ export function ReceiptDialog({
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={receiptPath}
+              src={comprovanteUrl}
               alt={`Comprovante enviado por ${memberName}`}
               className="max-h-[60vh] rounded-md object-contain"
             />

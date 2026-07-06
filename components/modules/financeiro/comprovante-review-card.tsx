@@ -35,6 +35,8 @@ export function ComprovanteReviewCard({
 }) {
   const [paymentId, setPaymentId] = useState(suggestedPaymentId ?? "");
   const [pending, startTransition] = useTransition();
+  const isPdf = imageDataUri.startsWith("data:application/pdf") || imageDataUri.endsWith(".pdf");
+  const comprovanteUrl = `/api/financeiro/comprovante?kind=whatsapp&id=${id}`;
 
   function handle(action: "aprovar" | "rejeitar") {
     startTransition(async () => {
@@ -59,9 +61,9 @@ export function ComprovanteReviewCard({
         </div>
       </CardHeader>
       <CardContent className="grid gap-4 sm:grid-cols-[200px_1fr]">
-        {imageDataUri.startsWith("data:application/pdf") ? (
+        {isPdf ? (
           <object
-            data={imageDataUri}
+            data={comprovanteUrl}
             type="application/pdf"
             className="h-64 w-full rounded-md border"
             aria-label="Comprovante em PDF"
@@ -71,9 +73,9 @@ export function ComprovanteReviewCard({
             </p>
           </object>
         ) : (
-          <a href={imageDataUri} target="_blank" rel="noreferrer" title="Abrir em tamanho real">
+          <a href={comprovanteUrl} target="_blank" rel="noreferrer" title="Abrir em tamanho real">
             <img
-              src={imageDataUri}
+              src={comprovanteUrl}
               alt="Comprovante"
               className="max-h-64 w-full rounded-md border object-contain"
             />

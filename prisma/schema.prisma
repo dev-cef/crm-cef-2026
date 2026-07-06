@@ -240,7 +240,7 @@ model Payment {
   dueDate        DateTime
   paidAt         DateTime?
   notes          String? // Observação da baixa
-  receiptPath        String? // Comprovante enviado pelo associado (data URI base64)
+  receiptPath        String? // Comprovante enviado pelo associado (pathname no Vercel Blob privado)
   receiptSubmittedAt DateTime? // Data/hora do envio do comprovante
   receiptNumber      String? @unique // Número do recibo gerado pelo financeiro (YYYY-NNNN)
   confirmedVia       String? // MANUAL | ASAAS | WHATSAPP — como a baixa aconteceu
@@ -279,7 +279,7 @@ model Transaction {
   notes           String?
   supplierId      String?
   supplier        Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  attachmentUrl   String?   // base64 data URL do comprovante
+  attachmentUrl   String?   // Pathname do comprovante no Vercel Blob privado
   attachmentName  String?   // nome original do arquivo
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -537,7 +537,7 @@ model WhatsappComprovante {
   paymentId String?
   payment   Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
 
-  imageDataUri String // data URI base64 da imagem
+  imageDataUri String // pathname da imagem no Vercel Blob privado
   imageSha256  String // dedupe de reenvio do mesmo print
 
   // Extração via IA (visão)

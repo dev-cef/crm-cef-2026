@@ -8,6 +8,7 @@ import { parseBrDate, toNum } from "@/lib/format";
 import { asaasConfigured, asaasCancelCharge } from "@/lib/asaas";
 import { notifyPaymentConfirmed } from "@/lib/messenger";
 import { generateReceiptNumber } from "@/lib/receipt";
+import { persistComprovante } from "@/lib/blob";
 import { planSchema, type PlanFormValues, transactionSchema, type TransactionFormValues } from "@/lib/validations/finance";
 
 type Result = { ok: boolean; error?: string };
@@ -258,6 +259,9 @@ export async function rejectReceipt(id: string): Promise<Result> {
   try {
     const payment = await prisma.payment.findUnique({ where: { id } });
     if (!payment) return { ok: false, error: "Pagamento não encontrado." };
+    // Não apaga o objeto no Blob (mesmo padrão do módulo documentos): o mesmo
+    // pathname pode ser compartilhado com um WhatsappComprovante aprovado, e
+    // sem referência no banco o arquivo já fica inacessível pela rota proxy.
     await prisma.payment.update({
       where: { id },
       data: {
@@ -528,6 +532,11 @@ export async function saveTransaction(
   const date = parseBrDate(d.date);
   if (!date) return { ok: false, error: "Data inválida." };
 
+  const attachmentUrl = await persistComprovante(
+    d.attachmentUrl?.trim() || null,
+    "comprovantes/transacoes",
+  );
+
   const data = {
     type: d.type,
     category: d.category,
@@ -543,7 +552,7 @@ export async function saveTransaction(
     paymentMethod: d.paymentMethod?.trim() || null,
     notes: d.notes?.trim() || null,
     supplierId:     d.supplierId?.trim() || null,
-    attachmentUrl:  d.attachmentUrl?.trim() || null,
+    attachmentUrl,
     attachmentName: d.attachmentName?.trim() || null,
   };
 
