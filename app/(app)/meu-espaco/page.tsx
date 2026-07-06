@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/authz";
+import { cn } from "@/lib/utils";
 import { formatCpf } from "@/lib/cpf";
 import { formatBRL, monthName, toBrDate, toNum } from "@/lib/format";
 import { membershipNumber, membershipValidity } from "@/lib/membership";
@@ -141,6 +142,28 @@ export default async function MeuEspacoPage() {
     .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())[0];
   const eligibility = checkEligibility(member.createdAt, member.eventRegistrations);
 
+  const now = new Date();
+  const upcomingEvents = member.eventRegistrations
+    .filter((r) => r.event.status !== "CANCELADO" && new Date(r.event.dateTime) >= now)
+    .sort((a, b) => new Date(a.event.dateTime).getTime() - new Date(b.event.dateTime).getTime());
+  const pastEvents = member.eventRegistrations
+    .filter((r) => r.event.status === "REALIZADO")
+    .slice(0, 5);
+  const nextEvent = upcomingEvents[0];
+
+  const DIFFICULTY_LABEL: Record<string, string> = {
+    FACIL: "Fácil", MODERADO: "Moderado", DIFICIL: "Difícil", TECNICO: "Técnico",
+  };
+  const DIFFICULTY_COLOR: Record<string, string> = {
+    FACIL: "text-green-600 dark:text-green-400",
+    MODERADO: "text-yellow-600 dark:text-yellow-400",
+    DIFICIL: "text-orange-600 dark:text-orange-400",
+    TECNICO: "text-red-600 dark:text-red-400",
+  };
+  const STATUS_LABEL: Record<string, string> = {
+    PLANEJADO: "Planejado", CONFIRMADO: "Confirmado", REALIZADO: "Realizado", CANCELADO: "Cancelado",
+  };
+
   const billingCfg = await getSystemConfig();
   const paymentDialogData = new Map<
     string,
@@ -200,11 +223,172 @@ export default async function MeuEspacoPage() {
     );
   }
 
+  const quickTileClass =
+    "flex flex-col items-start gap-3.5 rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:bg-accent/40";
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Meu Espaço" />
+      <div className="hidden md:block">
+        <PageHeader title="Meu Espaço" />
+      </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      {/* Hero mobile — home de "Meu Espaço" */}
+      <div className="-mx-4 -mt-4 mb-6 md:hidden">
+        <div className="relative overflow-hidden rounded-b-[32px] bg-gradient-to-br from-[#2b4954] to-[#1b2e35] px-5 pb-14 pt-9">
+          <div className="pointer-events-none absolute -right-8 -top-10 size-40 rounded-full bg-[radial-gradient(circle,rgba(146,184,196,0.35),transparent_70%)]" />
+          <div className="pointer-events-none absolute -bottom-16 -left-5 size-36 rounded-full bg-[radial-gradient(circle,rgba(63,181,163,0.22),transparent_70%)]" />
+
+          <p className="relative mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-white/55">
+            Meu Espaço
+          </p>
+
+          <div className="relative flex items-center gap-3.5">
+            <Avatar className="size-[60px] shrink-0 shadow-lg shadow-black/25">
+              {member.photoUrl ? (
+                <AvatarImage src={member.photoUrl} alt={member.fullName} />
+              ) : null}
+              <AvatarFallback className="bg-gradient-to-br from-[#92b8c4] to-[#4f7c93] font-display text-xl font-semibold text-white">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <p className="truncate font-display text-xl font-semibold tracking-tight text-white">
+                {member.fullName}
+              </p>
+              <p className="mt-1 text-[13px] text-white/60">
+                Matrícula {membershipNumber(member.registration)}
+              </p>
+            </div>
+          </div>
+
+          <div className="relative mt-4 flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-chart-5/40 bg-chart-5/15 px-3 py-1 text-xs font-semibold text-chart-5">
+              {member.status === "ACTIVE" ? (
+                <>
+                  <CircleCheck className="size-3" /> Ativo
+                </>
+              ) : (
+                "Inativo"
+              )}
+            </span>
+            {member.plan && (
+              <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium text-white/75">
+                {member.plan.name}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Sheet */}
+        <div className="relative -mt-7 rounded-t-3xl bg-card px-4 pb-1 pt-6 shadow-[0_-6px_20px_rgba(43,73,84,0.06)]">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Acesso rápido
+          </p>
+
+          <div className="grid grid-cols-2 gap-3">
+            <EditarDadosDialog
+              member={member}
+              trigger={
+                <button type="button" className={quickTileClass}>
+                  <QuickTileIcon icon={<Pencil className="size-5" />} />
+                  <span className="text-[14.5px] font-semibold">Editar Perfil</span>
+                </button>
+              }
+            />
+
+            <a href="#eventos" className={quickTileClass}>
+              <QuickTileIcon icon={<Calendar className="size-5" />} />
+              <span className="text-[14.5px] font-semibold">Eventos</span>
+            </a>
+
+            <Link href="/meu-espaco/biblioteca" className={quickTileClass}>
+              <QuickTileIcon icon={<BookOpen className="size-5" />} />
+              <span className="text-[14.5px] font-semibold">Biblioteca</span>
+            </Link>
+
+            <Link href="/meu-espaco/documentos" className={quickTileClass}>
+              <QuickTileIcon icon={<FileText className="size-5" />} />
+              <span className="text-[14.5px] font-semibold">Documentos</span>
+            </Link>
+
+            <Link href={`/carteirinha/${member.id}`} className={quickTileClass}>
+              <QuickTileIcon icon={<IdCard className="size-5" />} />
+              <span className="text-[14.5px] font-semibold">Carteirinha</span>
+            </Link>
+
+            <a href="#financeiro" className={quickTileClass}>
+              <QuickTileIcon icon={<CreditCard className="size-5" />} />
+              <span className="text-[14.5px] font-semibold">Financeiro</span>
+            </a>
+          </div>
+
+          {/* Situação financeira */}
+          <a
+            href="#financeiro"
+            className={cn(
+              "mt-5 flex items-center gap-3 rounded-2xl border p-3.5",
+              emDia ? "border-border bg-muted" : "border-destructive/40 bg-destructive/5",
+            )}
+          >
+            <span
+              className={cn(
+                "flex size-9 shrink-0 items-center justify-center rounded-[10px]",
+                emDia ? "bg-chart-5/15" : "bg-destructive/15",
+              )}
+            >
+              {emDia ? (
+                <CircleCheck className="size-[18px] text-chart-5" />
+              ) : (
+                <CircleAlert className="size-[18px] text-destructive" />
+              )}
+            </span>
+            <span className="min-w-0 flex-1">
+              <p className="text-[13.5px] font-semibold">
+                {emDia ? "Você está em dia" : `${unpaid.length} cobrança(s) em aberto`}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {emDia ? "Nenhuma cobrança pendente" : formatBRL(unpaidTotal)}
+              </p>
+            </span>
+          </a>
+
+          {/* Próximo evento */}
+          {nextEvent && (
+            <>
+              <p className="mb-2.5 mt-5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Próximo evento
+              </p>
+              <Link
+                href={`/eventos/${nextEvent.event.id}`}
+                className="mb-2 flex items-center gap-3 rounded-2xl border border-border p-3.5"
+              >
+                <span className="flex size-11 shrink-0 flex-col items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                  <span className="text-[15px] font-bold leading-none">
+                    {new Date(nextEvent.event.dateTime).getDate()}
+                  </span>
+                  <span className="text-[9px] font-semibold uppercase text-primary-foreground/65">
+                    {monthName(new Date(nextEvent.event.dateTime).getMonth() + 1).slice(0, 3)}
+                  </span>
+                </span>
+                <span className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{nextEvent.event.name}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {new Date(nextEvent.event.dateTime).toLocaleTimeString("pt-BR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                    {nextEvent.event.difficulty &&
+                      ` · ${DIFFICULTY_LABEL[nextEvent.event.difficulty] ?? nextEvent.event.difficulty}`}
+                  </p>
+                </span>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="hidden gap-4 md:grid md:grid-cols-3">
         {/* Cartão do associado */}
         <Card className="md:col-span-2">
           <CardHeader>
@@ -323,7 +507,7 @@ export default async function MeuEspacoPage() {
       </div>
 
       {/* Extrato de mensalidades */}
-      <Card>
+      <Card id="financeiro">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <CalendarClock className="size-5" />
@@ -463,119 +647,94 @@ export default async function MeuEspacoPage() {
       </Card>
 
       {/* Meus Eventos */}
-      {(() => {
-        const now = new Date();
-        const upcoming = member.eventRegistrations
-          .filter((r) => r.event.status !== "CANCELADO" && new Date(r.event.dateTime) >= now)
-          .sort((a, b) => new Date(a.event.dateTime).getTime() - new Date(b.event.dateTime).getTime());
-        const past = member.eventRegistrations
-          .filter((r) => r.event.status === "REALIZADO")
-          .slice(0, 5);
+      <Card id="eventos">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Calendar className="size-5" />
+              Meus Eventos
+            </CardTitle>
+            <Link href="/eventos" className={buttonVariants({ variant: "outline", size: "sm" })}>
+              Ver todos <ChevronRight className="size-3.5" />
+            </Link>
+          </div>
+          <CardDescription>
+            Eventos em que você está inscrito
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {upcomingEvents.length === 0 && pastEvents.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              Você ainda não está inscrito em nenhum evento.
+            </p>
+          )}
 
-        const DIFFICULTY_LABEL: Record<string, string> = {
-          FACIL: "Fácil", MODERADO: "Moderado", DIFICIL: "Difícil", TECNICO: "Técnico",
-        };
-        const DIFFICULTY_COLOR: Record<string, string> = {
-          FACIL: "text-green-600 dark:text-green-400",
-          MODERADO: "text-yellow-600 dark:text-yellow-400",
-          DIFICIL: "text-orange-600 dark:text-orange-400",
-          TECNICO: "text-red-600 dark:text-red-400",
-        };
-        const STATUS_LABEL: Record<string, string> = {
-          PLANEJADO: "Planejado", CONFIRMADO: "Confirmado", REALIZADO: "Realizado", CANCELADO: "Cancelado",
-        };
-
-        return (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Calendar className="size-5" />
-                  Meus Eventos
-                </CardTitle>
-                <Link href="/eventos" className={buttonVariants({ variant: "outline", size: "sm" })}>
-                  Ver todos <ChevronRight className="size-3.5" />
-                </Link>
+          {upcomingEvents.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Próximos</p>
+              <div className="divide-y rounded-lg border">
+                {upcomingEvents.map((r) => (
+                  <Link
+                    key={r.event.id}
+                    href={`/eventos/${r.event.id}`}
+                    className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{r.event.name}</p>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <CalendarClock className="size-3" />
+                          {toBrDate(r.event.dateTime)}
+                        </span>
+                        {r.event.location && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="size-3" />
+                            {r.event.location}
+                          </span>
+                        )}
+                        {r.event.difficulty && (
+                          <span className={DIFFICULTY_COLOR[r.event.difficulty] ?? ""}>
+                            {DIFFICULTY_LABEL[r.event.difficulty] ?? r.event.difficulty}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="shrink-0 text-[10px]">
+                      {STATUS_LABEL[r.event.status] ?? r.event.status}
+                    </Badge>
+                  </Link>
+                ))}
               </div>
-              <CardDescription>
-                Eventos em que você está inscrito
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {upcoming.length === 0 && past.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Você ainda não está inscrito em nenhum evento.
-                </p>
-              )}
+            </div>
+          )}
 
-              {upcoming.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Próximos</p>
-                  <div className="divide-y rounded-lg border">
-                    {upcoming.map((r) => (
-                      <Link
-                        key={r.event.id}
-                        href={`/eventos/${r.event.id}`}
-                        className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">{r.event.name}</p>
-                          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <CalendarClock className="size-3" />
-                              {toBrDate(r.event.dateTime)}
-                            </span>
-                            {r.event.location && (
-                              <span className="flex items-center gap-1">
-                                <MapPin className="size-3" />
-                                {r.event.location}
-                              </span>
-                            )}
-                            {r.event.difficulty && (
-                              <span className={DIFFICULTY_COLOR[r.event.difficulty] ?? ""}>
-                                {DIFFICULTY_LABEL[r.event.difficulty] ?? r.event.difficulty}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <Badge variant="secondary" className="shrink-0 text-[10px]">
-                          {STATUS_LABEL[r.event.status] ?? r.event.status}
-                        </Badge>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {past.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Realizados recentemente</p>
-                  <div className="divide-y rounded-lg border">
-                    {past.map((r) => (
-                      <Link
-                        key={r.event.id}
-                        href={`/eventos/${r.event.id}`}
-                        className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-muted-foreground">{r.event.name}</p>
-                          <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                            <CalendarClock className="size-3" />
-                            {toBrDate(r.event.dateTime)}
-                          </div>
-                        </div>
-                        <Badge variant="secondary" className="shrink-0 bg-muted text-[10px] text-muted-foreground">
-                          Realizado
-                        </Badge>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })()}
+          {pastEvents.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Realizados recentemente</p>
+              <div className="divide-y rounded-lg border">
+                {pastEvents.map((r) => (
+                  <Link
+                    key={r.event.id}
+                    href={`/eventos/${r.event.id}`}
+                    className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-muted-foreground">{r.event.name}</p>
+                      <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                        <CalendarClock className="size-3" />
+                        {toBrDate(r.event.dateTime)}
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="shrink-0 bg-muted text-[10px] text-muted-foreground">
+                      Realizado
+                    </Badge>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Carteirinha Física */}
       {(() => {
@@ -755,5 +914,13 @@ function Info({ label, value }: { label: string; value: string }) {
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="text-sm font-medium">{value}</p>
     </div>
+  );
+}
+
+function QuickTileIcon({ icon }: { icon: React.ReactNode }) {
+  return (
+    <span className="flex size-[42px] items-center justify-center rounded-xl bg-accent text-primary">
+      {icon}
+    </span>
   );
 }
