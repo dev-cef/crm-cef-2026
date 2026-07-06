@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck · Testes · Build
+    runs-on: ubuntu-latest
+    env:
+      # Placeholders: o build e os testes NÃO conectam ao banco (rotas dinâmicas
+      # + lógica pura). Servem só para não falhar ao instanciar Prisma/NextAuth
+      # por variável ausente. Nenhum segredo real é necessário no CI.
+      DATABASE_URL: postgresql://user:pass@localhost:5432/ci
+      AUTH_SECRET: ci-placeholder-secret-0000000000000000
+      NEXTAUTH_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # postinstall roda `prisma generate` (precisa do schema, não do banco).
+      - name: Instalar dependências
+        run: npm ci
+
+      # Informativo por ora: há erros de lint pré-existentes no código.
+      # Quando forem zerados, remover o continue-on-error para torná-lo bloqueante.
+      - name: Lint (informativo)
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Testes unitários
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+    # E2E (Playwright) não roda aqui: precisa de um banco de teste (Neon branch)
+    # com seed. A trava em e2e/global-setup.ts bloqueia bancos de produção.
+    # Habilitar num job separado com DATABASE_URL de teste + `npm run db:push`
+    # + `npm run seed` + `npx playwright install --with-deps chromium`.
